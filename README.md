@@ -55,14 +55,14 @@ aegislog config --provider openai-compatible --model YOUR_MODEL
 aegislog ask "Explain the likely root cause" examples/auth.log
 ```
 
-AegisLog does not save API keys in its configuration. Before provider calls it minimizes context, redacts recognized secrets, and explicitly marks log content as untrusted telemetry rather than model instructions. See `docs/AI_PROVIDERS.md` for the trust boundary and privacy guidance.
+AegisLog does not save API keys in configuration. Before provider calls it minimizes context, redacts recognized secrets, and explicitly marks log content as untrusted telemetry rather than model instructions. Remote OpenAI-compatible endpoints are restricted from resolving to local/private network addresses; the Ollama adapter is the explicit local-model path. See `docs/AI_PROVIDERS.md`.
 
 ## Main commands
 
 - `analyze` — local rule-backed analysis
 - `threats` — high/critical security findings
 - `anomalies` — lightweight rarity/frequency anomalies
-- `incidents` — correlate related findings
+- `incidents` — correlate and optionally persist related findings
 - `history` — view persisted incident records
 - `watch` — analyze appended log events live
 - `collect` — bounded journald or Docker collection
@@ -74,7 +74,7 @@ AegisLog does not save API keys in its configuration. Before provider calls it m
 
 ## Security model
 
-AegisLog is defensive tooling. Findings are investigative signals, not proof of compromise. Log data is considered hostile input: ANSI/control data is sanitized for terminal rendering and AI prompts label telemetry as untrusted. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
+AegisLog is defensive tooling. Findings are investigative signals, not proof of compromise. Log data is considered hostile input: terminal control data is sanitized and AI prompts label telemetry as untrusted. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
 
 ## Development
 
