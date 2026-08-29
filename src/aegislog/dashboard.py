@@ -114,7 +114,7 @@ def _anomaly_table(data: DashboardData, limit: int = 8) -> Table:
 
 
 def _finding_table(data: DashboardData, limit: int = 20) -> Table:
-    table = Table(title=f"Actionable findings — showing {min(len(data.findings), limit)} of {len(data.findings)}", expand=True, show_lines=True)
+    table = Table(title=f"Detected findings — showing {min(len(data.findings), limit)} of {len(data.findings)}", expand=True, show_lines=True)
     table.add_column("Severity", width=10)
     table.add_column("Category", width=18)
     table.add_column("Finding", width=34)
