@@ -7,7 +7,7 @@ on:
       - "v*"
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
             find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           )
 
-      - name: Verify offline customer install
+      - name: Verify offline Linux customer install
         run: |
           set -eux
           ROOT="$GITHUB_WORKSPACE/customer-dist/AegisLog-AI-Customer"
@@ -52,9 +52,9 @@ jobs:
       - name: Archive customer bundle
         run: |
           cd customer-dist
-          zip -r ../dist/AegisLog-AI-Customer-Bundle.zip AegisLog-AI-Customer
+          zip -r ../dist/AegisLog-AI-v1.1.0-Customer-Bundle.zip AegisLog-AI-Customer
           cd ../dist
-          sha256sum AegisLog-AI-Customer-Bundle.zip > AegisLog-AI-Customer-Bundle.zip.sha256
+          sha256sum AegisLog-AI-v1.1.0-Customer-Bundle.zip > AegisLog-AI-v1.1.0-Customer-Bundle.zip.sha256
 
       - uses: actions/upload-artifact@v4
         with:
@@ -67,5 +67,37 @@ jobs:
         with:
           name: customer-bundle
           path: |
-            dist/AegisLog-AI-Customer-Bundle.zip
-            dist/AegisLog-AI-Customer-Bundle.zip.sha256
+            dist/AegisLog-AI-v1.1.0-Customer-Bundle.zip
+            dist/AegisLog-AI-v1.1.0-Customer-Bundle.zip.sha256
+
+  verify-windows-customer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Windows test bundle
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+          $root = Join-Path $env:GITHUB_WORKSPACE "customer-dist\AegisLog-AI-Customer"
+          New-Item -ItemType Directory -Force -Path "$root\package", "$root\vendor", "$root\sample_logs" | Out-Null
+          Copy-Item "dist\*.whl" "$root\package\"
+          Copy-Item "customer_bundle\*" "$root\"
+          Copy-Item "examples\auth.log" "$root\sample_logs\auth.log"
+          python -m pip download --dest "$root\vendor" "rich>=13.7" "typer>=0.12"
+
+      - name: Verify actual Windows customer installer
+        shell: cmd
+        env:
+          AEGISLOG_NONINTERACTIVE: "1"
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\customer-dist\AegisLog-AI-Customer"
+          call INSTALL_WINDOWS.bat
+          if errorlevel 1 exit /b 1
+          .aegislog-venv\Scripts\aegislog.exe --version
+          .aegislog-venv\Scripts\aegislog.exe doctor
+          .aegislog-venv\Scripts\aegislog.exe dashboard sample_logs\auth.log
