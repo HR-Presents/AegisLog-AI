@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from rich.console import Console
+
 from aegislog.commands_v12 import _clean_path_input, _command_args, _menu, _path
 
 
@@ -25,6 +27,6 @@ def test_path_accepts_real_file(tmp_path: Path):
 
 
 def test_menu_exposes_command_mode():
-    table = _menu()
-    rendered = " ".join(str(cell) for row in table.rows for cell in row.cells)
-    assert "Command mode" in rendered
+    console = Console(record=True, width=120)
+    console.print(_menu())
+    assert "Command mode" in console.export_text()
