@@ -4,6 +4,7 @@ import json
 import platform
 import time
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 import typer
@@ -14,13 +15,15 @@ from rich.table import Table
 from . import __version__
 from .ai import InvestigationContext, build_safe_prompt, local_answer
 from .anomaly import score_events
+from .baseline import compare as compare_baseline
 from .collectors import CollectorError, docker as collect_docker, journal as collect_journal
 from .config import load_config, save_config
+from .database import add_incidents, get_incident, list_incidents, timeline as database_timeline
 from .engine import analyze_file, analyze_lines
+from .exporters import write_report
 from .incidents import correlate
 from .parsers import parse_line
 from .providers import ProviderError, run_provider
-from .store import load_incidents, save_incidents
 
 app = typer.Typer(help="AegisLog AI — defensive log intelligence in your terminal.", no_args_is_help=True)
 console = Console()
@@ -61,29 +64,58 @@ def anomalies(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> 
 
 @app.command()
 def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False), persist: bool = False) -> None:
-    """Correlate findings into incidents and optionally persist them."""
+    """Correlate findings into incidents and optionally persist them in SQLite."""
     _, findings = analyze_file(path); items = correlate(findings)
     table = Table(show_lines=True); table.add_column("ID"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Events"); table.add_column("Summary")
     for item in items: table.add_row(item.id, item.severity, item.category, str(item.count), item.title)
     console.print(table)
-    if persist and items: console.print(f"Incident history updated: {save_incidents(str(path), items)}")
+    if persist and items:
+        count = add_incidents(str(path), datetime.now(timezone.utc).isoformat(), items)
+        console.print(f"Persisted {count} incident records to the AegisLog database.")
 
 
 @app.command("history")
-def incident_history(limit: int = 50) -> None:
-    """Show previously persisted incident records."""
-    records = load_incidents(limit)
+def incident_history(limit: int = 50, severity: str = "") -> None:
+    """Show persisted SQLite incident records."""
+    records = list_incidents(limit, severity or None)
     if not records: console.print("No persisted incidents yet. Run incidents <log> --persist."); return
-    table = Table(show_lines=True); table.add_column("Recorded"); table.add_column("Severity"); table.add_column("Source"); table.add_column("Summary")
-    for item in records: table.add_row(item.get("recorded_at", ""), item.get("severity", ""), item.get("source", ""), item.get("title", ""))
+    table = Table(show_lines=True); table.add_column("DB ID"); table.add_column("Recorded"); table.add_column("Severity"); table.add_column("Source"); table.add_column("Summary")
+    for item in records: table.add_row(str(item["id"]), item["recorded_at"], item["severity"], item["source"], item["title"])
+    console.print(table)
+
+
+@app.command("incident")
+def incident_detail(incident_id: int) -> None:
+    """Inspect one persisted incident and its evidence."""
+    item = get_incident(incident_id)
+    if item is None: console.print(f"Incident {incident_id} was not found."); raise typer.Exit(1)
+    console.print(Panel(f"Severity: {item['severity']}\nCategory: {item['category']}\nSource: {item['source']}\nRecorded: {item['recorded_at']}\nEvents: {item['event_count']}", title=f"Incident {incident_id}: {item['title']}"))
+    for evidence in item["evidence"]: console.print(f"- {evidence}")
+
+
+@app.command("timeline")
+def timeline(limit: int = 100) -> None:
+    """Show the persisted investigation timeline."""
+    records = database_timeline(limit)
+    if not records: console.print("No incident timeline exists yet."); return
+    table = Table(show_lines=True); table.add_column("Time"); table.add_column("ID"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Summary")
+    for item in records: table.add_row(item["recorded_at"], str(item["id"]), item["severity"], item["category"], item["title"])
+    console.print(table)
+
+
+@app.command("baseline")
+def baseline(baseline_path: Path = typer.Argument(..., exists=True, dir_okay=False), current_path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
+    """Compare current telemetry with a baseline log sample."""
+    before = baseline_path.read_text(encoding="utf-8", errors="replace").splitlines(); current = current_path.read_text(encoding="utf-8", errors="replace").splitlines(); deltas = compare_baseline(before, current)
+    table = Table(show_lines=True); table.add_column("Event class"); table.add_column("Baseline"); table.add_column("Current"); table.add_column("Ratio")
+    for item in deltas[:50]: table.add_row(item.key, str(item.baseline), str(item.current), f"{item.ratio:.2f}x")
     console.print(table)
 
 
 @app.command("ask")
 def ask_log(question: str, path: Path = typer.Argument(..., exists=True, dir_okay=False), local: bool = False) -> None:
     """Ask a defensive investigation question using local analysis or configured AI."""
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines(); _, findings = analyze_file(path)
-    context = InvestigationContext(question=question, findings=findings, log_excerpt=lines[-80:]); cfg = load_config(); provider = str(cfg.get("ai_provider", "none"))
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines(); _, findings = analyze_file(path); context = InvestigationContext(question=question, findings=findings, log_excerpt=lines[-80:]); cfg = load_config(); provider = str(cfg.get("ai_provider", "none"))
     if local or provider == "none": console.print(Panel(local_answer(context), title=f"Investigation: {question}")); return
     try:
         response = run_provider(provider, build_safe_prompt(context), str(cfg.get("model", "")), cfg.get("base_url")); console.print(Panel(response.text, title=f"AI Investigation — {response.provider}/{response.model}"))
@@ -119,10 +151,13 @@ def watch(path: Path = typer.Argument(..., exists=True, dir_okay=False), interva
 
 @app.command()
 def report(path: Path = typer.Argument(..., exists=True, dir_okay=False), output: Path = Path("aegislog-report.json")) -> None:
-    """Write a machine-readable JSON analysis report."""
+    """Write JSON, Markdown, or HTML analysis reports."""
     total, findings = analyze_file(path); lines = path.read_text(encoding="utf-8", errors="replace").splitlines(); anomaly_results = score_events([parse_line(line) for line in lines]); incident_results = correlate(findings)
-    payload = {"source": str(path), "lines": total, "findings": [f.__dict__ for f in findings], "anomalies": [a.__dict__ for a in anomaly_results], "incidents": [{**i.__dict__, "evidence": list(i.evidence)} for i in incident_results]}
-    output.write_text(json.dumps(payload, indent=2), encoding="utf-8"); console.print(f"Report written to {output}")
+    if output.suffix.lower() in {".md", ".markdown", ".html", ".htm"}:
+        write_report(output, str(path), total, findings, incident_results)
+    else:
+        payload = {"source": str(path), "lines": total, "findings": [f.__dict__ for f in findings], "anomalies": [a.__dict__ for a in anomaly_results], "incidents": [{**i.__dict__, "evidence": list(i.evidence)} for i in incident_results]}; output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    console.print(f"Report written to {output}")
 
 
 @app.command()
