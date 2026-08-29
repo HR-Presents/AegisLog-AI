@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .sanitize import terminal_safe
+from .windows_security import parse_windows_security_line, signal_for_event
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,25 @@ def analyze_lines(lines: list[str]) -> list[Finding]:
         line = redact(raw.strip())
         if not line:
             continue
+
+        windows_event = parse_windows_security_line(line)
+        if windows_event is not None:
+            signal = signal_for_event(windows_event)
+            if windows_event.event_id == 4625:
+                if windows_event.source_ip:
+                    auth_ips[windows_event.source_ip] += 1
+                else:
+                    auth_without_ip += 1
+                continue
+            if signal is not None:
+                findings.append(Finding(
+                    signal.severity,
+                    signal.category,
+                    signal.title,
+                    signal.evidence,
+                    signal.recommendation,
+                ))
+                continue
 
         if AUTH_FAILURE_RE.search(line):
             ips = IP_RE.findall(line)
