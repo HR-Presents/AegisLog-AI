@@ -12,6 +12,7 @@ from rich.text import Text
 
 from .commands_v11 import dashboard
 from .commands_v13 import live_dashboard
+from .commands_v14 import live_multi
 from .config import config_dir
 
 console = Console()
@@ -32,12 +33,8 @@ def _clear() -> None:
 
 
 def _header() -> Panel:
-    title = Text("AEGISLOG AI", style="bold cyan")
-    subtitle = Text("Single-file defensive log intelligence", style="dim")
-    body = Text()
-    body.append_text(title)
-    body.append("\n")
-    body.append_text(subtitle)
+    body = Text("AEGISLOG AI", style="bold cyan")
+    body.append("\nSingle-file defensive log intelligence", style="dim")
     return Panel(body, border_style="cyan")
 
 
@@ -47,9 +44,10 @@ def _menu() -> Table:
     table.add_column()
     table.add_row("1", "Analyze a log file")
     table.add_row("2", "Open real-time dashboard")
-    table.add_row("3", "Run built-in demo analysis")
-    table.add_row("4", "System check")
-    table.add_row("5", "Show useful commands")
+    table.add_row("3", "Open multi-source live SOC")
+    table.add_row("4", "Run built-in demo analysis")
+    table.add_row("5", "System check")
+    table.add_row("6", "Show useful commands")
     table.add_row("Q", "Exit AegisLog")
     return table
 
@@ -58,7 +56,6 @@ def _resolve_demo() -> Path:
     bundled = Path.cwd() / "sample_logs" / "auth.log"
     if bundled.is_file():
         return bundled
-
     demo = config_dir() / "demo_auth.log"
     try:
         if not demo.exists() or demo.read_text(encoding="utf-8") != _DEMO_LOG:
@@ -69,23 +66,39 @@ def _resolve_demo() -> Path:
     return demo
 
 
-def _choose_log_file() -> Path | None:
-    raw = Prompt.ask("[bold]Enter log file path[/bold]").strip().strip('"').strip("'")
-    if not raw:
-        return None
-    path = Path(raw).expanduser()
+def _path(raw: str) -> Path | None:
+    path = Path(raw.strip().strip('"').strip("'")).expanduser()
     if not path.exists():
         console.print("[red]That path does not exist.[/red]")
         return None
     if path.is_dir():
-        console.print("[yellow]You selected a folder. Choose an actual log file such as auth.log, syslog, or app.log.[/yellow]")
+        console.print("[yellow]Choose an actual log file, not a folder.[/yellow]")
         return None
     return path
 
 
+def _choose_log_file() -> Path | None:
+    raw = Prompt.ask("[bold]Enter log file path[/bold]").strip()
+    return _path(raw) if raw else None
+
+
+def _choose_log_files() -> list[Path]:
+    raw = Prompt.ask("[bold]Enter 2+ log paths separated by semicolons[/bold]").strip()
+    paths: list[Path] = []
+    for item in raw.split(";"):
+        if not item.strip():
+            continue
+        path = _path(item)
+        if path is not None and path not in paths:
+            paths.append(path)
+    if len(paths) < 2:
+        console.print("[yellow]Multi-source monitoring needs at least two different log files.[/yellow]")
+        return []
+    return paths
+
+
 def _system_check() -> None:
     import platform
-
     table = Table(title="AegisLog system check")
     table.add_column("Check")
     table.add_column("Status")
@@ -95,6 +108,7 @@ def _system_check() -> None:
     table.add_row("Configuration", str(config_dir()))
     table.add_row("Local engine", "READY")
     table.add_row("Real-time monitor", "READY")
+    table.add_row("Multi-source correlation", "READY")
     console.print(table)
 
 
@@ -104,12 +118,10 @@ def _commands() -> None:
     table.add_column("Command", style="cyan")
     table.add_column("Purpose")
     table.add_row(executable, "Open this terminal control center")
-    table.add_row(f"{executable} live <file>", "Follow a growing log with the real-time dashboard")
-    table.add_row(f"{executable} live <file> --from-start", "Analyze existing lines, then continue monitoring")
+    table.add_row(f"{executable} live <file>", "Follow one growing log with the real-time dashboard")
+    table.add_row(f"{executable} live-multi <file1> <file2> ...", "Correlate multiple live logs in one terminal SOC")
     table.add_row(f"{executable} dashboard <file>", "Analyze one log and show the investigation dashboard")
-    table.add_row(f"{executable} analyze <file>", "Analyze a log with dashboard and local rule packs")
     table.add_row(f"{executable} stream <file>", "Run bounded-memory streaming analysis")
-    table.add_row(f"{executable} report", "Generate a report from stored analysis data")
     table.add_row(f"{executable} doctor", "Check the local AegisLog environment")
     console.print(table)
 
@@ -117,33 +129,23 @@ def _commands() -> None:
 def start() -> None:
     """Open the AegisLog one-terminal interactive control center."""
     while True:
-        _clear()
-        console.print(_header())
-        console.print(_menu())
-        console.print()
-        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "q", "Q"], default="1")
-
+        _clear(); console.print(_header()); console.print(_menu()); console.print()
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "6", "q", "Q"], default="1")
         if choice.lower() == "q":
-            console.print("[cyan]AegisLog closed safely.[/cyan]")
-            return
-
+            console.print("[cyan]AegisLog closed safely.[/cyan]"); return
         if choice == "1":
             path = _choose_log_file()
-            if path is not None:
-                console.print()
-                dashboard(path)
+            if path is not None: console.print(); dashboard(path)
         elif choice == "2":
             path = _choose_log_file()
-            if path is not None:
-                console.print()
-                live_dashboard(path)
+            if path is not None: console.print(); live_dashboard(path)
         elif choice == "3":
-            console.print()
-            dashboard(_resolve_demo())
+            paths = _choose_log_files()
+            if paths: console.print(); live_multi(paths)
         elif choice == "4":
-            _system_check()
+            console.print(); dashboard(_resolve_demo())
         elif choice == "5":
+            _system_check()
+        elif choice == "6":
             _commands()
-
-        console.print()
-        Prompt.ask("Press Enter to return to the AegisLog menu", default="")
+        console.print(); Prompt.ask("Press Enter to return to the AegisLog menu", default="")
