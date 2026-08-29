@@ -9,6 +9,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .investigation import InvestigationIncident, load_investigation
+from .mitre import map_findings
 
 console = Console()
 
@@ -19,28 +20,45 @@ def _incident_table(incidents: list[InvestigationIncident]) -> Table:
     table.add_column("Severity", width=10)
     table.add_column("Confidence", justify="right", width=12)
     table.add_column("Category", width=18)
+    table.add_column("ATT&CK", width=16)
     table.add_column("Signals", justify="right", width=8)
     table.add_column("Summary")
     for item in incidents:
-        table.add_row(item.id, item.severity, f"{item.confidence}%", item.category, str(len(item.findings)), Text(item.title))
+        techniques = map_findings(item.findings)
+        attack = ", ".join(t.id for t in techniques[:2]) or "-"
+        table.add_row(item.id, item.severity, f"{item.confidence}%", item.category, attack, str(len(item.findings)), Text(item.title))
     if not incidents:
-        table.add_row("-", "-", "-", "-", "0", "No correlated incidents detected")
+        table.add_row("-", "-", "-", "-", "-", "0", "No correlated incidents detected")
     return table
 
 
 def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
-    """List deterministic incident IDs and confidence scores for a log file."""
+    """List deterministic incident IDs, confidence scores and ATT&CK mappings for a log file."""
     _, items, _ = load_investigation(path)
     console.print(_incident_table(items))
     if items:
         console.print(f"[dim]Drill down with: AegisLog.exe investigate {path} {items[0].id}[/dim]")
 
 
+def _attack_table(incident: InvestigationIncident) -> Table:
+    table = Table(title="MITRE ATT&CK mapping", expand=True, show_lines=True)
+    table.add_column("Technique", width=14)
+    table.add_column("Tactic", width=22)
+    table.add_column("Confidence", justify="right", width=12)
+    table.add_column("Evidence")
+    techniques = map_findings(incident.findings)
+    for technique in techniques:
+        table.add_row(f"{technique.id} {technique.name}", technique.tactic, f"{technique.confidence}%", Text(technique.evidence))
+    if not techniques:
+        table.add_row("-", "-", "-", "No evidence-supported ATT&CK technique mapped")
+    return table
+
+
 def investigate(
     path: Path = typer.Argument(..., exists=True, dir_okay=False),
     incident_id: str = typer.Argument(..., help="Incident ID shown by the incidents command."),
 ) -> None:
-    """Open a detailed incident timeline, entities, evidence and confidence view."""
+    """Open a detailed incident timeline, entities, evidence, ATT&CK mapping and confidence view."""
     _, items, _ = load_investigation(path)
     wanted = incident_id.upper()
     incident = next((item for item in items if item.id.upper() == wanted), None)
@@ -59,6 +77,7 @@ def investigate(
     if not incident.entities:
         entities.add_row("No structured IP/user entity extracted")
     console.print(entities)
+    console.print(_attack_table(incident))
     timeline = Table(title="Attack / activity timeline", expand=True, show_lines=True)
     timeline.add_column("When", width=12)
     timeline.add_column("Service", width=16)
@@ -77,10 +96,29 @@ def investigate(
         evidence.add_row(finding.severity, Text(finding.title), Text(finding.evidence))
     console.print(evidence)
     console.print(Panel(
-        "Confidence estimates strength of the available log evidence; it is not proof of compromise. "
-        "Validate the timeline against host, identity, network and application context before taking action.",
+        "ATT&CK mappings are evidence-based analyst context, not proof that a specific adversary technique occurred. "
+        "Confidence estimates strength of available log evidence; validate against host, identity, network and application context before action.",
         title="Analyst guidance",
     ))
+
+
+def mitre(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
+    """Show evidence-supported MITRE ATT&CK techniques across detected incidents."""
+    _, incidents_list, _ = load_investigation(path)
+    table = Table(title="MITRE ATT&CK intelligence", expand=True, show_lines=True)
+    table.add_column("Incident", width=14)
+    table.add_column("Technique", width=24)
+    table.add_column("Tactic", width=22)
+    table.add_column("Confidence", justify="right", width=12)
+    table.add_column("Evidence")
+    rows = 0
+    for incident in incidents_list:
+        for technique in map_findings(incident.findings):
+            table.add_row(incident.id, f"{technique.id} {technique.name}", technique.tactic, f"{technique.confidence}%", Text(technique.evidence))
+            rows += 1
+    if not rows:
+        table.add_row("-", "-", "-", "-", "No evidence-supported ATT&CK mappings found")
+    console.print(table)
 
 
 def intel_entities(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
