@@ -16,19 +16,25 @@ SQLite incident/evidence index, drill-down and timeline, baseline comparison, HT
 Persisted hunting, defensive indicator extraction, declarative JSON rule packs, plugin-aware analysis, and expanded tests.
 
 ## V0.6 — Scale and correlation
-- multi-window behavioral profiling for level/source/time shifts
-- entity correlation across IP, host, user, service, and container evidence
-- bounded-memory streaming analysis for large files
-- correlation/streaming/behavior regression tests
-- CI lint scope focused on correctness errors while tests validate behavior
+Multi-window behavioral profiling, entity correlation across IP/host/user/service/container evidence, bounded-memory streaming analysis, and regression tests.
 
-## V0.7 — Planned release hardening
-- database schema migrations and richer evidence/entity indexing
-- expose entity graph, behavioral windows, and streaming mode throughout CLI/reporting
-- declarative parser extension interface
-- performance benchmarks and large-fixture tests
-- signed/reproducible release pipeline
-- stable configuration schema and migration policy
+## V0.7 — Release hardening
+- direct `stream`, `entities`, and `behavior` CLI commands
+- versioned SQLite schema migration framework
+- entity-index schema for future persisted correlation
+- bounded finding retention during streaming analysis
+- reproducible synthetic streaming benchmark harness
+- CLI-registration and migration regression tests
+- package entrypoint separated from the legacy command module for safer command growth
+
+## V0.8 — Planned release engineering
+- persist correlated entities into the entity index
+- configuration schema versioning and migration
+- declarative parser extensions
+- release artifact verification and checksums
+- signed tags / release attestations where supported
+- benchmark thresholds and large-fixture regression jobs
+- installation/update/uninstall lifecycle polish
 
 ## V1.0 target
 A stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collectors/parsers, persistent investigation state, strong tests, release artifacts, and clear operational limitations.
