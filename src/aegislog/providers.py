@@ -23,8 +23,8 @@ class ProviderError(RuntimeError):
 
 def _validate_url(url: str, allow_local: bool) -> str:
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ProviderError("provider URL must be HTTP(S)")
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+        raise ProviderError("provider URL must be HTTP(S) without embedded credentials")
     try:
         addresses = {ipaddress.ip_address(item[4][0]) for item in socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))}
     except (OSError, ValueError) as exc:
