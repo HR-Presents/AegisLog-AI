@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
+import shutil
 import subprocess  # nosec B404 - required for fixed, argument-list, read-only native collectors
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Callable
 
 
@@ -39,6 +42,18 @@ def _run(command: list[str], timeout: int = 15) -> str:
     return result.stdout
 
 
+def _windows_timestamp(value: object) -> str:
+    text = str(value or "").strip()
+    match = re.fullmatch(r"/Date\((-?\d+)(?:[+-]\d{4})?\)/", text)
+    if not match:
+        return text
+    try:
+        stamp = datetime.fromtimestamp(int(match.group(1)) / 1000, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return text
+    return stamp.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 def windows_event_logs(limit: int = 300, channel: str = "System") -> list[str]:
     if os.name != "nt":
         raise CollectorError("Windows Event Logs are only available on Windows")
@@ -50,7 +65,20 @@ def windows_event_logs(limit: int = 300, channel: str = "System") -> list[str]:
         f"Get-WinEvent -LogName '{channel}' -MaxEvents {count} -ErrorAction Stop | "
         "Select-Object TimeCreated,Id,LevelDisplayName,ProviderName,Message | ConvertTo-Json -Compress"
     )
-    raw = _run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script], timeout=30).strip()
+    try:
+        raw = _run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script], timeout=30).strip()
+    except CollectorError as exc:
+        detail = str(exc)
+        if channel == "Security" and (
+            "UnauthorizedAccessException" in detail
+            or "unauthorized operation" in detail.lower()
+            or "access is denied" in detail.lower()
+        ):
+            raise CollectorError(
+                "Windows Security Event Log access was denied. Reopen AegisLog with 'Run as administrator' "
+                "only when you want to inspect this protected channel, then retry. No system settings were changed."
+            ) from exc
+        raise
     if not raw:
         return []
     try:
@@ -62,7 +90,7 @@ def windows_event_logs(limit: int = 300, channel: str = "System") -> list[str]:
     for item in records:
         if not isinstance(item, dict):
             continue
-        timestamp = str(item.get("TimeCreated") or "")
+        timestamp = _windows_timestamp(item.get("TimeCreated"))
         level = str(item.get("LevelDisplayName") or "INFO").upper()
         provider = str(item.get("ProviderName") or "windows")
         event_id = str(item.get("Id") or "")
@@ -88,12 +116,22 @@ def docker_logs(container: str, limit: int = 300) -> list[str]:
     return [f"docker/{name}: {line}\n" for line in raw.splitlines() if line.strip()]
 
 
+def _docker_status() -> NativeSource:
+    if shutil.which("docker") is None:
+        return NativeSource("docker", "Docker logs", False, "Docker CLI not found")
+    try:
+        _run(["docker", "version", "--format", "{{.Server.Version}}"], timeout=5)
+    except CollectorError:
+        return NativeSource("docker", "Docker logs", False, "Docker CLI found; engine unavailable or access denied")
+    return NativeSource("docker", "Docker logs", True, "Docker CLI and engine accessible")
+
+
 def source_status() -> list[NativeSource]:
     system = platform.system()
     return [
         NativeSource("windows", "Windows Event Logs", system == "Windows", "System/Application/Security channels"),
         NativeSource("journald", "Linux journald", system == "Linux", "journalctl read-only snapshot"),
-        NativeSource("docker", "Docker logs", True, "requires local Docker CLI and container access"),
+        _docker_status(),
     ]
 
 
