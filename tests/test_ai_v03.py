@@ -36,3 +36,11 @@ def test_local_adapter_allows_loopback():
     fake = [(2, 1, 6, "", ("127.0.0.1", 11434))]
     with patch("aegislog.providers.socket.getaddrinfo", return_value=fake):
         assert _validate_url("http://127.0.0.1:11434/api/generate", allow_local=True).startswith("http://127.0.0.1")
+
+
+def test_provider_url_rejects_embedded_credentials():
+    try:
+        _validate_url("https://user:pass@example.com/v1", allow_local=False)
+    except ProviderError:
+        return
+    raise AssertionError("embedded provider credentials should be rejected")
