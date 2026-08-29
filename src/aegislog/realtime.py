@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 from collections import Counter, deque
@@ -19,11 +20,14 @@ from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
 
+_PREFIX_BYTES = 128
+
 
 @dataclass(frozen=True)
 class FileCursor:
     offset: int
     identity: tuple[int, int]
+    prefix_digest: str
 
 
 def _file_identity(path: Path) -> tuple[int, int]:
@@ -31,8 +35,18 @@ def _file_identity(path: Path) -> tuple[int, int]:
     return (int(stat.st_dev), int(stat.st_ino))
 
 
+def _prefix_digest(path: Path, length: int) -> str:
+    if length <= 0:
+        return ""
+    with path.open("rb") as handle:
+        data = handle.read(min(length, _PREFIX_BYTES))
+    return hashlib.sha256(data).hexdigest()
+
+
 def initial_cursor(path: Path, from_start: bool = False) -> FileCursor:
-    return FileCursor(0 if from_start else path.stat().st_size, _file_identity(path))
+    size = path.stat().st_size
+    offset = 0 if from_start else size
+    return FileCursor(offset, _file_identity(path), _prefix_digest(path, offset))
 
 
 @dataclass
@@ -204,19 +218,22 @@ def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], Fi
     """Read appended UTF-8 text using byte offsets and detect truncation or replacement."""
     identity = _file_identity(path)
     size = path.stat().st_size
+    current_prefix = _prefix_digest(path, cursor.offset)
     offset = cursor.offset
-    if identity != cursor.identity or size < offset:
+    replaced = identity != cursor.identity or (cursor.prefix_digest and current_prefix != cursor.prefix_digest)
+    if replaced or size < offset:
         offset = 0
     with path.open("rb") as handle:
         handle.seek(offset, os.SEEK_SET)
         data = handle.read()
         new_offset = handle.tell()
     text = data.decode("utf-8", errors="replace")
-    return text.splitlines(keepends=True), FileCursor(new_offset, identity)
+    new_prefix = _prefix_digest(path, new_offset)
+    return text.splitlines(keepends=True), FileCursor(new_offset, identity, new_prefix)
 
 
 def read_new_lines(path: Path, offset: int) -> tuple[list[str], int]:
     """Backward-compatible byte-safe appended-line reader using a numeric offset."""
-    identity = _file_identity(path)
-    lines, cursor = read_new_lines_cursor(path, FileCursor(offset, identity))
+    cursor = FileCursor(offset, _file_identity(path), _prefix_digest(path, offset))
+    lines, cursor = read_new_lines_cursor(path, cursor)
     return lines, cursor.offset
