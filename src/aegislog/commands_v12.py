@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -14,6 +15,15 @@ from .config import config_dir
 
 console = Console()
 
+_DEMO_LOG = """Aug 29 12:01:01 demo sshd[1001]: Failed password for root from 203.0.113.7 port 2201 ssh2
+Aug 29 12:01:02 demo sshd[1002]: Failed password for root from 203.0.113.7 port 2202 ssh2
+Aug 29 12:01:03 demo sshd[1003]: Failed password for root from 203.0.113.7 port 2203 ssh2
+Aug 29 12:01:04 demo sshd[1004]: Failed password for admin from 203.0.113.7 port 2204 ssh2
+Aug 29 12:01:05 demo sshd[1005]: Failed password for admin from 203.0.113.7 port 2205 ssh2
+Aug 29 12:01:06 demo sshd[1006]: Failed password for ubuntu from 203.0.113.7 port 2206 ssh2
+Aug 29 12:02:10 demo api[212]: ERROR database connection timeout
+"""
+
 
 def _clear() -> None:
     if os.environ.get("AEGISLOG_NO_CLEAR") != "1":
@@ -22,7 +32,7 @@ def _clear() -> None:
 
 def _header() -> Panel:
     title = Text("AEGISLOG AI", style="bold cyan")
-    subtitle = Text("One-terminal defensive log intelligence", style="dim")
+    subtitle = Text("Single-file defensive log intelligence", style="dim")
     body = Text()
     body.append_text(title)
     body.append("\n")
@@ -35,22 +45,26 @@ def _menu() -> Table:
     table.add_column(style="bold cyan", width=4)
     table.add_column()
     table.add_row("1", "Analyze a log file")
-    table.add_row("2", "Analyze bundled demo log")
+    table.add_row("2", "Run built-in demo analysis")
     table.add_row("3", "System check")
     table.add_row("4", "Show useful commands")
     table.add_row("Q", "Exit AegisLog")
     return table
 
 
-def _resolve_demo() -> Path | None:
-    candidates = [
-        Path.cwd() / "sample_logs" / "auth.log",
-        Path.cwd().parent / "sample_logs" / "auth.log",
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return None
+def _resolve_demo() -> Path:
+    bundled = Path.cwd() / "sample_logs" / "auth.log"
+    if bundled.is_file():
+        return bundled
+
+    demo = config_dir() / "demo_auth.log"
+    try:
+        if not demo.exists() or demo.read_text(encoding="utf-8") != _DEMO_LOG:
+            demo.write_text(_DEMO_LOG, encoding="utf-8")
+    except OSError:
+        demo = Path.cwd() / "aegislog_demo_auth.log"
+        demo.write_text(_DEMO_LOG, encoding="utf-8")
+    return demo
 
 
 def _choose_log_file() -> Path | None:
@@ -69,12 +83,12 @@ def _choose_log_file() -> Path | None:
 
 def _system_check() -> None:
     import platform
-    import sys
 
     table = Table(title="AegisLog system check")
     table.add_column("Check")
     table.add_column("Status")
-    table.add_row("Python", sys.version.split()[0])
+    runtime = "Bundled Windows runtime" if getattr(sys, "frozen", False) else f"Python {sys.version.split()[0]}"
+    table.add_row("Runtime", runtime)
     table.add_row("Platform", platform.platform())
     table.add_row("Configuration", str(config_dir()))
     table.add_row("Local engine", "READY")
@@ -82,15 +96,16 @@ def _system_check() -> None:
 
 
 def _commands() -> None:
+    executable = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
     table = Table(title="Useful commands")
     table.add_column("Command", style="cyan")
     table.add_column("Purpose")
-    table.add_row("aegislog start", "Open this terminal control center")
-    table.add_row("aegislog dashboard <file>", "Analyze one log and show the investigation dashboard")
-    table.add_row("aegislog analyze <file>", "Analyze a log with dashboard and local rule packs")
-    table.add_row("aegislog stream <file>", "Run bounded-memory streaming analysis")
-    table.add_row("aegislog report", "Generate a report from stored analysis data")
-    table.add_row("aegislog doctor", "Check the local AegisLog environment")
+    table.add_row(executable, "Open this terminal control center")
+    table.add_row(f"{executable} dashboard <file>", "Analyze one log and show the investigation dashboard")
+    table.add_row(f"{executable} analyze <file>", "Analyze a log with dashboard and local rule packs")
+    table.add_row(f"{executable} stream <file>", "Run bounded-memory streaming analysis")
+    table.add_row(f"{executable} report", "Generate a report from stored analysis data")
+    table.add_row(f"{executable} doctor", "Check the local AegisLog environment")
     console.print(table)
 
 
@@ -113,12 +128,8 @@ def start() -> None:
                 console.print()
                 dashboard(path)
         elif choice == "2":
-            path = _resolve_demo()
-            if path is None:
-                console.print("[yellow]The bundled sample log could not be found. Choose option 1 and select a log file manually.[/yellow]")
-            else:
-                console.print()
-                dashboard(path)
+            console.print()
+            dashboard(_resolve_demo())
         elif choice == "3":
             _system_check()
         elif choice == "4":
