@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.live import Live
 
 from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
-from .watch_profiles import get_profile, profile_choices
+from .watch_profiles import get_profile
 
 console = Console()
 
