@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from aegislog.entry import app
 from aegislog.migrations import LATEST_SCHEMA, migrate
 from aegislog.streaming import analyze_stream
@@ -12,6 +14,14 @@ def test_schema_migration_reaches_latest(tmp_path: Path):
     assert migrate(db) == LATEST_SCHEMA
     row = db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()
     assert row[0] == str(LATEST_SCHEMA)
+
+
+def test_future_schema_is_rejected(tmp_path: Path):
+    db = sqlite3.connect(tmp_path / "future.db")
+    db.execute("CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    db.execute("INSERT INTO schema_meta(key, value) VALUES('schema_version', '999')")
+    with pytest.raises(RuntimeError):
+        migrate(db)
 
 
 def test_v07_commands_registered():
