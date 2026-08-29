@@ -45,7 +45,19 @@ def add_incidents(source: str, recorded_at: str, incidents: list, path: Path | N
     with connect(path) as db:
         db.executemany(
             "INSERT INTO incidents (external_id, recorded_at, source, severity, category, title, event_count, evidence_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [(item.id, recorded_at, source, item.severity, item.category, item.title, item.count, json.dumps(list(item.evidence))) for item in incidents],
+            [
+                (
+                    item.id,
+                    recorded_at,
+                    source,
+                    item.severity,
+                    item.category,
+                    item.title,
+                    item.count,
+                    json.dumps(list(item.evidence)),
+                )
+                for item in incidents
+            ],
         )
         return len(incidents)
 
@@ -74,4 +86,10 @@ def get_incident(row_id: int, path: Path | None = None) -> dict | None:
 
 def timeline(limit: int = 100, path: Path | None = None) -> list[dict]:
     with connect(path) as db:
-        return [dict(row) for row in db.execute("SELECT id, recorded_at, source, severity, category, title, event_count FROM incidents ORDER BY recorded_at DESC, id DESC LIMIT ?", (max(1, min(limit, 1000)),)).fetchall()]
+        return [
+            dict(row)
+            for row in db.execute(
+                "SELECT id, recorded_at, source, severity, category, title, event_count FROM incidents ORDER BY recorded_at DESC, id DESC LIMIT ?",
+                (max(1, min(limit, 1000)),),
+            ).fetchall()
+        ]
