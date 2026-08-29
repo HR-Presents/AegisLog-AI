@@ -16,14 +16,8 @@ from . import __version__
 from .anomaly import score_events
 from .engine import Finding, analyze_lines
 from .incidents import correlate
-from .parsers import parse_line
-from .realtime import read_new_lines
-
-
-@dataclass(frozen=True)
-class SourceCursor:
-    path: Path
-    offset: int = 0
+from .parsers import Event, parse_line
+from .realtime import FileCursor, initial_cursor, read_new_lines_cursor
 
 
 @dataclass(frozen=True)
@@ -41,14 +35,17 @@ class MultiSourceState:
     sources: tuple[Path, ...]
     window_size: int = 1000
     trend_seconds: int = 60
+    alert_ttl_seconds: int = 300
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
     _lines: deque[tuple[str, str]] = field(default_factory=deque)
     _arrivals: deque[float] = field(default_factory=deque)
     _alerts: deque[LiveAlert] = field(default_factory=lambda: deque(maxlen=15))
-    _seen: set[tuple[str, str, str, str]] = field(default_factory=set)
+    _seen: dict[tuple[str, str, str, str], float] = field(default_factory=dict)
     _sequence: int = 0
+    _events_cache: list[Event] = field(default_factory=list)
+    _findings_cache: list[Finding] = field(default_factory=list)
     source_counts: Counter[str] = field(default_factory=Counter)
 
     def __post_init__(self) -> None:
@@ -68,7 +65,8 @@ class MultiSourceState:
             self.total_bytes += len(line.encode("utf-8", errors="replace"))
             self.source_counts[label] += 1
         self._trim_arrivals(stamp)
-        self._refresh_alerts(label)
+        self._refresh_snapshot()
+        self._refresh_alerts(stamp)
         return len(lines)
 
     def _trim_arrivals(self, now: float) -> None:
@@ -76,28 +74,61 @@ class MultiSourceState:
         while self._arrivals and self._arrivals[0] < cutoff:
             self._arrivals.popleft()
 
-    def _refresh_alerts(self, source: str) -> None:
-        for finding in self.findings:
+    def _refresh_snapshot(self) -> None:
+        raw = [line for _, line in self._lines]
+        self._events_cache = [parse_line(line) for line in raw]
+        self._findings_cache = analyze_lines(raw)
+
+    def _expire_seen(self, now: float) -> None:
+        cutoff = now - max(self.alert_ttl_seconds, 1)
+        expired = [fp for fp, seen_at in self._seen.items() if seen_at < cutoff]
+        for fp in expired:
+            self._seen.pop(fp, None)
+
+    def _source_for_finding(self, finding: Finding) -> str:
+        evidence = finding.evidence.strip().lower()
+        title = finding.title.strip().lower()
+        for label, line in reversed(self._lines):
+            candidate = line.lower()
+            if evidence and evidence in candidate:
+                return label
+            if title and title in candidate:
+                return label
+        return "correlated"
+
+    def _refresh_alerts(self, now: float) -> None:
+        self._expire_seen(now)
+        for finding in self._findings_cache:
             fp = (finding.severity, finding.category, finding.title, finding.evidence)
-            if fp in self._seen:
-                continue
-            self._seen.add(fp)
-            self._sequence += 1
-            self._alerts.appendleft(
-                LiveAlert(self._sequence, finding.severity, finding.category, source, finding.title, finding.evidence)
-            )
+            if fp not in self._seen:
+                self._sequence += 1
+                self._alerts.appendleft(
+                    LiveAlert(
+                        self._sequence,
+                        finding.severity,
+                        finding.category,
+                        self._source_for_finding(finding),
+                        finding.title,
+                        finding.evidence,
+                    )
+                )
+            self._seen[fp] = now
 
     @property
     def raw_lines(self) -> list[str]:
         return [line for _, line in self._lines]
 
     @property
-    def findings(self) -> list[Finding]:
-        return analyze_lines(self.raw_lines)
+    def rolling_count(self) -> int:
+        return len(self._lines)
 
     @property
-    def events(self):
-        return [parse_line(line) for line in self.raw_lines]
+    def findings(self) -> list[Finding]:
+        return list(self._findings_cache)
+
+    @property
+    def events(self) -> list[Event]:
+        return list(self._events_cache)
 
     @property
     def alerts(self) -> tuple[LiveAlert, ...]:
@@ -113,21 +144,29 @@ class MultiSourceState:
         return self.total_lines / max(time.monotonic() - self.started_at, 0.001)
 
 
-def initial_offsets(paths: tuple[Path, ...], from_start: bool) -> dict[Path, int]:
-    return {path: 0 if from_start else path.stat().st_size for path in paths}
+def initial_cursors(paths: tuple[Path, ...], from_start: bool) -> dict[Path, FileCursor]:
+    return {path: initial_cursor(path, from_start=from_start) for path in paths}
 
 
-def poll_sources(paths: tuple[Path, ...], offsets: dict[Path, int]) -> tuple[list[tuple[Path, list[str]]], dict[Path, int]]:
+def poll_sources(paths: tuple[Path, ...], cursors: dict[Path, FileCursor]) -> tuple[list[tuple[Path, list[str]]], dict[Path, FileCursor]]:
     batches: list[tuple[Path, list[str]]] = []
-    updated = dict(offsets)
+    updated = dict(cursors)
     for path in paths:
         if not path.exists() or not path.is_file():
             continue
-        lines, offset = read_new_lines(path, updated.get(path, 0))
-        updated[path] = offset
+        cursor = updated.get(path)
+        if cursor is None:
+            cursor = initial_cursor(path, from_start=True)
+        lines, cursor = read_new_lines_cursor(path, cursor)
+        updated[path] = cursor
         if lines:
             batches.append((path, lines))
     return batches, updated
+
+
+def initial_offsets(paths: tuple[Path, ...], from_start: bool) -> dict[Path, int]:
+    """Compatibility helper retained for callers that only need starting byte offsets."""
+    return {path: 0 if from_start else path.stat().st_size for path in paths}
 
 
 def _risk(counts: Counter[str]) -> str:
@@ -189,7 +228,7 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     )
     metrics = Columns(
         [
-            _metric("Sources", str(len(state.sources)), f"{len(state._lines):,}/{state.window_size:,} rolling lines"),
+            _metric("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines"),
             _metric("Events", f"{state.total_lines:,}"),
             _metric("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s"),
             _metric("Findings", str(len(findings))),
