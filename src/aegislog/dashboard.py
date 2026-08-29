@@ -48,15 +48,9 @@ def analyze_dashboard(path: Path) -> DashboardData:
     severity_counts = Counter(item.severity for item in findings)
 
     return DashboardData(
-        source=str(path),
-        lines=len(lines),
-        findings=tuple(findings),
-        anomalies=tuple(anomalies),
-        incidents=tuple(incidents),
-        levels=dict(level_counts),
-        services=dict(service_counts),
-        categories=dict(category_counts),
-        severities=dict(severity_counts),
+        source=str(path), lines=len(lines), findings=tuple(findings), anomalies=tuple(anomalies),
+        incidents=tuple(incidents), levels=dict(level_counts), services=dict(service_counts),
+        categories=dict(category_counts), severities=dict(severity_counts),
     )
 
 
@@ -90,14 +84,15 @@ def _top_table(title: str, values: dict[str, int], limit: int = 8) -> Table:
 
 def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     table = Table(title="Correlated incidents", expand=True)
+    table.add_column("Incident ID", width=16)
     table.add_column("Severity", width=10)
     table.add_column("Category", width=18)
     table.add_column("Signals", justify="right", width=7)
     table.add_column("Incident summary")
     for item in data.incidents[:limit]:
-        table.add_row(item.severity, Text(item.category), str(item.count), Text(item.title))
+        table.add_row(f"INC-{item.id.upper()[:8]}", item.severity, Text(item.category), str(item.count), Text(item.title))
     if not data.incidents:
-        table.add_row("-", "-", "0", "No correlated incidents")
+        table.add_row("-", "-", "-", "0", "No correlated incidents")
     return table
 
 
@@ -136,44 +131,36 @@ def _risk_state(data: DashboardData) -> str:
     return "CLEAR"
 
 
+def _next_steps(data: DashboardData) -> Panel:
+    command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
+    text = Text("Signals are investigative evidence, not proof of compromise. ")
+    if data.incidents:
+        incident_id = f"INC-{data.incidents[0].id.upper()[:8]}"
+        text.append(
+            f"Start with `{command} incidents <file>`, then use `{command} investigate <file> {incident_id}` "
+            f"or `{command} explain <file> {incident_id}` for the incident shown above. "
+        )
+    else:
+        text.append(f"Use `{command} incidents <file>` to review correlated findings. ")
+    text.append(f"Additional local review is available with `{command} mitre <file>` and `{command} intel-entities <file>`.")
+    return Panel(text, title="Next steps")
+
+
 def render_dashboard(data: DashboardData) -> RenderableType:
     """Return a rich terminal dashboard containing the full investigation summary."""
     critical = data.severities.get("CRITICAL", 0)
     high = data.severities.get("HIGH", 0)
     medium = data.severities.get("MEDIUM", 0)
     risk = _risk_state(data)
-
-    header = Panel(
-        Align.center(Text(f"AEGISLOG AI  v{__version__}\n{data.source}", style="bold")),
-        subtitle="Defensive log intelligence • local analysis dashboard",
-    )
-    metrics = Columns(
-        [
-            _metric("Lines analyzed", f"{data.lines:,}"),
-            _metric("Findings", str(len(data.findings)), f"{critical} critical • {high} high • {medium} medium"),
-            _metric("Incidents", str(len(data.incidents))),
-            _metric("Anomalies", str(len(data.anomalies))),
-            _metric("Risk state", risk),
-        ],
-        equal=True,
-        expand=True,
-    )
-    overview = Columns(
-        [
-            _severity_table(data),
-            _top_table("Finding categories", data.categories),
-            _top_table("Parsed log levels", data.levels),
-            _top_table("Top services", data.services),
-        ],
-        equal=True,
-        expand=True,
-    )
-    command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
-    footer = Panel(
-        Text(
-            f"Signals are investigative evidence, not proof of compromise. Continue with `{command} incident`, "
-            f"`{command} hunt`, `{command} entity`, or `{command} report` for deeper review."
-        ),
-        title="Next steps",
-    )
-    return Group(header, metrics, overview, _incident_table(data), _anomaly_table(data), _finding_table(data), footer)
+    header = Panel(Align.center(Text(f"AEGISLOG AI  v{__version__}\n{data.source}", style="bold")), subtitle="Defensive log intelligence • local analysis dashboard")
+    metrics = Columns([
+        _metric("Lines analyzed", f"{data.lines:,}"),
+        _metric("Findings", str(len(data.findings)), f"{critical} critical • {high} high • {medium} medium"),
+        _metric("Incidents", str(len(data.incidents))), _metric("Anomalies", str(len(data.anomalies))),
+        _metric("Risk state", risk),
+    ], equal=True, expand=True)
+    overview = Columns([
+        _severity_table(data), _top_table("Finding categories", data.categories),
+        _top_table("Parsed log levels", data.levels), _top_table("Top services", data.services),
+    ], equal=True, expand=True)
+    return Group(header, metrics, overview, _incident_table(data), _anomaly_table(data), _finding_table(data), _next_steps(data))
