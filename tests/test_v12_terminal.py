@@ -12,7 +12,8 @@ def test_start_command_is_registered() -> None:
 
 
 def test_choose_log_file_rejects_directory(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr("aegislog.commands_v12.Prompt.ask", lambda *args, **kwargs: str(tmp_path))
+    answers = iter([str(tmp_path), "back"])
+    monkeypatch.setattr("aegislog.commands_v12.Prompt.ask", lambda *args, **kwargs: next(answers))
     assert _choose_log_file() is None
 
 
