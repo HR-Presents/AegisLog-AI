@@ -1,27 +1,35 @@
 # Roadmap
 
-## V0.2 — intelligence foundation
+## V0.1 — Foundation
 
-Structured parsing, live watch, local anomaly scoring, incident correlation, local question-driven investigation, configuration, install helpers, security policy, and CI coverage.
+Installable terminal CLI, deterministic security/error rules, secret redaction, JSON reporting, initial CI and tests.
 
-## V0.3 — provider and telemetry adapters
+## V0.2 — Intelligence layer
 
-- optional remote AI provider adapter with explicit opt-in and redacted/minimized context
-- local-model adapter
-- journald command adapter
-- Docker/container log adapter
-- Nginx/Apache-specific normalization
-- configurable detection thresholds and allowlists
-- persisted incident store
+Structured generic/syslog/journald/web parsing, live file watch, lightweight anomaly scoring, incident correlation, local question-driven investigation, and security/privacy documentation.
 
-## V0.4 — analyst workflow
+## V0.3 — AI and collection layer
 
-- incident detail and timeline commands
-- baseline comparison across time windows
-- richer explainability and confidence metadata
-- SARIF/JSONL export
-- plugin interface for parsers and rules
+- optional OpenAI-compatible provider adapter
+- explicit local Ollama adapter
+- prompt-injection boundary for untrusted telemetry
+- remote provider private-network protection
+- bounded journald collector
+- bounded Docker logs collector
+- persistent incident history
+- AI-provider fallback to local analysis
 
-## V1.0 — stable terminal platform
+## V0.4 — Planned analyst workflow
 
-Stable CLI/API contracts, packaging/release automation, expanded test corpus, documented threat model, performance limits, and upgrade/migration guarantees.
+- richer statistical baselines over time windows
+- SQLite-backed incident/evidence index
+- incident timeline drill-down
+- pluggable parser/rule packs
+- richer Docker/systemd metadata correlation
+- analyst-ready HTML/Markdown reports
+- performance work for large files and streaming workloads
+- signed/reproducible release pipeline
+
+## V1.0 target
+
+A stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collectors/parsers, persistent investigation state, strong tests, release artifacts, and clear operational limitations.
