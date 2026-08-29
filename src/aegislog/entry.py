@@ -8,6 +8,7 @@ from .commands_v12 import start
 from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
 from .commands_v15 import incidents, intel_entities, investigate
+from .commands_v16 import case_history, case_show, save_investigation
 
 replace_analyze_command(app)
 app.command("start")(start)
@@ -17,6 +18,9 @@ app.command("live-multi")(live_multi)
 app.command("incidents")(incidents)
 app.command("investigate")(investigate)
 app.command("intel-entities")(intel_entities)
+app.command("save-investigation")(save_investigation)
+app.command("case-history")(case_history)
+app.command("case-show")(case_show)
 app.command("stream")(stream)
 app.command("entities")(entities)
 app.command("behavior")(behavior)
