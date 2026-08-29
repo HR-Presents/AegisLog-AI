@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import platform
-import subprocess
+import subprocess  # nosec B404 - required for fixed, argument-list, read-only native collectors
 from dataclasses import dataclass
 from typing import Callable
 
@@ -22,7 +22,7 @@ class NativeSource:
 
 def _run(command: list[str], timeout: int = 15) -> str:
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 - shell is never used; commands are constructed as argument lists
             command,
             capture_output=True,
             text=True,
