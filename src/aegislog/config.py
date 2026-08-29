@@ -8,6 +8,12 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 DEFAULTS = {"ai_provider": "none", "model": "", "redact": True, "max_ai_events": 80}
 
 
+def config_dir() -> Path:
+    """Return the AegisLog state/config directory, creating it when needed."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    return CONFIG_DIR
+
+
 def load_config() -> dict:
     if not CONFIG_FILE.exists():
         return DEFAULTS.copy()
@@ -19,6 +25,6 @@ def load_config() -> dict:
 
 
 def save_config(data: dict) -> Path:
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    config_dir()
     CONFIG_FILE.write_text(json.dumps({**DEFAULTS, **data}, indent=2), encoding="utf-8")
     return CONFIG_FILE
