@@ -17,7 +17,7 @@ from .anomaly import score_events
 from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
-from .realtime import FileCursor, initial_cursor, read_new_lines_cursor
+from .realtime import FileCursor, initial_cursor, read_new_lines, read_new_lines_cursor
 
 
 @dataclass(frozen=True)
@@ -148,17 +148,25 @@ def initial_cursors(paths: tuple[Path, ...], from_start: bool) -> dict[Path, Fil
     return {path: initial_cursor(path, from_start=from_start) for path in paths}
 
 
-def poll_sources(paths: tuple[Path, ...], cursors: dict[Path, FileCursor]) -> tuple[list[tuple[Path, list[str]]], dict[Path, FileCursor]]:
+def poll_sources(
+    paths: tuple[Path, ...], cursors: dict[Path, FileCursor] | dict[Path, int]
+) -> tuple[list[tuple[Path, list[str]]], dict[Path, FileCursor] | dict[Path, int]]:
     batches: list[tuple[Path, list[str]]] = []
     updated = dict(cursors)
+    legacy = all(isinstance(value, int) for value in updated.values())
     for path in paths:
         if not path.exists() or not path.is_file():
             continue
-        cursor = updated.get(path)
-        if cursor is None:
-            cursor = initial_cursor(path, from_start=True)
-        lines, cursor = read_new_lines_cursor(path, cursor)
-        updated[path] = cursor
+        if legacy:
+            offset = int(updated.get(path, 0))
+            lines, offset = read_new_lines(path, offset)
+            updated[path] = offset
+        else:
+            cursor = updated.get(path)
+            if not isinstance(cursor, FileCursor):
+                cursor = initial_cursor(path, from_start=True)
+            lines, cursor = read_new_lines_cursor(path, cursor)
+            updated[path] = cursor
         if lines:
             batches.append((path, lines))
     return batches, updated
