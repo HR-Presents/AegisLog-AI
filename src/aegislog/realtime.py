@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from collections import Counter, deque
 from dataclasses import dataclass, field
@@ -19,47 +20,87 @@ from .incidents import correlate
 from .parsers import Event, parse_line
 
 
+@dataclass(frozen=True)
+class FileCursor:
+    offset: int
+    identity: tuple[int, int, int]
+
+
+def _file_identity(path: Path) -> tuple[int, int, int]:
+    stat = path.stat()
+    return (int(stat.st_dev), int(stat.st_ino), int(stat.st_ctime_ns))
+
+
+def initial_cursor(path: Path, from_start: bool = False) -> FileCursor:
+    return FileCursor(0 if from_start else path.stat().st_size, _file_identity(path))
+
+
 @dataclass
 class RealtimeState:
     source: str
     window_size: int = 500
+    alert_ttl_seconds: int = 300
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
     _lines: deque[str] = field(default_factory=deque)
     _recent_findings: deque[Finding] = field(default_factory=lambda: deque(maxlen=12))
-    _seen_fingerprints: set[tuple[str, str, str, str]] = field(default_factory=set)
+    _seen_fingerprints: dict[tuple[str, str, str, str], float] = field(default_factory=dict)
+    _events_cache: list[Event] = field(default_factory=list)
+    _findings_cache: list[Finding] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.window_size < 20:
             raise ValueError("window_size must be at least 20")
         self._lines = deque(self._lines, maxlen=self.window_size)
 
-    def ingest(self, lines: list[str]) -> int:
+    def ingest(self, lines: list[str], now: float | None = None) -> int:
         if not lines:
             return 0
+        stamp = time.monotonic() if now is None else now
         for line in lines:
             self._lines.append(line)
             self.total_lines += 1
             self.total_bytes += len(line.encode("utf-8", errors="replace"))
-        for finding in analyze_lines(list(self._lines)):
+        self._refresh_snapshot()
+        self._expire_seen(stamp)
+        for finding in self._findings_cache:
             fp = (finding.severity, finding.category, finding.title, finding.evidence)
             if fp not in self._seen_fingerprints:
                 self._recent_findings.appendleft(finding)
-                self._seen_fingerprints.add(fp)
+            self._seen_fingerprints[fp] = stamp
         return len(lines)
+
+    def _refresh_snapshot(self) -> None:
+        raw = list(self._lines)
+        self._events_cache = [parse_line(line) for line in raw]
+        self._findings_cache = analyze_lines(raw)
+
+    def _expire_seen(self, now: float) -> None:
+        cutoff = now - max(self.alert_ttl_seconds, 1)
+        expired = [fp for fp, seen_at in self._seen_fingerprints.items() if seen_at < cutoff]
+        for fp in expired:
+            self._seen_fingerprints.pop(fp, None)
 
     @property
     def lines(self) -> list[str]:
         return list(self._lines)
 
     @property
+    def rolling_count(self) -> int:
+        return len(self._lines)
+
+    @property
+    def recent_findings(self) -> tuple[Finding, ...]:
+        return tuple(self._recent_findings)
+
+    @property
     def events(self) -> list[Event]:
-        return [parse_line(line) for line in self._lines]
+        return list(self._events_cache)
 
     @property
     def findings(self) -> list[Finding]:
-        return analyze_lines(self.lines)
+        return list(self._findings_cache)
 
     @property
     def elapsed(self) -> float:
@@ -130,7 +171,7 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     )
     metrics = Columns(
         [
-            _metric("Lines received", f"{state.total_lines:,}", f"window {len(state.lines):,}/{state.window_size:,}"),
+            _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
             _metric("Event rate", f"{state.lines_per_second:.1f}/s"),
             _metric("Active findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium"),
             _metric("Incidents", str(len(incidents))),
@@ -156,16 +197,26 @@ def render_realtime(state: RealtimeState) -> RenderableType:
         ),
         title="Live status",
     )
-    return Group(header, metrics, overview, _recent_table(list(state._recent_findings)), status)
+    return Group(header, metrics, overview, _recent_table(list(state.recent_findings)), status)
+
+
+def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], FileCursor]:
+    """Read appended UTF-8 text using byte offsets and detect truncation or replacement."""
+    identity = _file_identity(path)
+    size = path.stat().st_size
+    offset = cursor.offset
+    if identity != cursor.identity or size < offset:
+        offset = 0
+    with path.open("rb") as handle:
+        handle.seek(offset, os.SEEK_SET)
+        data = handle.read()
+        new_offset = handle.tell()
+    text = data.decode("utf-8", errors="replace")
+    return text.splitlines(keepends=True), FileCursor(new_offset, identity)
 
 
 def read_new_lines(path: Path, offset: int) -> tuple[list[str], int]:
-    """Read only lines appended since offset; recover safely after truncation."""
-    size = path.stat().st_size
-    if size < offset:
-        offset = 0
-    with path.open("r", encoding="utf-8", errors="replace") as handle:
-        handle.seek(offset)
-        lines = handle.readlines()
-        new_offset = handle.tell()
-    return lines, new_offset
+    """Backward-compatible byte-safe appended-line reader using a numeric offset."""
+    identity = _file_identity(path)
+    lines, cursor = read_new_lines_cursor(path, FileCursor(offset, identity))
+    return lines, cursor.offset
