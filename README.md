@@ -1,68 +1,80 @@
 # AegisLog AI
 
-**AI-ready defensive log intelligence for the terminal.**
+**Terminal-first defensive log intelligence with optional AI investigation.**
 
-AegisLog AI is an installable CLI for analyzing Linux, server, web, authentication, and application logs. The first engine combines deterministic security/error detection, repeated-authentication correlation, severity classification, sensitive-value redaction, readable terminal output, and JSON reporting. It works locally without sending logs to an AI provider.
+AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using local deterministic detections, anomaly scoring, incident correlation, safe collection, and optional LLM-assisted explanation. Local analysis remains available without any AI service.
 
-> Status: early V0.1 foundation. Detection findings are investigative signals, not proof of compromise.
-
-## Install from source
+## Quick start
 
 ```bash
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
 python -m venv .venv
-# Linux/macOS: source .venv/bin/activate
-# Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
-```
 
-## Quick start
-
-```bash
 aegislog doctor
 aegislog analyze examples/auth.log
 aegislog threats examples/auth.log
-aegislog report examples/auth.log --output report.json
-aegislog scan /var/log
+aegislog anomalies examples/auth.log
+aegislog incidents examples/auth.log --persist
+aegislog history
 ```
 
-## What V0.1 detects
+## Live and system telemetry
 
-- authentication failures and repeated-source brute-force indicators
-- suspicious privilege/sudo activity
-- common suspicious web-request indicators
-- crashes, fatal errors, OOM and service failures
-- application errors, exceptions, access denials and timeouts
-- secrets such as passwords, tokens and API keys are redacted before findings are displayed/stored
-
-## Architecture
-
-```text
-log files / system logs
-        |
-        v
- ingestion + normalization
-        |
-        v
- redaction layer
-        |
-        +----> deterministic security/error rules
-        |                 |
-        |                 v
-        +----------> correlation
-                          |
-                          v
-                 severity + findings
-                          |
-                  +-------+-------+
-                  |               |
-               terminal        JSON report
+```bash
+aegislog watch /var/log/auth.log
+aegislog collect journal --lines 500 --output journal.log
+aegislog collect journal --target ssh.service --output ssh.log
+aegislog collect docker --target my-container --output container.log
 ```
 
-## Roadmap
+Collectors are bounded and read-only. AegisLog never automatically elevates privileges, changes services, or modifies containers.
 
-The next milestones are structured parsers for journald/nginx/apache/docker, streaming `watch`, statistical anomaly baselines, incident timelines, configuration profiles, and an optional provider-neutral AI explanation layer. AI integrations will receive redacted/minimized context and local detection will remain usable without AI.
+## Ask AegisLog
+
+Local investigation requires no model:
+
+```bash
+aegislog ask "What are the strongest security signals?" examples/auth.log --local
+```
+
+For a local Ollama model:
+
+```bash
+aegislog config --provider ollama --model llama3.2
+aegislog ask "What likely happened?" examples/auth.log
+```
+
+For an OpenAI-compatible endpoint:
+
+```bash
+export AEGISLOG_API_KEY='your-key'
+aegislog config --provider openai-compatible --model YOUR_MODEL
+aegislog ask "Explain the likely root cause" examples/auth.log
+```
+
+AegisLog does not save API keys in its configuration. Before provider calls it minimizes context, redacts recognized secrets, and explicitly marks log content as untrusted telemetry rather than model instructions. See `docs/AI_PROVIDERS.md` for the trust boundary and privacy guidance.
+
+## Main commands
+
+- `analyze` — local rule-backed analysis
+- `threats` — high/critical security findings
+- `anomalies` — lightweight rarity/frequency anomalies
+- `incidents` — correlate related findings
+- `history` — view persisted incident records
+- `watch` — analyze appended log events live
+- `collect` — bounded journald or Docker collection
+- `ask` — local or configured AI-assisted investigation
+- `report` — JSON findings/anomaly/incident report
+- `scan` — scan candidate logs in a directory
+- `config` — set non-secret provider preferences
+- `doctor` — inspect runtime configuration
+
+## Security model
+
+AegisLog is defensive tooling. Findings are investigative signals, not proof of compromise. Log data is considered hostile input: ANSI/control data is sanitized for terminal rendering and AI prompts label telemetry as untrusted. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
 
 ## Development
 
@@ -72,9 +84,7 @@ pytest
 ruff check .
 ```
 
-## Security philosophy
-
-AegisLog AI is defensive tooling. It is designed to identify, explain, correlate, and report suspicious or broken behavior. Recommendations should be validated by an administrator before production changes are made.
+The repository includes CI, packaging checks, dependency auditing, synthetic fixtures, installation helpers, architecture notes, privacy documentation, a threat model and operational guidance under `docs/`.
 
 ## License
 
