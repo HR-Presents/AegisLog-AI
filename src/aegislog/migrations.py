@@ -9,6 +9,8 @@ def migrate(db: sqlite3.Connection) -> int:
     db.execute("CREATE TABLE IF NOT EXISTS schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     row = db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()
     current = int(row[0]) if row else 1
+    if current > LATEST_SCHEMA:
+        raise RuntimeError(f"database schema {current} is newer than supported schema {LATEST_SCHEMA}")
     if current < 2:
         db.executescript(
             """
