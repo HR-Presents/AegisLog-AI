@@ -18,6 +18,7 @@ from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
 from .realtime import FileCursor, initial_cursor, read_new_lines, read_new_lines_cursor
+from .trends import TrendSnapshot, TrendTracker, render_trends
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class MultiSourceState:
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
+    trend_tracker: TrendTracker = field(default_factory=TrendTracker)
     _lines: deque[tuple[str, str]] = field(default_factory=deque)
     _arrivals: deque[float] = field(default_factory=deque)
     _alerts: deque[LiveAlert] = field(default_factory=lambda: deque(maxlen=15))
@@ -52,6 +54,8 @@ class MultiSourceState:
         if self.window_size < 20:
             raise ValueError("window_size must be at least 20")
         self._lines = deque(self._lines, maxlen=self.window_size)
+        if self.trend_tracker.window_seconds != self.trend_seconds:
+            self.trend_tracker = TrendTracker(window_seconds=self.trend_seconds)
 
     def ingest(self, source: Path, lines: list[str], now: float | None = None) -> int:
         if not lines:
@@ -64,6 +68,7 @@ class MultiSourceState:
             self.total_lines += 1
             self.total_bytes += len(line.encode("utf-8", errors="replace"))
             self.source_counts[label] += 1
+        self.trend_tracker.ingest(lines, stamp)
         self._trim_arrivals(stamp)
         self._refresh_snapshot()
         self._refresh_alerts(stamp)
@@ -133,6 +138,10 @@ class MultiSourceState:
     @property
     def alerts(self) -> tuple[LiveAlert, ...]:
         return tuple(self._alerts)
+
+    @property
+    def trends(self) -> TrendSnapshot:
+        return self.trend_tracker.snapshot()
 
     @property
     def recent_eps(self) -> float:
@@ -223,6 +232,7 @@ def _alerts_table(state: MultiSourceState) -> Table:
 def render_multisource(state: MultiSourceState) -> RenderableType:
     events = state.events
     findings = state.findings
+    trend = state.trends
     severity = Counter(item.severity for item in findings)
     categories = Counter(item.category for item in findings)
     levels = Counter((event.level or "unknown").upper() for event in events if event.message)
@@ -239,6 +249,7 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
             _metric("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines"),
             _metric("Events", f"{state.total_lines:,}"),
             _metric("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s"),
+            _metric("Rate spikes", str(trend.spike_count), f"{trend.window_seconds}s baseline"),
             _metric("Findings", str(len(findings))),
             _metric("Incidents", str(len(incidents))),
             _metric("Anomalies", str(len(anomalies))),
@@ -260,8 +271,8 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     status = Panel(
         Text(
             f"{state.total_bytes:,} bytes ingested. Correlation runs across all monitored sources in one rolling window. "
-            f"Live EPS uses the most recent {state.trend_seconds}s of arrivals."
+            f"Live EPS and rate baselines use the most recent {state.trend_seconds}s of arrivals."
         ),
         title="Monitoring status",
     )
-    return Group(header, metrics, overview, _alerts_table(state), status)
+    return Group(header, metrics, overview, render_trends(trend), _alerts_table(state), status)
