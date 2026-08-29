@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.live import Live
 
 from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
+from .watch_profiles import get_profile
 
 console = Console()
 
@@ -17,16 +18,24 @@ def live_dashboard(
     from_start: bool = typer.Option(False, "--from-start", help="Analyze existing content before following new lines."),
     refresh: float = typer.Option(1.0, "--refresh", min=0.2, max=10.0, help="Dashboard refresh interval in seconds."),
     window: int = typer.Option(500, "--window", min=20, max=10000, help="Rolling analysis window in lines."),
+    profile: str = typer.Option("all", "--profile", help="Watch profile: all, security, authentication, web, docker, operations."),
 ) -> None:
-    """Follow a growing log file and render a continuously updating terminal dashboard."""
-    state = RealtimeState(source=str(path), window_size=window)
+    """Follow a growing log file with an optional defensive watch profile."""
+    try:
+        selected = get_profile(profile)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--profile") from exc
+    state = RealtimeState(source=str(path), window_size=window, watch_profile=selected.key)
     cursor = initial_cursor(path, from_start=from_start)
 
     if from_start:
         initial, cursor = read_new_lines_cursor(path, cursor)
         state.ingest(initial)
 
-    console.print("[cyan]Starting AegisLog real-time monitor. Press Ctrl+C to stop safely.[/cyan]")
+    console.print(
+        f"[cyan]Starting AegisLog real-time monitor with {selected.label} profile. "
+        "Press Ctrl+C to stop safely.[/cyan]"
+    )
     try:
         with Live(render_realtime(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
             while True:

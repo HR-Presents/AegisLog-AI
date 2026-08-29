@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.live import Live
 
 from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
+from .watch_profiles import get_profile
 
 console = Console()
 
@@ -18,19 +19,32 @@ def live_multi(
     refresh: float = typer.Option(1.0, "--refresh", min=0.2, max=10.0, help="Dashboard refresh interval in seconds."),
     window: int = typer.Option(1000, "--window", min=20, max=20000, help="Unified rolling correlation window in lines."),
     trend_seconds: int = typer.Option(60, "--trend-seconds", min=10, max=3600, help="Window used for live event-rate calculation."),
+    profile: str = typer.Option("all", "--profile", help="Watch profile: all, security, authentication, web, docker, operations."),
 ) -> None:
-    """Monitor multiple growing log files in one correlated real-time terminal SOC."""
+    """Monitor multiple growing log files in one profile-focused real-time terminal SOC."""
     unique = tuple(dict.fromkeys(path.resolve() for path in paths))
     if len(unique) < 2:
         raise typer.BadParameter("Provide at least two different log files for multi-source monitoring.")
-    state = MultiSourceState(sources=unique, window_size=window, trend_seconds=trend_seconds)
+    try:
+        selected = get_profile(profile)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--profile") from exc
+    state = MultiSourceState(
+        sources=unique,
+        window_size=window,
+        trend_seconds=trend_seconds,
+        watch_profile=selected.key,
+    )
     cursors = initial_cursors(unique, from_start=from_start)
     if from_start:
         batches, cursors = poll_sources(unique, cursors)
         for path, lines in batches:
             state.ingest(path, lines)
 
-    console.print("[cyan]Starting AegisLog multi-source real-time SOC. Press Ctrl+C to stop safely.[/cyan]")
+    console.print(
+        f"[cyan]Starting AegisLog multi-source SOC with {selected.label} profile. "
+        "Press Ctrl+C to stop safely.[/cyan]"
+    )
     try:
         with Live(render_multisource(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
             while True:
