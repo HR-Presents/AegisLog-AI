@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.live import Live
 
-from .realtime import RealtimeState, read_new_lines, render_realtime
+from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
 
 console = Console()
 
@@ -20,10 +20,10 @@ def live_dashboard(
 ) -> None:
     """Follow a growing log file and render a continuously updating terminal dashboard."""
     state = RealtimeState(source=str(path), window_size=window)
-    offset = 0 if from_start else path.stat().st_size
+    cursor = initial_cursor(path, from_start=from_start)
 
     if from_start:
-        initial, offset = read_new_lines(path, offset)
+        initial, cursor = read_new_lines_cursor(path, cursor)
         state.ingest(initial)
 
     console.print("[cyan]Starting AegisLog real-time monitor. Press Ctrl+C to stop safely.[/cyan]")
@@ -34,7 +34,7 @@ def live_dashboard(
                     live.update(render_realtime(state))
                     time.sleep(refresh)
                     continue
-                lines, offset = read_new_lines(path, offset)
+                lines, cursor = read_new_lines_cursor(path, cursor)
                 if lines:
                     state.ingest(lines)
                 live.update(render_realtime(state))
