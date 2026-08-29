@@ -19,6 +19,7 @@ from .incidents import correlate
 from .parsers import Event, parse_line
 from .realtime import FileCursor, initial_cursor, read_new_lines, read_new_lines_cursor
 from .trends import TrendSnapshot, TrendTracker, render_trends
+from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ class MultiSourceState:
     window_size: int = 1000
     trend_seconds: int = 60
     alert_ttl_seconds: int = 300
+    watch_profile: str = "all"
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
@@ -53,6 +55,7 @@ class MultiSourceState:
     def __post_init__(self) -> None:
         if self.window_size < 20:
             raise ValueError("window_size must be at least 20")
+        get_profile(self.watch_profile)
         self._lines = deque(self._lines, maxlen=self.window_size)
         if self.trend_tracker.window_seconds != self.trend_seconds:
             self.trend_tracker = TrendTracker(window_seconds=self.trend_seconds)
@@ -103,7 +106,7 @@ class MultiSourceState:
 
     def _refresh_alerts(self, now: float) -> None:
         self._expire_seen(now)
-        for finding in self._findings_cache:
+        for finding in self.focused_findings:
             fp = (finding.severity, finding.category, finding.title, finding.evidence)
             if fp not in self._seen:
                 self._sequence += 1
@@ -120,6 +123,10 @@ class MultiSourceState:
             self._seen[fp] = now
 
     @property
+    def profile(self) -> WatchProfile:
+        return get_profile(self.watch_profile)
+
+    @property
     def raw_lines(self) -> list[str]:
         return [line for _, line in self._lines]
 
@@ -132,8 +139,16 @@ class MultiSourceState:
         return list(self._findings_cache)
 
     @property
+    def focused_findings(self) -> list[Finding]:
+        return filter_findings(self.profile, self.findings)
+
+    @property
     def events(self) -> list[Event]:
         return list(self._events_cache)
+
+    @property
+    def focused_events(self) -> list[Event]:
+        return filter_events(self.profile, self.events)
 
     @property
     def alerts(self) -> tuple[LiveAlert, ...]:
@@ -215,7 +230,8 @@ def _counter(title: str, values: Counter[str], limit: int = 6) -> Table:
 
 
 def _alerts_table(state: MultiSourceState) -> Table:
-    table = Table(title="Live security alert feed", expand=True, show_lines=True)
+    profile = state.profile
+    table = Table(title=f"Live alert feed — {profile.label}", expand=True, show_lines=True)
     table.add_column("#", justify="right", width=5)
     table.add_column("Severity", width=10)
     table.add_column("Source", width=18)
@@ -225,13 +241,14 @@ def _alerts_table(state: MultiSourceState) -> Table:
     for item in state.alerts[:10]:
         table.add_row(str(item.sequence), item.severity, Text(item.source), Text(item.category), Text(item.title), Text(item.evidence))
     if not state.alerts:
-        table.add_row("-", "-", "-", "-", "Waiting for high-signal activity", "New detections appear here automatically")
+        table.add_row("-", "-", "-", "-", f"No {profile.label.lower()} alerts yet", "All sources remain under local monitoring")
     return table
 
 
 def render_multisource(state: MultiSourceState) -> RenderableType:
-    events = state.events
-    findings = state.findings
+    profile = state.profile
+    events = state.focused_events
+    findings = state.focused_findings
     trend = state.trends
     severity = Counter(item.severity for item in findings)
     categories = Counter(item.category for item in findings)
@@ -240,17 +257,19 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     incidents = correlate(findings)
     anomalies = score_events(events)
     sources = ", ".join(path.name for path in state.sources)
+    allowed_metrics = set(profile.trend_metrics)
+    focused_spikes = sum(1 for item in trend.metrics if item.name in allowed_metrics and item.state == "SPIKE")
     header = Panel(
-        Align.center(Text(f"AEGISLOG AI  v{__version__}\nMULTI-SOURCE REAL-TIME SOC\n{sources}", style="bold")),
-        subtitle="Unified live correlation • local/read-only • Ctrl+C to stop",
+        Align.center(Text(f"AEGISLOG AI  v{__version__}\nMULTI-SOURCE REAL-TIME SOC\n{sources}\nPROFILE: {profile.label.upper()}", style="bold")),
+        subtitle=f"{profile.description} • local/read-only • Ctrl+C to stop",
     )
     metrics = Columns(
         [
             _metric("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines"),
             _metric("Events", f"{state.total_lines:,}"),
             _metric("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s"),
-            _metric("Rate spikes", str(trend.spike_count), f"{trend.window_seconds}s baseline"),
-            _metric("Findings", str(len(findings))),
+            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s profile baseline"),
+            _metric("Profile findings", str(len(findings))),
             _metric("Incidents", str(len(incidents))),
             _metric("Anomalies", str(len(anomalies))),
             _metric("Risk", _risk(severity)),
@@ -261,18 +280,18 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     overview = Columns(
         [
             _counter("Events by source", state.source_counts),
-            _counter("Finding categories", categories),
-            _counter("Log levels", levels),
-            _counter("Top services", services),
+            _counter("Profile categories", categories),
+            _counter("Profile log levels", levels),
+            _counter("Profile services", services),
         ],
         equal=True,
         expand=True,
     )
     status = Panel(
         Text(
-            f"{state.total_bytes:,} bytes ingested. Correlation runs across all monitored sources in one rolling window. "
-            f"Live EPS and rate baselines use the most recent {state.trend_seconds}s of arrivals."
+            f"{state.total_bytes:,} bytes ingested. The {profile.label} profile changes terminal emphasis only. "
+            f"Correlation remains local/read-only and rate baselines use the most recent {state.trend_seconds}s of arrivals."
         ),
         title="Monitoring status",
     )
-    return Group(header, metrics, overview, render_trends(trend), _alerts_table(state), status)
+    return Group(header, metrics, overview, render_trends(trend, profile.trend_metrics), _alerts_table(state), status)
