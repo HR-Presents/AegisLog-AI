@@ -12,12 +12,15 @@ from rich.panel import Panel
 from rich.table import Table
 
 from . import __version__
-from .ai import InvestigationContext, local_answer
+from .ai import InvestigationContext, build_safe_prompt, local_answer
 from .anomaly import score_events
+from .collectors import CollectorError, docker as collect_docker, journal as collect_journal
 from .config import load_config, save_config
 from .engine import analyze_file, analyze_lines
 from .incidents import correlate
 from .parsers import parse_line
+from .providers import ProviderError, run_provider
+from .store import load_incidents, save_incidents
 
 app = typer.Typer(help="AegisLog AI — defensive log intelligence in your terminal.", no_args_is_help=True)
 console = Console()
@@ -35,10 +38,6 @@ def _render(path: Path) -> None:
     for finding in findings[:50]:
         table.add_row(finding.severity, finding.title, finding.evidence)
     console.print(table)
-    if findings:
-        console.print("\n[bold]Recommended investigation[/bold]")
-        for finding in findings[:8]:
-            console.print(f"• {finding.recommendation}")
 
 
 @app.command()
@@ -71,31 +70,64 @@ def anomalies(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> 
 
 
 @app.command()
-def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
-    """Correlate findings into compact investigation incidents."""
+def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False), persist: bool = False) -> None:
+    """Correlate findings into incidents and optionally persist them."""
     _, findings = analyze_file(path)
     items = correlate(findings)
-    if not items:
-        console.print("No incidents created from current findings.")
-        return
     table = Table(show_lines=True)
-    table.add_column("ID")
-    table.add_column("Severity")
-    table.add_column("Category")
-    table.add_column("Events")
-    table.add_column("Summary")
+    table.add_column("ID"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Events"); table.add_column("Summary")
     for item in items:
         table.add_row(item.id, item.severity, item.category, str(item.count), item.title)
+    console.print(table)
+    if persist and items:
+        console.print(f"Incident history updated: {save_incidents(str(path), items)}")
+
+
+@app.command("history")
+def incident_history(limit: int = 50) -> None:
+    """Show previously persisted incident records."""
+    records = load_incidents(limit)
+    if not records:
+        console.print("No persisted incidents yet. Run incidents <log> --persist.")
+        return
+    table = Table(show_lines=True)
+    table.add_column("Recorded"); table.add_column("Severity"); table.add_column("Source"); table.add_column("Summary")
+    for item in records:
+        table.add_row(item.get("recorded_at", ""), item.get("severity", ""), item.get("source", ""), item.get("title", ""))
     console.print(table)
 
 
 @app.command("ask")
-def ask_log(question: str, path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
-    """Ask a defensive investigation question about a log file (local mode in V0.2)."""
+def ask_log(question: str, path: Path = typer.Argument(..., exists=True, dir_okay=False), local: bool = False) -> None:
+    """Ask a defensive investigation question using local analysis or configured AI."""
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     _, findings = analyze_file(path)
     context = InvestigationContext(question=question, findings=findings, log_excerpt=lines[-80:])
-    console.print(Panel(local_answer(context), title=f"Investigation: {question}"))
+    cfg = load_config()
+    provider = str(cfg.get("ai_provider", "none"))
+    if local or provider == "none":
+        console.print(Panel(local_answer(context), title=f"Investigation: {question}"))
+        return
+    try:
+        response = run_provider(provider, build_safe_prompt(context), str(cfg.get("model", "")), cfg.get("base_url"))
+        console.print(Panel(response.text, title=f"AI Investigation — {response.provider}/{response.model}"))
+    except ProviderError as exc:
+        console.print(f"AI provider unavailable: {exc}\nFalling back to local analysis.")
+        console.print(Panel(local_answer(context), title=f"Investigation: {question}"))
+
+
+@app.command()
+def collect(source: str = typer.Argument(..., help="journal or docker"), target: str = "", lines: int = 300, output: Path = Path("aegislog-collected.log")) -> None:
+    """Collect bounded recent telemetry from journald or a Docker container."""
+    try:
+        result = collect_journal(lines, target or None) if source == "journal" else collect_docker(target, lines) if source == "docker" else None
+        if result is None:
+            raise typer.BadParameter("source must be journal or docker")
+    except CollectorError as exc:
+        console.print(f"Collection failed: {exc}")
+        raise typer.Exit(1)
+    output.write_text("\n".join(result.lines) + "\n", encoding="utf-8")
+    console.print(f"Collected {len(result.lines)} lines from {result.source} -> {output}")
 
 
 @app.command()
@@ -108,14 +140,11 @@ def watch(path: Path = typer.Argument(..., exists=True, dir_okay=False), interva
             while True:
                 line = handle.readline()
                 if not line:
-                    time.sleep(max(interval, 0.1))
-                    continue
-                findings = analyze_lines([line])
-                event = parse_line(line)
-                if findings:
-                    for finding in findings:
-                        console.print(f"[{finding.severity}] {finding.title} | {finding.evidence}")
-                elif event.level in {"error", "warning"}:
+                    time.sleep(max(interval, 0.1)); continue
+                findings = analyze_lines([line]); event = parse_line(line)
+                for finding in findings:
+                    console.print(f"[{finding.severity}] {finding.title} | {finding.evidence}")
+                if not findings and event.level in {"error", "warning"}:
                     console.print(f"[{event.level.upper()}] {event.message}")
     except KeyboardInterrupt:
         console.print("Watch stopped.")
@@ -126,17 +155,15 @@ def report(path: Path = typer.Argument(..., exists=True, dir_okay=False), output
     """Write a machine-readable JSON analysis report."""
     total, findings = analyze_file(path)
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    anomaly_results = score_events([parse_line(line) for line in lines])
-    incident_results = correlate(findings)
+    anomaly_results = score_events([parse_line(line) for line in lines]); incident_results = correlate(findings)
     payload = {"source": str(path), "lines": total, "findings": [f.__dict__ for f in findings], "anomalies": [a.__dict__ for a in anomaly_results], "incidents": [{**i.__dict__, "evidence": list(i.evidence)} for i in incident_results]}
-    output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    console.print(f"Report written to {output}")
+    output.write_text(json.dumps(payload, indent=2), encoding="utf-8"); console.print(f"Report written to {output}")
 
 
 @app.command()
-def config(provider: str = "none", model: str = "") -> None:
-    """Set non-secret AI/provider preferences. API keys belong in environment variables."""
-    path = save_config({"ai_provider": provider, "model": model})
+def config(provider: str = "none", model: str = "", base_url: str = "") -> None:
+    """Set non-secret provider preferences. API keys must stay in environment variables."""
+    path = save_config({"ai_provider": provider, "model": model, "base_url": base_url or None})
     console.print(f"Configuration saved to {path}")
 
 
@@ -144,29 +171,22 @@ def config(provider: str = "none", model: str = "") -> None:
 def doctor() -> None:
     """Check the local AegisLog runtime."""
     cfg = load_config()
-    console.print(f"AegisLog AI {__version__}")
-    console.print(f"Python: {platform.python_version()}")
-    console.print(f"Platform: {platform.platform()}")
+    console.print(f"AegisLog AI {__version__}\nPython: {platform.python_version()}\nPlatform: {platform.platform()}")
     console.print("Local detection engine: ready")
-    console.print(f"AI provider preference: {cfg['ai_provider']}")
+    console.print(f"AI provider preference: {cfg.get('ai_provider', 'none')}  model: {cfg.get('model', '') or '(default)'}")
 
 
 @app.command()
 def scan(path: Path = typer.Argument(Path("/var/log"))) -> None:
     """Scan readable log files under a directory."""
-    if not path.exists() or not path.is_dir():
-        raise typer.BadParameter("scan path must be an existing directory")
+    if not path.exists() or not path.is_dir(): raise typer.BadParameter("scan path must be an existing directory")
     files = [p for p in path.rglob("*") if p.is_file() and (p.suffix in {".log", ".txt"} or "log" in p.name.lower())][:100]
     console.print(f"Scanning {len(files)} candidate log files under {path}")
     for file in files:
-        try:
-            _, findings = analyze_file(file)
-        except (OSError, PermissionError):
-            continue
+        try: _, findings = analyze_file(file)
+        except (OSError, PermissionError): continue
         serious = sum(f.severity in {"CRITICAL", "HIGH"} for f in findings)
-        if findings:
-            console.print(f"{file}: {len(findings)} findings ({serious} high/critical)")
+        if findings: console.print(f"{file}: {len(findings)} findings ({serious} high/critical)")
 
 
-if __name__ == "__main__":
-    app()
+if __name__ == "__main__": app()
