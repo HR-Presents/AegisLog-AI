@@ -27,7 +27,7 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --onefile --console --name AegisLog packaging/aegislog_onefile.py
 
-      - name: Verify single executable
+      - name: Verify single executable and core command surface
         shell: pwsh
         run: |
           if (-not (Test-Path "dist\AegisLog.exe")) { throw "AegisLog.exe was not created" }
@@ -35,6 +35,14 @@ jobs:
           .\dist\AegisLog.exe doctor
           .\dist\AegisLog.exe start --help
           .\dist\AegisLog.exe dashboard examples\auth.log
+          .\dist\AegisLog.exe live --help
+          .\dist\AegisLog.exe live-multi --help
+          .\dist\AegisLog.exe native-sources
+          .\dist\AegisLog.exe native-live --help
+          .\dist\AegisLog.exe incidents --help
+          .\dist\AegisLog.exe investigate --help
+          .\dist\AegisLog.exe explain --help
+          .\dist\AegisLog.exe mitre --help
 
       - name: Verify distribution is exactly one executable
         shell: pwsh
@@ -52,6 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: AegisLog-Windows-Single-EXE
+          if-no-files-found: error
           path: |
             dist/AegisLog.exe
             AegisLog.exe.sha256
