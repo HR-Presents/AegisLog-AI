@@ -15,8 +15,7 @@ if %errorlevel%==0 (
   if errorlevel 1 (
     echo ERROR: Python 3.10 or newer is required.
     echo Install Python, then run this installer again.
-    pause
-    exit /b 1
+    goto :fail
   )
   set "PY=python"
 )
@@ -46,11 +45,11 @@ echo.
 echo Installation complete.
 echo Double-click OPEN_AEGISLOG_TERMINAL.bat to start AegisLog.
 echo.
-pause
+if /I not "%AEGISLOG_NONINTERACTIVE%"=="1" pause
 exit /b 0
 
 :fail
 echo.
 echo Installation failed. Review the error shown above.
-pause
+if /I not "%AEGISLOG_NONINTERACTIVE%"=="1" pause
 exit /b 1
