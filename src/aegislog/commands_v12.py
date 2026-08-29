@@ -47,9 +47,10 @@ def _menu() -> Table:
     table.add_row("3", "Open multi-source live SOC")
     table.add_row("4", "Analyze native system/container logs")
     table.add_row("5", "Open native real-time monitor")
-    table.add_row("6", "Run built-in demo analysis")
-    table.add_row("7", "System check")
-    table.add_row("8", "Show useful commands")
+    table.add_row("6", "Explain an incident")
+    table.add_row("7", "Run built-in demo analysis")
+    table.add_row("8", "System check")
+    table.add_row("9", "Show useful commands")
     table.add_row("Q", "Exit AegisLog")
     return table
 
@@ -143,6 +144,30 @@ def _native_live_menu() -> None:
     native_live(source, channel=channel, container=container)
 
 
+def _explain_menu() -> None:
+    from .commands_v19 import explain
+    from .investigation import load_investigation
+
+    path = _choose_log_file()
+    if path is None:
+        return
+    _, incidents, _ = load_investigation(path)
+    if not incidents:
+        console.print("[yellow]No correlated incidents were detected in this log.[/yellow]")
+        return
+    table = Table(title="Detected incidents")
+    table.add_column("Incident ID", width=14)
+    table.add_column("Severity", width=10)
+    table.add_column("Confidence", justify="right", width=12)
+    table.add_column("Summary")
+    for item in incidents[:12]:
+        table.add_row(item.id, item.severity, f"{item.confidence}%", Text(item.title))
+    console.print(table)
+    incident_id = Prompt.ask("Incident ID to explain", default=incidents[0].id).strip()
+    if incident_id:
+        explain(path, incident_id)
+
+
 def _system_check() -> None:
     import platform
 
@@ -156,6 +181,7 @@ def _system_check() -> None:
     table.add_row("Platform", platform.platform())
     table.add_row("Configuration", str(config_dir()))
     table.add_row("Local engine", "READY")
+    table.add_row("Incident explanation", "READY — local only")
     table.add_row("Real-time file monitor", "READY")
     table.add_row("Multi-source correlation", "READY")
     table.add_row("Native live monitor", "READY")
@@ -170,6 +196,9 @@ def _commands() -> None:
     table.add_column("Command", style="cyan")
     table.add_column("Purpose")
     table.add_row(executable, "Open this terminal control center")
+    table.add_row(f"{executable} incidents <file>", "List correlated incidents and confidence")
+    table.add_row(f"{executable} explain <file> <incident-id>", "Explain an incident locally in plain analyst language")
+    table.add_row(f"{executable} mitre <file>", "Show evidence-supported MITRE ATT&CK context")
     table.add_row(f"{executable} native-sources", "Show native OS/container sources")
     table.add_row(f"{executable} native-analyze windows --channel Security", "Analyze Windows Event Logs")
     table.add_row(f"{executable} native-analyze journald", "Analyze Linux journald")
@@ -193,7 +222,7 @@ def start() -> None:
         console.print()
         choice = Prompt.ask(
             "Select",
-            choices=["1", "2", "3", "4", "5", "6", "7", "8", "q", "Q"],
+            choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "q", "Q"],
             default="1",
         )
         if choice.lower() == "q":
@@ -222,10 +251,13 @@ def start() -> None:
             _native_live_menu()
         elif choice == "6":
             console.print()
-            dashboard(_resolve_demo())
+            _explain_menu()
         elif choice == "7":
-            _system_check()
+            console.print()
+            dashboard(_resolve_demo())
         elif choice == "8":
+            _system_check()
+        elif choice == "9":
             _commands()
         console.print()
         Prompt.ask("Press Enter to return to the AegisLog menu", default="")
