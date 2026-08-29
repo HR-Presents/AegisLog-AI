@@ -6,11 +6,13 @@ from .commands_v08 import entity, entity_top, index_entities
 from .commands_v11 import dashboard, replace_analyze_command
 from .commands_v12 import start
 from .commands_v13 import live_dashboard
+from .commands_v14 import live_multi
 
 replace_analyze_command(app)
 app.command("start")(start)
 app.command("dashboard")(dashboard)
 app.command("live")(live_dashboard)
+app.command("live-multi")(live_multi)
 app.command("stream")(stream)
 app.command("entities")(entities)
 app.command("behavior")(behavior)
