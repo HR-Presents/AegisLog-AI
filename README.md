@@ -4,42 +4,65 @@
 
 AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using deterministic detections, anomaly scoring, incident correlation, behavioral baselines, persistent investigation state, declarative rule packs, entity correlation, bounded-memory streaming, stateful live analysis, and optional LLM-assisted explanation. Core analysis works without an AI service.
 
-## Quick start
+## Customer bundle quick start
+
+AegisLog AI 1.1 includes a self-contained customer distribution bundle. The bundle contains the AegisLog wheel, offline Python dependencies, Windows and Linux/macOS installers, ready-terminal launchers, dashboard launchers, uninstallers, a sample log, and SHA-256 checksums. Customers do not need access to this GitHub repository after receiving the bundle. Python 3.10 or newer is still required on the target machine.
+
+### Windows
+
+1. Extract `AegisLog-AI-v1.1.0-Customer-Bundle.zip`.
+2. Open the `AegisLog-AI-Customer` folder.
+3. Double-click `INSTALL_WINDOWS.bat`.
+4. Double-click `OPEN_AEGISLOG_TERMINAL.bat`.
+5. Analyze a log:
+
+```text
+aegislog dashboard C:\path\to\auth.log
+```
+
+For the shortest path, double-click `RUN_DASHBOARD.bat` after installation and paste the log path when prompted.
+
+### Linux / macOS
+
+```bash
+chmod +x INSTALL_LINUX_MACOS.sh OPEN_AEGISLOG_TERMINAL.sh RUN_DASHBOARD.sh UNINSTALL_LINUX_MACOS.sh
+./INSTALL_LINUX_MACOS.sh
+./OPEN_AEGISLOG_TERMINAL.sh
+```
+
+Then run:
+
+```bash
+aegislog dashboard /path/to/auth.log
+```
+
+The installers create a private `.aegislog-venv` inside the extracted customer folder. They install the bundled wheel and dependencies locally rather than relying on a global Python Scripts directory or GitHub access.
+
+## Developer quick start
 
 ```bash
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .
 
-# Windows
-powershell -ExecutionPolicy Bypass -File .\install.ps1
-.\aegislog.cmd doctor
-.\aegislog.cmd analyze examples\auth.log
-
-# Linux / macOS
-sh install.sh
-./aegislog doctor
-./aegislog analyze examples/auth.log
+aegislog doctor
+aegislog analyze examples/auth.log
+aegislog incidents examples/auth.log --persist
+aegislog timeline
 ```
 
-The installers create a private `.aegislog-venv` inside the AegisLog folder instead of depending on the user's global Python `Scripts` directory being on `PATH`. Windows also creates `OPEN_AEGISLOG_TERMINAL.bat`, which opens a ready command prompt in the product folder. Linux/macOS creates `OPEN_AEGISLOG_TERMINAL.sh`.
+For an isolated command-line installation, use `pipx install .` from a checked-out release. Upgrade with `pipx upgrade aegislog-ai` after a package release and uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration, rules, and investigation state under `~/.config/aegislog`; uninstalling the package does not delete analyst data.
 
-## Terminal dashboard
-
-`analyze` now opens the complete AegisLog terminal dashboard after analysis:
+## Terminal analysis dashboard
 
 ```bash
 aegislog analyze auth.log
-```
-
-The dashboard shows lines analyzed, risk state, severity counts, finding categories, log levels, top services, correlated incidents, anomaly scores, detected findings and supporting evidence in one terminal view.
-
-The same dashboard can be opened explicitly:
-
-```bash
 aegislog dashboard auth.log
 ```
 
-A spinner is shown while the file is analyzed, then the final investigation dashboard remains in the terminal for review. Log-derived values are rendered as literal text so hostile Rich markup is not interpreted as terminal formatting.
+`analyze` opens the terminal dashboard by default. The dashboard shows total lines analyzed, overall risk state, severity counts, categories, parsed log levels, top services, correlated incidents, anomaly scores, detailed findings, evidence, and investigation recommendations. Log-derived values are rendered as untrusted literal text.
 
 ## Persistent entity investigation
 
@@ -146,7 +169,7 @@ twine check dist/*
 
 ## Release status
 
-V1.0.0 is the stable public baseline. The `feature/v1.1-terminal-dashboard` branch develops the improved customer installation and terminal-dashboard experience and must pass CI/security/package checks before release.
+AegisLog AI 1.1.0 is being prepared on PR #2. CI, security checks, package validation, Linux offline customer installation, Windows customer installer verification, terminal dashboard smoke tests, and customer ZIP generation are automated before merge. No merge, tag, release publication, or repository visibility change is performed by this branch.
 
 ## License
 
