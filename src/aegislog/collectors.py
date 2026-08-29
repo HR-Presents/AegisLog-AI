@@ -16,14 +16,14 @@ class CollectorError(RuntimeError):
     pass
 
 
-def _run(command: list[str], timeout: int = 20) -> str:
+def _run(command: list[str], timeout: int = 20, include_stderr: bool = False) -> str:
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise CollectorError(str(exc)) from exc
     if result.returncode != 0:
         raise CollectorError(result.stderr.strip() or f"command exited with {result.returncode}")
-    return result.stdout
+    return result.stdout + (result.stderr if include_stderr else "")
 
 
 def journal(lines: int = 300, unit: str | None = None) -> Collection:
@@ -48,5 +48,8 @@ def docker(container: str, lines: int = 300) -> Collection:
         raise CollectorError("docker is not installed")
     if not container or container.startswith("-"):
         raise CollectorError("invalid container name")
-    output = _run(["docker", "logs", "--tail", str(max(1, min(lines, 5000))), container])
+    output = _run(
+        ["docker", "logs", "--tail", str(max(1, min(lines, 5000))), container],
+        include_stderr=True,
+    )
     return Collection(f"docker:{container}", output.splitlines())
