@@ -21,6 +21,7 @@ Multi-window behavioral profiling, entity correlation across IP/host/user/servic
 ## V0.7 — Release hardening
 - direct `stream`, `entities`, and `behavior` CLI commands
 - versioned SQLite schema migration framework
+- rejection of unsupported future database schemas
 - entity-index schema for future persisted correlation
 - bounded finding retention during streaming analysis
 - reproducible synthetic streaming benchmark harness
