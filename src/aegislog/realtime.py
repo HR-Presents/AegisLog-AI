@@ -19,6 +19,7 @@ from .anomaly import score_events
 from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
+from .trends import TrendSnapshot, TrendTracker, render_trends
 
 _PREFIX_BYTES = 128
 
@@ -57,6 +58,7 @@ class RealtimeState:
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
+    trend_tracker: TrendTracker = field(default_factory=TrendTracker)
     _lines: deque[str] = field(default_factory=deque)
     _recent_findings: deque[Finding] = field(default_factory=lambda: deque(maxlen=12))
     _seen_fingerprints: dict[tuple[str, str, str, str], float] = field(default_factory=dict)
@@ -76,6 +78,7 @@ class RealtimeState:
             self._lines.append(line)
             self.total_lines += 1
             self.total_bytes += len(line.encode("utf-8", errors="replace"))
+        self.trend_tracker.ingest(lines, stamp)
         self._refresh_snapshot()
         self._expire_seen(stamp)
         for finding in self._findings_cache:
@@ -115,6 +118,10 @@ class RealtimeState:
     @property
     def findings(self) -> list[Finding]:
         return list(self._findings_cache)
+
+    @property
+    def trends(self) -> TrendSnapshot:
+        return self.trend_tracker.snapshot()
 
     @property
     def elapsed(self) -> float:
@@ -169,6 +176,7 @@ def _recent_table(findings: list[Finding]) -> Table:
 def render_realtime(state: RealtimeState) -> RenderableType:
     events = state.events
     findings = state.findings
+    trend = state.trends
     severities = Counter(item.severity for item in findings)
     categories = Counter(item.category for item in findings)
     levels = Counter((event.level or "unknown").upper() for event in events if event.message)
@@ -187,6 +195,7 @@ def render_realtime(state: RealtimeState) -> RenderableType:
         [
             _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
             _metric("Event rate", f"{state.lines_per_second:.1f}/s"),
+            _metric("Rate spikes", str(trend.spike_count), f"{trend.window_seconds}s baseline"),
             _metric("Active findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium"),
             _metric("Incidents", str(len(incidents))),
             _metric("Anomalies", str(len(anomalies))),
@@ -207,11 +216,11 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     status = Panel(
         Text(
             f"Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
-            "New lines are analyzed automatically with rolling correlation and anomaly scoring."
+            "New lines are analyzed automatically with rolling correlation, anomaly scoring and rate/baseline deviation detection."
         ),
         title="Live status",
     )
-    return Group(header, metrics, overview, _recent_table(list(state.recent_findings)), status)
+    return Group(header, metrics, overview, render_trends(trend), _recent_table(list(state.recent_findings)), status)
 
 
 def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], FileCursor]:
