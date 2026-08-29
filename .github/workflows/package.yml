@@ -50,6 +50,7 @@ jobs:
           ./INSTALL_LINUX_MACOS.sh
           ./.aegislog-venv/bin/aegislog --version
           ./.aegislog-venv/bin/aegislog doctor
+          ./.aegislog-venv/bin/aegislog start --help
           ./.aegislog-venv/bin/aegislog dashboard sample_logs/auth.log
           rm -rf .aegislog-venv
 
@@ -60,6 +61,8 @@ jobs:
           test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.1.0-py3-none-any.whl
           test -f customer-dist/AegisLog-AI-Customer/vendor/typer-0.27.2-py3-none-any.whl
           test -n "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name 'colorama-*.whl' -print -quit)"
+          test -f customer-dist/AegisLog-AI-Customer/START_AEGISLOG.bat
+          test -f customer-dist/AegisLog-AI-Customer/START_AEGISLOG.sh
           test -f customer-dist/AegisLog-AI-Customer/INSTALL_WINDOWS.bat
           test -f customer-dist/AegisLog-AI-Customer/OPEN_AEGISLOG_TERMINAL.bat
 
@@ -114,4 +117,5 @@ jobs:
           if errorlevel 1 exit /b 1
           .aegislog-venv\Scripts\aegislog.exe --version
           .aegislog-venv\Scripts\aegislog.exe doctor
+          .aegislog-venv\Scripts\aegislog.exe start --help
           .aegislog-venv\Scripts\aegislog.exe dashboard sample_logs\auth.log
