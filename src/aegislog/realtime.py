@@ -23,12 +23,12 @@ from .parsers import Event, parse_line
 @dataclass(frozen=True)
 class FileCursor:
     offset: int
-    identity: tuple[int, int, int]
+    identity: tuple[int, int]
 
 
-def _file_identity(path: Path) -> tuple[int, int, int]:
+def _file_identity(path: Path) -> tuple[int, int]:
     stat = path.stat()
-    return (int(stat.st_dev), int(stat.st_ino), int(stat.st_ctime_ns))
+    return (int(stat.st_dev), int(stat.st_ino))
 
 
 def initial_cursor(path: Path, from_start: bool = False) -> FileCursor:
