@@ -1,0 +1,116 @@
+name: Release v1.1.0
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify release version
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          data = tomllib.loads(Path('pyproject.toml').read_text())
+          assert data['project']['version'] == '1.1.0', data['project']['version']
+          PY
+
+      - name: Install verification tooling
+        run: python -m pip install --upgrade "build>=1.2" "twine>=5.1" "ruff>=0.5" "pytest>=8.0" "bandit>=1.7" "pip-audit>=2.7"
+
+      - name: Verify source
+        run: |
+          python -m ruff check .
+          python -m pytest -q
+          python -m bandit -q -r src
+          python -m pip_audit
+
+      - name: Build package
+        run: |
+          python -m build
+          python -m twine check dist/*
+          cd dist
+          sha256sum aegislog_ai-* > SHA256SUMS
+
+      - name: Build clean customer bundle
+        run: |
+          set -eux
+          ROOT="customer-dist/AegisLog-AI-Customer"
+          mkdir -p "$ROOT/package" "$ROOT/vendor" "$ROOT/sample_logs"
+          cp dist/*.whl "$ROOT/package/"
+          cp customer_bundle/* "$ROOT/"
+          cp examples/auth.log "$ROOT/sample_logs/auth.log"
+          python -m pip download --dest "$ROOT/vendor" "rich>=13.7" "typer>=0.12"
+          chmod +x "$ROOT"/*.sh
+          (
+            cd "$ROOT"
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
+          rm -rf "$ROOT/.aegislog-venv"
+          if find "$ROOT" -path '*/.aegislog-venv/*' -print -quit | grep -q .; then
+            echo "Refusing to package CI virtual environment" >&2
+            exit 1
+          fi
+          cd customer-dist
+          zip -r ../dist/AegisLog-AI-v1.1.0-Customer-Bundle.zip AegisLog-AI-Customer
+          cd ../dist
+          sha256sum AegisLog-AI-v1.1.0-Customer-Bundle.zip > AegisLog-AI-v1.1.0-Customer-Bundle.zip.sha256
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.1.0 >/dev/null 2>&1; then
+            echo "v1.1.0 already exists; refusing to create a duplicate release."
+            exit 0
+          fi
+          gh release create v1.1.0 \
+            --target "${{ github.event.workflow_run.head_sha }}" \
+            --title "AegisLog AI v1.1.0" \
+            --notes-file - \
+            dist/aegislog_ai-1.1.0-py3-none-any.whl \
+            dist/aegislog_ai-1.1.0.tar.gz \
+            dist/SHA256SUMS \
+            dist/AegisLog-AI-v1.1.0-Customer-Bundle.zip \
+            dist/AegisLog-AI-v1.1.0-Customer-Bundle.zip.sha256 <<'EOF'
+          ## AegisLog AI v1.1.0
+
+          AegisLog AI v1.1.0 focuses on the customer terminal experience and offline distribution.
+
+          ### Highlights
+          - Rich terminal investigation dashboard for `aegislog analyze <log>`
+          - explicit `aegislog dashboard <log>` command
+          - severity, category, anomaly, incident, service and evidence summaries
+          - stateful rolling terminal analysis improvements
+          - customer-ready Windows and Linux/macOS installers
+          - private per-folder virtual environment installation
+          - one-click terminal and dashboard launchers
+          - offline dependency bundle and SHA-256 verification
+          - defensive/read-only security posture preserved
+
+          ### Customer installation
+          Download `AegisLog-AI-v1.1.0-Customer-Bundle.zip`, extract it, then run the installer for your platform.
+
+          Python 3.10+ is required. Runtime Python dependencies are included in the customer bundle for offline installation.
+
+          ### Verification
+          The release workflow re-runs Ruff, pytest, Bandit, pip-audit, package build and Twine metadata validation before publishing the release.
+          EOF
