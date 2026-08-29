@@ -19,7 +19,7 @@ aegislog config --provider openai-compatible --model YOUR_MODEL
 aegislog ask "Explain the strongest security signals" examples/auth.log
 ```
 
-`AEGISLOG_BASE_URL` can point at a public compatible `/v1` API. `OPENAI_API_KEY` is accepted as a fallback. Keys are never written by the `config` command. The remote adapter rejects endpoints resolving to loopback, link-local, private, multicast, or reserved addresses; use Ollama for local models.
+`AEGISLOG_BASE_URL` can point at a public compatible `/v1` API. `OPENAI_API_KEY` is accepted as a fallback. Keys are never written by the `config` command. The remote adapter rejects endpoints resolving to loopback, link-local, private, multicast, or reserved addresses and disables HTTP redirects so the validated destination cannot silently redirect into a different network boundary. Use Ollama for local models.
 
 ## Privacy boundary
 
