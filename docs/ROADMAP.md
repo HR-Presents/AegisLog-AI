@@ -19,23 +19,24 @@ Persisted hunting, defensive indicator extraction, declarative JSON rule packs, 
 Multi-window behavioral profiling, entity correlation across IP/host/user/service/container evidence, bounded-memory streaming analysis, and regression tests.
 
 ## V0.7 — Release hardening
-- direct `stream`, `entities`, and `behavior` CLI commands
-- versioned SQLite schema migration framework
-- rejection of unsupported future database schemas
-- entity-index schema for future persisted correlation
-- bounded finding retention during streaming analysis
-- reproducible synthetic streaming benchmark harness
-- CLI-registration and migration regression tests
-- package entrypoint separated from the legacy command module for safer command growth
+Direct scale CLI commands, versioned SQLite migrations, future-schema rejection, streaming retention bounds, benchmark harness, and stabilized CI/security/package builds.
 
-## V0.8 — Planned release engineering
-- persist correlated entities into the entity index
+## V0.8 — Persistent correlation
+- persisted entity graph and historical entity pivots
+- ranked entity investigation across incidents
+- stateful bounded-window live correlation
+- hardened Rich terminal rendering for log-derived text
+- JSON report schema/tool/timestamp metadata
+- SPDX-style package license metadata
+
+## V0.9 — Final release candidate hardening
 - configuration schema versioning and migration
 - declarative parser extensions
-- release artifact verification and checksums
-- signed tags / release attestations where supported
-- benchmark thresholds and large-fixture regression jobs
+- richer redaction for authorization headers, JWTs, emails and optional IP privacy
+- large-fixture regression/performance jobs
 - installation/update/uninstall lifecycle polish
+- release artifact verification and checksums
+- final documentation and detection-semantics audit
 
 ## V1.0 target
-A stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collectors/parsers, persistent investigation state, strong tests, release artifacts, and clear operational limitations.
+Stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collection/parsing, persistent investigation state, reproducible release artifacts, strong automated tests, and clear operational limitations.
