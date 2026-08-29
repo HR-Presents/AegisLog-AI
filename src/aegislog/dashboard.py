@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -91,8 +92,8 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     table = Table(title="Correlated incidents", expand=True)
     table.add_column("Severity", width=10)
     table.add_column("Category", width=18)
-    table.add_column("Events", justify="right", width=7)
-    table.add_column("Summary")
+    table.add_column("Signals", justify="right", width=7)
+    table.add_column("Incident summary")
     for item in data.incidents[:limit]:
         table.add_row(item.severity, Text(item.category), str(item.count), Text(item.title))
     if not data.incidents:
@@ -101,14 +102,14 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
 
 
 def _anomaly_table(data: DashboardData, limit: int = 8) -> Table:
-    table = Table(title="Anomalies", expand=True)
+    table = Table(title="High-signal anomalies", expand=True)
     table.add_column("Score", justify="right", width=7)
     table.add_column("Event class", width=28)
     table.add_column("Reason")
     for item in data.anomalies[:limit]:
         table.add_row(f"{item.score:.1f}", Text(item.key), Text(item.reason))
     if not data.anomalies:
-        table.add_row("-", "-", "No frequency anomalies detected")
+        table.add_row("-", "-", "No rare concerning event classes detected")
     return table
 
 
@@ -116,7 +117,7 @@ def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     table = Table(title=f"Detected findings — showing {min(len(data.findings), limit)} of {len(data.findings)}", expand=True, show_lines=True)
     table.add_column("Severity", width=10)
     table.add_column("Category", width=18)
-    table.add_column("Finding", width=32)
+    table.add_column("Finding", width=34)
     table.add_column("Evidence")
     for item in data.findings[:limit]:
         table.add_row(item.severity, Text(item.category), Text(item.title), Text(item.evidence))
@@ -125,11 +126,22 @@ def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     return table
 
 
+def _risk_state(data: DashboardData) -> str:
+    if data.severities.get("CRITICAL", 0):
+        return "CRITICAL"
+    if data.severities.get("HIGH", 0):
+        return "HIGH"
+    if data.severities.get("MEDIUM", 0):
+        return "REVIEW"
+    return "CLEAR"
+
+
 def render_dashboard(data: DashboardData) -> RenderableType:
     """Return a rich terminal dashboard containing the full investigation summary."""
     critical = data.severities.get("CRITICAL", 0)
     high = data.severities.get("HIGH", 0)
-    risk = "CRITICAL" if critical else "HIGH" if high else "REVIEW" if data.findings else "CLEAR"
+    medium = data.severities.get("MEDIUM", 0)
+    risk = _risk_state(data)
 
     header = Panel(
         Align.center(Text(f"AEGISLOG AI  v{__version__}\n{data.source}", style="bold")),
@@ -138,7 +150,7 @@ def render_dashboard(data: DashboardData) -> RenderableType:
     metrics = Columns(
         [
             _metric("Lines analyzed", f"{data.lines:,}"),
-            _metric("Findings", str(len(data.findings)), f"{critical} critical • {high} high"),
+            _metric("Findings", str(len(data.findings)), f"{critical} critical • {high} high • {medium} medium"),
             _metric("Incidents", str(len(data.incidents))),
             _metric("Anomalies", str(len(data.anomalies))),
             _metric("Risk state", risk),
@@ -150,14 +162,18 @@ def render_dashboard(data: DashboardData) -> RenderableType:
         [
             _severity_table(data),
             _top_table("Finding categories", data.categories),
-            _top_table("Log levels", data.levels),
+            _top_table("Parsed log levels", data.levels),
             _top_table("Top services", data.services),
         ],
         equal=True,
         expand=True,
     )
+    command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
     footer = Panel(
-        "Investigative signals are not proof of compromise. Use `aegislog incident`, `hunt`, `entity`, and `report` for deeper review.",
+        Text(
+            f"Signals are investigative evidence, not proof of compromise. Continue with `{command} incident`, "
+            f"`{command} hunt`, `{command} entity`, or `{command} report` for deeper review."
+        ),
         title="Next steps",
     )
     return Group(header, metrics, overview, _incident_table(data), _anomaly_table(data), _finding_table(data), footer)
