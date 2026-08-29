@@ -10,24 +10,27 @@ Structured generic/syslog/journald/web parsing, live file watch, lightweight ano
 
 ## V0.3 — AI and collection layer
 
-- optional OpenAI-compatible provider adapter
-- explicit local Ollama adapter
-- prompt-injection boundary for untrusted telemetry
-- remote provider private-network protection
-- bounded journald collector
-- bounded Docker logs collector
-- persistent incident history
-- AI-provider fallback to local analysis
+Optional compatible AI and Ollama adapters, prompt-injection boundary, remote provider network protection, bounded journald/Docker collectors, incident history, and local fallback.
 
-## V0.4 — Planned analyst workflow
+## V0.4 — Analyst workflow
 
-- richer statistical baselines over time windows
-- SQLite-backed incident/evidence index
-- incident timeline drill-down
-- pluggable parser/rule packs
-- richer Docker/systemd metadata correlation
-- analyst-ready HTML/Markdown reports
-- performance work for large files and streaming workloads
+SQLite-backed incident/evidence index, incident drill-down and timeline, baseline comparison, analyst-ready HTML/Markdown reports, and safer report rendering.
+
+## V0.5 — SOC hunting and extensibility
+
+- persisted incident hunting by text, severity, category, and source
+- defensive IP/domain indicator extraction
+- local rule-pack plugin loader with failure isolation
+- plugin-aware analysis workflow
+- expanded tests for plugins and hunting primitives
+
+## V0.6 — Planned scale and correlation
+
+- time-window behavioral baselines rather than sample-only comparisons
+- entity correlation across IP, host, user, service, and container
+- database schema migrations and richer evidence indexing
+- streaming analysis for large files without full-file reads
+- parser plugin interface in addition to detection rules
 - signed/reproducible release pipeline
 
 ## V1.0 target
