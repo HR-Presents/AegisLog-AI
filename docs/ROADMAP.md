@@ -20,7 +20,7 @@ SQLite-backed incident/evidence index, incident drill-down and timeline, baselin
 
 - persisted incident hunting by text, severity, category, and source
 - defensive IP/domain indicator extraction
-- local rule-pack plugin loader with failure isolation
+- declarative JSON rule packs with failure isolation and no plugin code execution
 - plugin-aware analysis workflow
 - expanded tests for plugins and hunting primitives
 
@@ -30,7 +30,7 @@ SQLite-backed incident/evidence index, incident drill-down and timeline, baselin
 - entity correlation across IP, host, user, service, and container
 - database schema migrations and richer evidence indexing
 - streaming analysis for large files without full-file reads
-- parser plugin interface in addition to detection rules
+- declarative parser extension interface
 - signed/reproducible release pipeline
 
 ## V1.0 target
