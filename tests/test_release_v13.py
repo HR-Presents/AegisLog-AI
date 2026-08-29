@@ -39,6 +39,16 @@ def test_release_publishes_only_customer_exe_and_checksum():
     assert "AegisLog-AI-v1.3.0-Customer-Bundle.zip" not in workflow
 
 
+def test_release_artifact_is_staged_flat_for_linux_checksum_verification():
+    workflow = (ROOT / ".github" / "workflows" / "release-v1.3.0.yml").read_text(encoding="utf-8")
+    assert 'Copy-Item "dist\\AegisLog.exe" "release-assets\\AegisLog.exe"' in workflow
+    assert '"release-assets\\AegisLog.exe.sha256"' in workflow
+    assert "path: release-assets/*" in workflow
+    assert "test -f AegisLog.exe" in workflow
+    assert "test -f AegisLog.exe.sha256" in workflow
+    assert "sha256sum --check AegisLog.exe.sha256" in workflow
+
+
 def test_v13_release_notes_describe_single_file_windows_delivery():
     notes = (ROOT / "docs" / "RELEASE_V1.3.0.md").read_text(encoding="utf-8")
     assert "AegisLog.exe" in notes
