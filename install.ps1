@@ -1,18 +1,19 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-$Python = Get-Command py -ErrorAction SilentlyContinue
-if ($Python) {
-    $Py = @("py", "-3")
-} elseif (Get-Command python -ErrorAction SilentlyContinue) {
-    $Py = @("python")
-} else {
+$HasPy = Get-Command py -ErrorAction SilentlyContinue
+$HasPython = Get-Command python -ErrorAction SilentlyContinue
+if (-not $HasPy -and -not $HasPython) {
     throw "Python 3.10 or newer is required. Install Python and run this installer again."
 }
 
 $Venv = Join-Path $PSScriptRoot ".aegislog-venv"
 if (-not (Test-Path $Venv)) {
-    & $Py[0] $Py[1..($Py.Count-1)] -m venv $Venv
+    if ($HasPy) {
+        & py -3 -m venv $Venv
+    } else {
+        & python -m venv $Venv
+    }
 }
 
 $VenvPython = Join-Path $Venv "Scripts\python.exe"
