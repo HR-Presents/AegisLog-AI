@@ -2,7 +2,7 @@
 
 **Terminal-first defensive log intelligence and investigation.**
 
-AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using deterministic detections, anomaly scoring, incident correlation, historical baselines, persistent investigation state, local rule plugins, defensive indicator extraction, and optional LLM-assisted explanation. Core analysis works without an AI service.
+AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using deterministic detections, anomaly scoring, incident correlation, historical baselines, persistent investigation state, declarative local rule packs, defensive indicator extraction, and optional LLM-assisted explanation. Core analysis works without an AI service.
 
 ## Quick start
 
@@ -35,7 +35,13 @@ Persisted incidents use a local SQLite database under the AegisLog configuration
 
 ## Extensible detection rules
 
-AegisLog loads optional local Python rule packs from its `rules.d` configuration directory. Run `aegislog plugins` to inspect loaded packs and errors. A plugin defines a `RULES` list containing dictionaries with `id`, `severity`, `category`, `title`, `pattern`, and `recommendation`. Broken plugins are isolated instead of preventing the core analyzer from running. Only install rule plugins you trust because Python rule files execute locally as code.
+AegisLog loads optional declarative JSON rule packs from its `rules.d` configuration directory. Run `aegislog plugins` to inspect loaded packs and errors. A pack contains a `rules` list; each rule provides `id`, `severity`, `category`, `title`, `pattern`, and `recommendation`. Broken packs are isolated instead of preventing the core analyzer from running. Python files in `rules.d` are not imported or executed.
+
+Example:
+
+```json
+{"rules":[{"id":"custom-01","severity":"HIGH","category":"application","title":"Sensitive service failure","pattern":"payment-worker.*fatal","recommendation":"Review the affected worker and surrounding telemetry."}]}
+```
 
 ## Live and system telemetry
 
