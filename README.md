@@ -9,21 +9,37 @@ AegisLog AI analyzes Linux, authentication, web, system, Docker and application 
 ```bash
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e .
 
-aegislog doctor
-aegislog analyze examples/auth.log
-aegislog incidents examples/auth.log --persist
-aegislog timeline
+# Windows
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+.\aegislog.cmd doctor
+.\aegislog.cmd analyze examples\auth.log
+
+# Linux / macOS
+sh install.sh
+./aegislog doctor
+./aegislog analyze examples/auth.log
 ```
 
-For an isolated command-line installation, use `pipx install .` from a checked-out
-release. Upgrade with `pipx upgrade aegislog-ai` after a package release and
-uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration,
-rules, and investigation state under `~/.config/aegislog`; uninstalling the package
-does not delete analyst data.
+The installers create a private `.aegislog-venv` inside the AegisLog folder instead of depending on the user's global Python `Scripts` directory being on `PATH`. Windows also creates `OPEN_AEGISLOG_TERMINAL.bat`, which opens a ready command prompt in the product folder. Linux/macOS creates `OPEN_AEGISLOG_TERMINAL.sh`.
+
+## Terminal dashboard
+
+`analyze` now opens the complete AegisLog terminal dashboard after analysis:
+
+```bash
+aegislog analyze auth.log
+```
+
+The dashboard shows lines analyzed, risk state, severity counts, finding categories, log levels, top services, correlated incidents, anomaly scores, detected findings and supporting evidence in one terminal view.
+
+The same dashboard can be opened explicitly:
+
+```bash
+aegislog dashboard auth.log
+```
+
+A spinner is shown while the file is analyzed, then the final investigation dashboard remains in the terminal for review. Log-derived values are rendered as literal text so hostile Rich markup is not interpreted as terminal formatting.
 
 ## Persistent entity investigation
 
@@ -78,7 +94,7 @@ aegislog collect journal --target ssh.service --output ssh.log
 aegislog collect docker --target my-container --output container.log
 ```
 
-`watch` now maintains a bounded rolling correlation window, allowing repeated events to be detected across incoming lines instead of treating every line independently. Collectors remain bounded and read-only.
+`watch` maintains a bounded rolling correlation window, allowing repeated events to be detected across incoming lines instead of treating every line independently. Collectors remain bounded and read-only.
 
 ## Ask AegisLog
 
@@ -111,7 +127,7 @@ The benchmark is for reproducible regression comparison rather than marketing pe
 
 ## Main commands
 
-`analyze`, `threats`, `anomalies`, `incidents`, `history`, `incident`, `timeline`, `hunt`, `indicators`, `baseline`, `plugins`, `stream`, `entities`, `behavior`, `index-entities`, `entity`, `entity-top`, `watch`, `collect`, `ask`, `report`, `scan`, `config`, and `doctor`.
+`analyze`, `dashboard`, `threats`, `anomalies`, `incidents`, `history`, `incident`, `timeline`, `hunt`, `indicators`, `baseline`, `plugins`, `stream`, `entities`, `behavior`, `index-entities`, `entity`, `entity-top`, `watch`, `collect`, `ask`, `report`, `scan`, `config`, and `doctor`.
 
 ## Security model
 
@@ -130,9 +146,7 @@ twine check dist/*
 
 ## Release status
 
-This branch is the V1.0.0 release candidate. A maintainer must verify the complete
-GitHub Actions matrix and release checksums before creating the `v1.0.0` tag. No
-automatic remediation or privileged system changes are performed.
+V1.0.0 is the stable public baseline. The `feature/v1.1-terminal-dashboard` branch develops the improved customer installation and terminal-dashboard experience and must pass CI/security/package checks before release.
 
 ## License
 
