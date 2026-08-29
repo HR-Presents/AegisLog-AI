@@ -30,3 +30,9 @@ def test_remote_provider_rejects_private_address():
         except ProviderError:
             return
     raise AssertionError("private endpoint should be rejected for remote provider")
+
+
+def test_local_adapter_allows_loopback():
+    fake = [(2, 1, 6, "", ("127.0.0.1", 11434))]
+    with patch("aegislog.providers.socket.getaddrinfo", return_value=fake):
+        assert _validate_url("http://127.0.0.1:11434/api/generate", allow_local=True).startswith("http://127.0.0.1")
