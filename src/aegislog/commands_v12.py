@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import sys
 from pathlib import Path
 
@@ -36,6 +37,7 @@ def _clear() -> None:
 def _header() -> Panel:
     body = Text("AEGISLOG AI", style="bold cyan")
     body.append("\nSingle-file defensive log intelligence", style="dim")
+    body.append("\nChoose a number or type a command", style="dim")
     return Panel(body, border_style="cyan")
 
 
@@ -52,6 +54,7 @@ def _menu() -> Table:
     table.add_row("7", "Run built-in demo analysis")
     table.add_row("8", "System check")
     table.add_row("9", "Show useful commands")
+    table.add_row("C", "Command mode — run any AegisLog CLI command")
     table.add_row("Q", "Exit AegisLog")
     return table
 
@@ -70,10 +73,25 @@ def _resolve_demo() -> Path:
     return demo
 
 
+def _clean_path_input(raw: str) -> str:
+    value = raw.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        value = value[1:-1]
+    return value.strip()
+
+
 def _path(raw: str) -> Path | None:
-    path = Path(raw.strip().strip('"').strip("'")).expanduser()
+    cleaned = _clean_path_input(raw)
+    if not cleaned:
+        return None
+    path = Path(cleaned).expanduser()
     if not path.exists():
-        console.print("[red]That path does not exist.[/red]")
+        panel = Text()
+        panel.append("FILE NOT FOUND\n", style="bold red")
+        panel.append(cleaned, style="white")
+        panel.append("\n\nEnter a real existing log path, or drag a log file from File Explorer into this terminal.\n", style="dim")
+        panel.append("Tip: C:\\logs\\auth.log in documentation is an example path unless you created that file.", style="yellow")
+        console.print(Panel(panel, border_style="red"))
         return None
     if path.is_dir():
         console.print("[yellow]Choose an actual log file, not a folder.[/yellow]")
@@ -82,12 +100,28 @@ def _path(raw: str) -> Path | None:
 
 
 def _choose_log_file() -> Path | None:
-    raw = Prompt.ask("[bold]Enter log file path[/bold]").strip()
-    return _path(raw) if raw else None
+    while True:
+        console.print("[dim]Drag-and-drop a log file here, paste its full path, type [cyan]demo[/cyan] for a sample, or [cyan]back[/cyan].[/dim]")
+        raw = Prompt.ask("[bold]Log file path[/bold]").strip()
+        if not raw or raw.lower() in {"b", "back", "cancel"}:
+            return None
+        if raw.lower() in {"demo", "sample"}:
+            path = _resolve_demo()
+            console.print(f"[cyan]Using built-in demo:[/cyan] {path}")
+            return path
+        path = _path(raw)
+        if path is not None:
+            return path
+        action = Prompt.ask("Next", choices=["retry", "demo", "back"], default="retry")
+        if action == "demo":
+            return _resolve_demo()
+        if action == "back":
+            return None
 
 
 def _choose_log_files() -> list[Path]:
-    raw = Prompt.ask("[bold]Enter 2+ log paths separated by semicolons[/bold]").strip()
+    console.print("[dim]Enter at least two existing paths separated by semicolons. Quoted/dragged paths are accepted.[/dim]")
+    raw = Prompt.ask("[bold]Log paths[/bold]").strip()
     paths: list[Path] = []
     for item in raw.split(";"):
         if not item.strip():
@@ -96,7 +130,7 @@ def _choose_log_files() -> list[Path]:
         if path is not None and path not in paths:
             paths.append(path)
     if len(paths) < 2:
-        console.print("[yellow]Multi-source monitoring needs at least two different log files.[/yellow]")
+        console.print("[yellow]Multi-source monitoring needs at least two different existing log files.[/yellow]")
         return []
     return paths
 
@@ -190,6 +224,7 @@ def _system_check() -> None:
     table.add_row("Real-time file monitor", "READY")
     table.add_row("Multi-source correlation", "READY")
     table.add_row("Native live monitor", "READY")
+    table.add_row("Command mode", "READY — menu numbers and CLI commands")
     for item in source_status():
         table.add_row(item.label, "READY" if item.available else "NOT ON THIS OS")
     console.print(table)
@@ -201,18 +236,82 @@ def _commands() -> None:
     table.add_column("Command", style="cyan")
     table.add_column("Purpose")
     table.add_row(executable, "Open this terminal control center")
+    table.add_row(f"{executable} --help", "Show every available CLI command")
+    table.add_row(f"{executable} dashboard <file>", "Analyze one log and show the investigation dashboard")
     table.add_row(f"{executable} incidents <file>", "List correlated incidents and confidence")
     table.add_row(f"{executable} explain <file> <incident-id>", "Explain an incident locally in plain analyst language")
     table.add_row(f"{executable} mitre <file>", "Show evidence-supported MITRE ATT&CK context")
     table.add_row(f"{executable} native-sources", "Show native OS/container sources")
+    table.add_row(f"{executable} native-analyze windows --channel Security", "Analyze Windows Security events")
     table.add_row(f"{executable} live <file> --profile security", "Follow one log with a focused Security watch profile")
     table.add_row(f"{executable} live-multi <file1> <file2> --profile authentication", "Correlate multiple logs with an Authentication profile")
     table.add_row(f"{executable} native-live windows --channel Security --profile security", "Continuously monitor Windows Event Logs")
     table.add_row(f"{executable} native-live journald --profile operations", "Continuously monitor Linux operations signals")
     table.add_row(f"{executable} native-live docker --container <name> --profile docker", "Continuously monitor Docker-focused signals")
-    table.add_row(f"{executable} dashboard <file>", "Analyze one log and show the investigation dashboard")
     table.add_row(f"{executable} doctor", "Check the local AegisLog environment")
     console.print(table)
+    console.print("[dim]You can type these commands directly at the main menu too. The leading AegisLog.exe/aegislog is optional there.[/dim]")
+
+
+def _command_args(raw: str) -> list[str]:
+    lexer = shlex.shlex(raw, posix=False)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    args = []
+    for token in lexer:
+        value = token.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        args.append(value)
+    if args and Path(args[0]).name.lower() in {"aegislog", "aegislog.exe"}:
+        args = args[1:]
+    return args
+
+
+def _run_inline_command(raw: str) -> None:
+    args = _command_args(raw)
+    if not args:
+        return
+    if args[0].lower() in {"start"}:
+        console.print("[yellow]You are already inside the AegisLog control center.[/yellow]")
+        return
+    try:
+        from typer.main import get_command
+
+        from .entry import app
+
+        command = get_command(app)
+        command.main(args=args, prog_name="AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog", standalone_mode=False)
+    except (SystemExit, KeyboardInterrupt):
+        return
+    except Exception as exc:
+        console.print(Panel(Text(str(exc) or exc.__class__.__name__), title="Command could not run", border_style="red"))
+        console.print("[dim]Use `help` or `AegisLog.exe --help` to see valid commands and exact syntax.[/dim]")
+
+
+def _command_prompt() -> None:
+    console.print(Panel(
+        "Type any AegisLog command without opening another terminal.\n"
+        "Examples:\n"
+        "  dashboard C:\\logs\\auth.log\n"
+        "  native-analyze windows --channel Security\n"
+        "  native-live windows --channel Security --profile security\n"
+        "  incidents C:\\logs\\auth.log\n"
+        "  --help\n\n"
+        "Type `back` to return.",
+        title="Command mode",
+        border_style="cyan",
+    ))
+    while True:
+        raw = Prompt.ask("aegislog").strip()
+        if not raw:
+            continue
+        if raw.lower() in {"b", "back", "exit", "quit", "q"}:
+            return
+        if raw.lower() in {"help", "commands", "?"}:
+            _commands()
+            continue
+        _run_inline_command(raw)
 
 
 def start() -> None:
@@ -222,8 +321,10 @@ def start() -> None:
         console.print(_header())
         console.print(_menu())
         console.print()
-        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "q", "Q"], default="1")
-        if choice.lower() == "q":
+        console.print("[dim]Numbers are shortcuts. You can also type commands such as `dashboard <file>` or `native-sources`.[/dim]")
+        choice = Prompt.ask("Select or command", default="1").strip()
+        lowered = choice.lower()
+        if lowered == "q":
             console.print("[cyan]AegisLog closed safely.[/cyan]")
             return
         if choice == "1":
@@ -259,5 +360,12 @@ def start() -> None:
             _system_check()
         elif choice == "9":
             _commands()
+        elif lowered == "c":
+            _command_prompt()
+        elif lowered in {"help", "commands", "?"}:
+            _commands()
+        else:
+            console.print()
+            _run_inline_command(choice)
         console.print()
         Prompt.ask("Press Enter to return to the AegisLog menu", default="")
