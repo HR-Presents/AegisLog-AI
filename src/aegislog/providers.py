@@ -30,17 +30,24 @@ def _validate_url(url: str, allow_local: bool) -> str:
     except (OSError, ValueError) as exc:
         raise ProviderError("provider hostname could not be resolved") from exc
     unsafe = any(ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved for ip in addresses)
-    if unsafe and not allow_local:
-        raise ProviderError("remote provider URL resolves to a local/private address; use Ollama for local models")
+    if unsafe and not allow_local: raise ProviderError("remote provider URL resolves to a local/private address; use Ollama for local models")
     return url.rstrip("/")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ProviderError("provider redirects are disabled")
 
 
 def _post_json(url: str, payload: dict, headers: dict[str, str], timeout: int = 45, allow_local: bool = False) -> dict:
     safe_url = _validate_url(url, allow_local)
     request = urllib.request.Request(safe_url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json", **headers}, method="POST")
+    opener = urllib.request.build_opener(_NoRedirect())
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))
+    except ProviderError:
+        raise
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as exc:
         raise ProviderError(str(exc)) from exc
 
