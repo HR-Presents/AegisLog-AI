@@ -11,6 +11,7 @@ from .commands_v15 import incidents, intel_entities, investigate, mitre
 from .commands_v16 import case_history, case_show, save_investigation
 from .commands_v17 import native_analyze, native_sources
 from .commands_v18 import native_live
+from .commands_v19 import explain
 
 replace_analyze_command(app)
 app.command("start")(start)
@@ -22,6 +23,7 @@ app.command("native-analyze")(native_analyze)
 app.command("native-live")(native_live)
 app.command("incidents")(incidents)
 app.command("investigate")(investigate)
+app.command("explain")(explain)
 app.command("mitre")(mitre)
 app.command("intel-entities")(intel_entities)
 app.command("save-investigation")(save_investigation)
