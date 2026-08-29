@@ -9,7 +9,7 @@ aegislog config --provider ollama --model llama3.2
 aegislog ask "What likely happened?" examples/auth.log
 ```
 
-The default endpoint is `http://127.0.0.1:11434`. Override it with `AEGISLOG_OLLAMA_URL` or `--base-url` in config.
+The default endpoint is `http://127.0.0.1:11434`. Override it with `AEGISLOG_OLLAMA_URL` or `--base-url` in config. Local/private addresses are permitted for the explicit Ollama adapter.
 
 ## OpenAI-compatible endpoint
 
@@ -19,7 +19,7 @@ aegislog config --provider openai-compatible --model YOUR_MODEL
 aegislog ask "Explain the strongest security signals" examples/auth.log
 ```
 
-`AEGISLOG_BASE_URL` can point at a compatible `/v1` API. `OPENAI_API_KEY` is accepted as a fallback. Keys are never written by the `config` command.
+`AEGISLOG_BASE_URL` can point at a public compatible `/v1` API. `OPENAI_API_KEY` is accepted as a fallback. Keys are never written by the `config` command. The remote adapter rejects endpoints resolving to loopback, link-local, private, multicast, or reserved addresses; use Ollama for local models.
 
 ## Privacy boundary
 
