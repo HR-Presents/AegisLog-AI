@@ -28,9 +28,15 @@ if not exist ".aegislog-venv\Scripts\python.exe" (
 )
 
 set "VPY=%CD%\.aegislog-venv\Scripts\python.exe"
+set "WHEEL="
+for %%F in ("%CD%\package\aegislog_ai-*.whl") do set "WHEEL=%%~fF"
+if not defined WHEEL (
+  echo ERROR: AegisLog package wheel is missing from the package folder.
+  goto :fail
+)
 
 echo Installing AegisLog AI and bundled dependencies offline...
-"%VPY%" -m pip install --disable-pip-version-check --no-index --find-links "%CD%\vendor" "%CD%\package\aegislog_ai-*.whl"
+"%VPY%" -m pip install --disable-pip-version-check --no-index --find-links "%CD%\vendor" "%WHEEL%"
 if errorlevel 1 goto :fail
 
 "%VPY%" -m aegislog --version
