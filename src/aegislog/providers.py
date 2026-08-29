@@ -21,6 +21,9 @@ class ProviderError(RuntimeError):
     pass
 
 
+MAX_RESPONSE_BYTES = 2_000_000
+
+
 def _validate_url(url: str, allow_local: bool) -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
@@ -45,7 +48,16 @@ def _post_json(url: str, payload: dict, headers: dict[str, str], timeout: int = 
     opener = urllib.request.build_opener(_NoRedirect())
     try:
         with opener.open(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
+            declared = response.headers.get("Content-Length")
+            if declared and int(declared) > MAX_RESPONSE_BYTES:
+                raise ProviderError("provider response exceeds the 2 MB safety limit")
+            body = response.read(MAX_RESPONSE_BYTES + 1)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise ProviderError("provider response exceeds the 2 MB safety limit")
+            data = json.loads(body.decode("utf-8"))
+            if not isinstance(data, dict):
+                raise ProviderError("provider returned a non-object JSON response")
+            return data
     except ProviderError:
         raise
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as exc:

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.0 - Release candidate
+
+- Promoted the complete terminal analysis, SOC workflow, persistent entity graph,
+  streaming, behavioral correlation, collectors, reports, and optional AI stack.
+- Added versioned, allowlisted, atomic configuration with private file permissions.
+- Hardened collector execution with an executable allowlist and argument isolation.
+- Replaced legacy incident identifiers with deterministic SHA-256 identifiers.
+- Removed dynamic SQL composition and expanded static application security checks.
+- Bounded remote AI response bodies and rejected non-object JSON responses.
+- Escaped log-derived and database-derived terminal table values.
+- Expanded CI to Python 3.10–3.13 and added Bandit, Twine, and release checksums.
+
+## 0.9.0 - Release candidate hardening
+
+- Completed the security, configuration migration, packaging, and terminal-safety gate.
+
 ## 0.2.0 - Unreleased
 
 - Added generic, syslog, journald/JSON, and web access-log parsing.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass
 
 
@@ -17,8 +17,13 @@ class CollectorError(RuntimeError):
 
 
 def _run(command: list[str], timeout: int = 20, include_stderr: bool = False) -> str:
+    """Run an internally constructed, argument-separated collector command."""
+    if not command or command[0] not in {"journalctl", "docker"}:
+        raise CollectorError("unsupported collector command")
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
+        result = subprocess.run(  # nosec B603
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise CollectorError(str(exc)) from exc
     if result.returncode != 0:

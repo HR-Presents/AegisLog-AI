@@ -29,7 +29,7 @@ Direct scale CLI commands, versioned SQLite migrations, future-schema rejection,
 - JSON report schema/tool/timestamp metadata
 - SPDX-style package license metadata
 
-## V0.9 — Final release candidate hardening
+## V0.9 — Final release candidate hardening (complete)
 - configuration schema versioning and migration
 - declarative parser extensions
 - richer redaction for authorization headers, JWTs, emails and optional IP privacy
@@ -38,5 +38,5 @@ Direct scale CLI commands, versioned SQLite migrations, future-schema rejection,
 - release artifact verification and checksums
 - final documentation and detection-semantics audit
 
-## V1.0 target
+## V1.0 release candidate
 Stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collection/parsing, persistent investigation state, reproducible release artifacts, strong automated tests, and clear operational limitations.

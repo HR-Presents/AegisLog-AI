@@ -39,7 +39,7 @@ def _render(path: Path) -> None:
     console.print(Panel.fit(f"[bold]AegisLog AI[/bold]  v{__version__}\n{escape(str(path))}"))
     console.print(f"Lines: [bold]{total}[/bold]  Findings: [bold]{len(findings)}[/bold]  Critical: {counts['CRITICAL']}  High: {counts['HIGH']}")
     table = Table(show_lines=True); table.add_column("Severity", width=10); table.add_column("Finding", width=34); table.add_column("Evidence")
-    for finding in findings[:50]: table.add_row(finding.severity, finding.title, finding.evidence)
+    for finding in findings[:50]: table.add_row(finding.severity, escape(finding.title), escape(finding.evidence))
     console.print(table)
 
 
@@ -74,7 +74,7 @@ def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False), per
     """Correlate findings into incidents and optionally persist them in SQLite."""
     _, findings = analyze_file(path); items = correlate(findings)
     table = Table(show_lines=True); table.add_column("ID"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Events"); table.add_column("Summary")
-    for item in items: table.add_row(item.id, item.severity, item.category, str(item.count), item.title)
+    for item in items: table.add_row(item.id, item.severity, escape(item.category), str(item.count), escape(item.title))
     console.print(table)
     if persist and items:
         count = add_incidents(str(path), datetime.now(timezone.utc).isoformat(), items); console.print(f"Persisted {count} incident records to the AegisLog database.")
@@ -86,7 +86,7 @@ def incident_history(limit: int = 50, severity: str = "") -> None:
     records = list_incidents(limit, severity or None)
     if not records: console.print("No persisted incidents yet. Run incidents <log> --persist."); return
     table = Table(show_lines=True); table.add_column("DB ID"); table.add_column("Recorded"); table.add_column("Severity"); table.add_column("Source"); table.add_column("Summary")
-    for item in records: table.add_row(str(item["id"]), item["recorded_at"], item["severity"], item["source"], item["title"])
+    for item in records: table.add_row(str(item["id"]), escape(item["recorded_at"]), item["severity"], escape(item["source"]), escape(item["title"]))
     console.print(table)
 
 
@@ -105,7 +105,7 @@ def timeline(limit: int = 100) -> None:
     records = database_timeline(limit)
     if not records: console.print("No incident timeline exists yet."); return
     table = Table(show_lines=True); table.add_column("Time"); table.add_column("ID"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Summary")
-    for item in records: table.add_row(item["recorded_at"], str(item["id"]), item["severity"], item["category"], item["title"])
+    for item in records: table.add_row(escape(item["recorded_at"]), str(item["id"]), item["severity"], escape(item["category"]), escape(item["title"]))
     console.print(table)
 
 
@@ -114,7 +114,7 @@ def hunt(query: str = "", severity: str = "", category: str = "", source: str = 
     """Search persisted incidents like a lightweight SOC investigation console."""
     results = search_incidents(query, severity, category, source, limit)
     table = Table(show_lines=True); table.add_column("ID"); table.add_column("Time"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Source"); table.add_column("Summary")
-    for item in results: table.add_row(str(item.id), item.recorded_at, item.severity, item.category, item.source, item.title)
+    for item in results: table.add_row(str(item.id), escape(item.recorded_at), item.severity, escape(item.category), escape(item.source), escape(item.title))
     console.print(table)
 
 

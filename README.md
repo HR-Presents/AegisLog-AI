@@ -19,6 +19,12 @@ aegislog incidents examples/auth.log --persist
 aegislog timeline
 ```
 
+For an isolated command-line installation, use `pipx install .` from a checked-out
+release. Upgrade with `pipx upgrade aegislog-ai` after a package release and
+uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration,
+rules, and investigation state under `~/.config/aegislog`; uninstalling the package
+does not delete analyst data.
+
 ## Persistent entity investigation
 
 ```bash
@@ -117,7 +123,16 @@ AegisLog is defensive tooling. Findings, indicators, correlations and behavioral
 pip install -e '.[dev]'
 pytest
 ruff check .
+bandit -q -r src
+python -m build
+twine check dist/*
 ```
+
+## Release status
+
+This branch is the V1.0.0 release candidate. A maintainer must verify the complete
+GitHub Actions matrix and release checksums before creating the `v1.0.0` tag. No
+automatic remediation or privileged system changes are performed.
 
 ## License
 

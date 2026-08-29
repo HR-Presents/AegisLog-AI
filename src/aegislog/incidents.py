@@ -27,7 +27,7 @@ def correlate(findings: list[Finding]) -> list[Incident]:
     incidents: list[Incident] = []
     for category, items in groups.items():
         top = max(items, key=lambda item: SEVERITY.get(item.severity, 0))
-        digest = hashlib.sha1((category + top.title).encode()).hexdigest()[:8]
+        digest = hashlib.sha256((category + "\0" + top.title).encode()).hexdigest()[:12]
         incidents.append(Incident(
             id=digest,
             category=category,
