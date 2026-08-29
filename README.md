@@ -1,68 +1,121 @@
 # AegisLog AI
 
-**AI-ready defensive log intelligence for the terminal.**
+**Terminal-first defensive log intelligence and investigation.**
 
-AegisLog AI is an installable CLI for analyzing Linux, server, web, authentication, and application logs. The first engine combines deterministic security/error detection, repeated-authentication correlation, severity classification, sensitive-value redaction, readable terminal output, and JSON reporting. It works locally without sending logs to an AI provider.
+AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using deterministic detections, anomaly scoring, incident correlation, behavioral baselines, persistent investigation state, declarative rule packs, entity correlation, bounded-memory streaming, stateful live analysis, and optional LLM-assisted explanation. Core analysis works without an AI service.
 
-> Status: early V0.1 foundation. Detection findings are investigative signals, not proof of compromise.
-
-## Install from source
+## Quick start
 
 ```bash
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
 python -m venv .venv
-# Linux/macOS: source .venv/bin/activate
-# Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e .
-```
 
-## Quick start
-
-```bash
 aegislog doctor
 aegislog analyze examples/auth.log
-aegislog threats examples/auth.log
-aegislog report examples/auth.log --output report.json
-aegislog scan /var/log
+aegislog incidents examples/auth.log --persist
+aegislog timeline
 ```
 
-## What V0.1 detects
+For an isolated command-line installation, use `pipx install .` from a checked-out
+release. Upgrade with `pipx upgrade aegislog-ai` after a package release and
+uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration,
+rules, and investigation state under `~/.config/aegislog`; uninstalling the package
+does not delete analyst data.
 
-- authentication failures and repeated-source brute-force indicators
-- suspicious privilege/sudo activity
-- common suspicious web-request indicators
-- crashes, fatal errors, OOM and service failures
-- application errors, exceptions, access denials and timeouts
-- secrets such as passwords, tokens and API keys are redacted before findings are displayed/stored
+## Persistent entity investigation
 
-## Architecture
-
-```text
-log files / system logs
-        |
-        v
- ingestion + normalization
-        |
-        v
- redaction layer
-        |
-        +----> deterministic security/error rules
-        |                 |
-        |                 v
-        +----------> correlation
-                          |
-                          v
-                 severity + findings
-                          |
-                  +-------+-------+
-                  |               |
-               terminal        JSON report
+```bash
+aegislog index-entities auth.log
+aegislog entity ip 203.0.113.7
+aegislog entity user admin
+aegislog entity-top
+aegislog entity-top --entity-type ip
 ```
 
-## Roadmap
+`index-entities` persists correlated incidents and builds a searchable local entity graph. Analysts can pivot from an IP, user, host, service, or container to historical incidents and rank repeatedly observed entities.
 
-The next milestones are structured parsers for journald/nginx/apache/docker, streaming `watch`, statistical anomaly baselines, incident timelines, configuration profiles, and an optional provider-neutral AI explanation layer. AI integrations will receive redacted/minimized context and local detection will remain usable without AI.
+## Scale and behavioral correlation
+
+```bash
+aegislog stream huge-server.log --chunk-size 2000
+aegislog entities auth.log
+aegislog behavior --baseline monday.log --baseline tuesday.log --current today.log
+```
+
+`stream` analyzes large files incrementally with bounded retained findings. `entities` performs immediate correlation without persistence. `behavior` compares current telemetry with multiple historical windows.
+
+## SOC-style workflow
+
+```bash
+aegislog incidents auth.log --persist
+aegislog timeline
+aegislog hunt --severity HIGH
+aegislog hunt --query "authentication"
+aegislog incident 1
+aegislog indicators auth.log
+aegislog baseline normal.log current.log
+```
+
+Persisted investigations use SQLite with versioned schema migrations.
+
+## Extensible detection rules
+
+AegisLog loads declarative JSON rule packs from its `rules.d` configuration directory. `aegislog plugins` displays loaded packs and validation errors. Python files in the rule directory are not imported or executed.
+
+```json
+{"rules":[{"id":"custom-01","severity":"HIGH","category":"application","title":"Sensitive service failure","pattern":"payment-worker.*fatal","recommendation":"Review the affected worker and surrounding telemetry."}]}
+```
+
+## Live and system telemetry
+
+```bash
+aegislog watch /var/log/auth.log --window 200
+aegislog collect journal --lines 500 --output journal.log
+aegislog collect journal --target ssh.service --output ssh.log
+aegislog collect docker --target my-container --output container.log
+```
+
+`watch` now maintains a bounded rolling correlation window, allowing repeated events to be detected across incoming lines instead of treating every line independently. Collectors remain bounded and read-only.
+
+## Ask AegisLog
+
+```bash
+aegislog ask "What are the strongest security signals?" examples/auth.log --local
+
+aegislog config --provider ollama --model llama3.2
+aegislog ask "What likely happened?" examples/auth.log
+```
+
+Remote compatible providers use environment-based credentials. Provider context is minimized and redacted, telemetry is explicitly untrusted, private-network remote endpoints are rejected, and redirects are disabled. See `docs/AI_PROVIDERS.md`.
+
+## Reports
+
+```bash
+aegislog report auth.log --output report.json
+aegislog report auth.log --output report.md
+aegislog report auth.log --output report.html
+```
+
+JSON reports include a schema version, tool version and generation timestamp. HTML report fields escape untrusted log-derived values.
+
+## Performance benchmark
+
+```bash
+python benchmarks/stream_benchmark.py --lines 250000 --chunk-size 2000
+```
+
+The benchmark is for reproducible regression comparison rather than marketing performance claims.
+
+## Main commands
+
+`analyze`, `threats`, `anomalies`, `incidents`, `history`, `incident`, `timeline`, `hunt`, `indicators`, `baseline`, `plugins`, `stream`, `entities`, `behavior`, `index-entities`, `entity`, `entity-top`, `watch`, `collect`, `ask`, `report`, `scan`, `config`, and `doctor`.
+
+## Security model
+
+AegisLog is defensive tooling. Findings, indicators, correlations and behavioral deltas are investigative signals, not proof of compromise. Log-derived terminal text is treated as untrusted and escaped/sanitized. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
 
 ## Development
 
@@ -70,11 +123,16 @@ The next milestones are structured parsers for journald/nginx/apache/docker, str
 pip install -e '.[dev]'
 pytest
 ruff check .
+bandit -q -r src
+python -m build
+twine check dist/*
 ```
 
-## Security philosophy
+## Release status
 
-AegisLog AI is defensive tooling. It is designed to identify, explain, correlate, and report suspicious or broken behavior. Recommendations should be validated by an administrator before production changes are made.
+This branch is the V1.0.0 release candidate. A maintainer must verify the complete
+GitHub Actions matrix and release checksums before creating the `v1.0.0` tag. No
+automatic remediation or privileged system changes are performed.
 
 ## License
 

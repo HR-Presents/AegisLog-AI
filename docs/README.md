@@ -1,0 +1,9 @@
+# Documentation index
+
+Start with [INSTALL.md](INSTALL.md), [COMMANDS.md](COMMANDS.md), and [DEMO.md](DEMO.md).
+
+Architecture and engineering: [ARCHITECTURE.md](ARCHITECTURE.md), [DETECTION_PIPELINE.md](DETECTION_PIPELINE.md), [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md), [ROADMAP.md](ROADMAP.md).
+
+Security/privacy: [THREAT_MODEL.md](THREAT_MODEL.md), [PRIVACY.md](PRIVACY.md), [AI_SAFETY.md](AI_SAFETY.md), [SECURITY_NOTES.md](SECURITY_NOTES.md).
+
+Behavior: [RULES.md](RULES.md), [PARSERS.md](PARSERS.md), [ANOMALIES.md](ANOMALIES.md), [INCIDENTS.md](INCIDENTS.md), [WATCH.md](WATCH.md), [REPORT_SCHEMA.md](REPORT_SCHEMA.md).
