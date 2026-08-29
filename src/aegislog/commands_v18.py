@@ -9,6 +9,7 @@ from rich.live import Live
 from .native_collectors import CollectorError
 from .native_live import NativeLivePoller
 from .realtime import RealtimeState, render_realtime
+from .watch_profiles import get_profile
 
 console = Console()
 
@@ -21,11 +22,16 @@ def native_live(
     from_start: bool = typer.Option(False, "--from-start", help="Include the current source snapshot before following new events."),
     channel: str = typer.Option("System", "--channel", help="Windows: System, Application, or Security"),
     container: str = typer.Option("", "--container", help="Docker container name or ID"),
+    profile: str = typer.Option("all", "--profile", help="Watch profile: all, security, authentication, web, docker, operations."),
 ) -> None:
-    """Continuously collect a native source and feed the real-time AegisLog dashboard."""
+    """Continuously collect a native source into a profile-focused AegisLog dashboard."""
     normalized = source.strip().lower()
+    try:
+        selected = get_profile(profile)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--profile") from exc
     poller = NativeLivePoller(normalized, limit=limit, channel=channel, container=container)
-    state = RealtimeState(source=f"native:{normalized}", window_size=window)
+    state = RealtimeState(source=f"native:{normalized}", window_size=window, watch_profile=selected.key)
     try:
         initial = poller.prime(include_existing=from_start)
     except CollectorError as exc:
@@ -33,7 +39,10 @@ def native_live(
         raise typer.Exit(code=2) from exc
     if initial:
         state.ingest(initial)
-    console.print("[cyan]Starting native real-time monitoring. Press Ctrl+C to stop safely.[/cyan]")
+    console.print(
+        f"[cyan]Starting native real-time monitoring with {selected.label} profile. "
+        "Press Ctrl+C to stop safely.[/cyan]"
+    )
     try:
         with Live(render_realtime(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
             while True:
