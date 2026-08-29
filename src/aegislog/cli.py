@@ -21,8 +21,10 @@ from .config import load_config, save_config
 from .database import add_incidents, get_incident, list_incidents, timeline as database_timeline
 from .engine import analyze_file, analyze_lines
 from .exporters import write_report
+from .hunt import extract_indicators, search_incidents
 from .incidents import correlate
 from .parsers import parse_line
+from .plugins import apply_rules, load_rules, plugin_dir
 from .providers import ProviderError, run_provider
 
 app = typer.Typer(help="AegisLog AI — defensive log intelligence in your terminal.", no_args_is_help=True)
@@ -34,16 +36,21 @@ def _render(path: Path) -> None:
     counts = Counter(f.severity for f in findings)
     console.print(Panel.fit(f"[bold]AegisLog AI[/bold]  v{__version__}\n{path}"))
     console.print(f"Lines: [bold]{total}[/bold]  Findings: [bold]{len(findings)}[/bold]  Critical: {counts['CRITICAL']}  High: {counts['HIGH']}")
-    table = Table(show_lines=True)
-    table.add_column("Severity", width=10); table.add_column("Finding", width=34); table.add_column("Evidence")
+    table = Table(show_lines=True); table.add_column("Severity", width=10); table.add_column("Finding", width=34); table.add_column("Evidence")
     for finding in findings[:50]: table.add_row(finding.severity, finding.title, finding.evidence)
     console.print(table)
 
 
 @app.command()
-def analyze(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
-    """Analyze one log file for errors, suspicious activity, and anomalies."""
+def analyze(path: Path = typer.Argument(..., exists=True, dir_okay=False), plugins: bool = True) -> None:
+    """Analyze one log file, optionally including local rule plugins."""
     _render(path)
+    if plugins:
+        rules, errors = load_rules()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        custom = apply_rules(lines, rules)
+        for error in errors: console.print(f"Plugin warning: {error}")
+        for finding in custom[:50]: console.print(f"[PLUGIN/{finding.severity}] {finding.title} | {finding.evidence}")
 
 
 @app.command()
@@ -70,8 +77,7 @@ def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False), per
     for item in items: table.add_row(item.id, item.severity, item.category, str(item.count), item.title)
     console.print(table)
     if persist and items:
-        count = add_incidents(str(path), datetime.now(timezone.utc).isoformat(), items)
-        console.print(f"Persisted {count} incident records to the AegisLog database.")
+        count = add_incidents(str(path), datetime.now(timezone.utc).isoformat(), items); console.print(f"Persisted {count} incident records to the AegisLog database.")
 
 
 @app.command("history")
@@ -101,6 +107,33 @@ def timeline(limit: int = 100) -> None:
     table = Table(show_lines=True); table.add_column("Time"); table.add_column("ID"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Summary")
     for item in records: table.add_row(item["recorded_at"], str(item["id"]), item["severity"], item["category"], item["title"])
     console.print(table)
+
+
+@app.command("hunt")
+def hunt(query: str = "", severity: str = "", category: str = "", source: str = "", limit: int = 100) -> None:
+    """Search persisted incidents like a lightweight SOC investigation console."""
+    results = search_incidents(query, severity, category, source, limit)
+    table = Table(show_lines=True); table.add_column("ID"); table.add_column("Time"); table.add_column("Severity"); table.add_column("Category"); table.add_column("Source"); table.add_column("Summary")
+    for item in results: table.add_row(str(item.id), item.recorded_at, item.severity, item.category, item.source, item.title)
+    console.print(table)
+
+
+@app.command("indicators")
+def indicators(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
+    """Extract defensive IP/domain indicators from a log sample."""
+    values = extract_indicators(path.read_text(encoding="utf-8", errors="replace"))
+    for kind, items in values.items():
+        console.print(f"[bold]{kind}[/bold]")
+        for item in items: console.print(f"  {item}")
+
+
+@app.command("plugins")
+def plugins() -> None:
+    """List local detection rule plugins and loading errors."""
+    rules, errors = load_rules(); console.print(f"Plugin directory: {plugin_dir()}")
+    for rule in rules: console.print(f"{rule.id}: [{rule.severity}] {rule.title} ({rule.source})")
+    for error in errors: console.print(f"ERROR: {error}")
+    if not rules and not errors: console.print("No local rule plugins installed.")
 
 
 @app.command("baseline")
@@ -153,8 +186,7 @@ def watch(path: Path = typer.Argument(..., exists=True, dir_okay=False), interva
 def report(path: Path = typer.Argument(..., exists=True, dir_okay=False), output: Path = Path("aegislog-report.json")) -> None:
     """Write JSON, Markdown, or HTML analysis reports."""
     total, findings = analyze_file(path); lines = path.read_text(encoding="utf-8", errors="replace").splitlines(); anomaly_results = score_events([parse_line(line) for line in lines]); incident_results = correlate(findings)
-    if output.suffix.lower() in {".md", ".markdown", ".html", ".htm"}:
-        write_report(output, str(path), total, findings, incident_results)
+    if output.suffix.lower() in {".md", ".markdown", ".html", ".htm"}: write_report(output, str(path), total, findings, incident_results)
     else:
         payload = {"source": str(path), "lines": total, "findings": [f.__dict__ for f in findings], "anomalies": [a.__dict__ for a in anomaly_results], "incidents": [{**i.__dict__, "evidence": list(i.evidence)} for i in incident_results]}; output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     console.print(f"Report written to {output}")
