@@ -4,6 +4,19 @@
 
 AegisLog AI analyzes authentication, Linux, Windows Event Log, web, Docker, system, and application telemetry using deterministic detections, anomaly scoring, incident correlation, entity intelligence, behavioral baselines, MITRE ATT&CK context, persistent cases, real-time rate/trend analysis, and optional LLM-assisted explanation. Core analysis works locally without an AI service.
 
+## Documentation
+
+- **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, command reference, Watch Mode Profiles, live monitoring, native Windows/journald/Docker collection, incidents, investigation, Explain This Incident, MITRE ATT&CK context, case history, checksum verification, recommended workflows, and troubleshooting.
+- **v1.3.0 release notes:** [`docs/RELEASE_V1.3.0.md`](docs/RELEASE_V1.3.0.md)
+- **AI provider documentation:** [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md)
+
+For exact syntax supported by the executable you downloaded, use:
+
+```text
+AegisLog.exe --help
+AegisLog.exe <command> --help
+```
+
 ## Windows customer quick start
 
 The primary Windows delivery is one file:
@@ -40,6 +53,8 @@ AegisLog.exe explain C:\path\to\auth.log <incident-id>
 AegisLog.exe mitre C:\path\to\auth.log
 AegisLog.exe case-history
 ```
+
+See the [complete user guide](docs/USER_GUIDE.md) for explanations and practical workflows for these commands.
 
 ## Watch Mode Profiles
 
@@ -166,7 +181,7 @@ AegisLog is defensive tooling. Findings, anomaly scores, confidence values, corr
 
 ## Release engineering
 
-v1.3.0 is prepared through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.3.0` tag or GitHub release.
+v1.3.0 is published through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.3.0` tag or GitHub release.
 
 Release notes and customer instructions are in `docs/RELEASE_V1.3.0.md`.
 
