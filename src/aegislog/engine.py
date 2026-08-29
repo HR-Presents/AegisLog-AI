@@ -63,7 +63,6 @@ def analyze_lines(lines: list[str]) -> list[Finding]:
     findings: list[Finding] = []
     auth_ips: Counter[str] = Counter()
     auth_without_ip = 0
-    seen_rule_findings: set[tuple[str, str, str]] = set()
 
     for raw in lines:
         line = redact(raw.strip())
@@ -81,12 +80,12 @@ def analyze_lines(lines: list[str]) -> list[Finding]:
             # represented as one meaningful finding instead of many duplicates.
             continue
 
+        # Operational/security rule hits remain one finding per matching log event.
+        # This preserves event counts for streaming summaries while authentication
+        # failures are still intentionally correlated into a single signal.
         for severity, category, pattern, title, recommendation in RULES:
             if pattern.search(line):
-                key = (category, title, line)
-                if key not in seen_rule_findings:
-                    findings.append(Finding(severity, category, title, line[:500], recommendation))
-                    seen_rule_findings.add(key)
+                findings.append(Finding(severity, category, title, line[:500], recommendation))
                 break
 
     for ip, count in sorted(auth_ips.items(), key=lambda item: (-item[1], item[0])):
