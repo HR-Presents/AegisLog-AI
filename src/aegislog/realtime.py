@@ -20,6 +20,7 @@ from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
 from .trends import TrendSnapshot, TrendTracker, render_trends
+from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
 
 _PREFIX_BYTES = 128
 
@@ -55,6 +56,7 @@ class RealtimeState:
     source: str
     window_size: int = 500
     alert_ttl_seconds: int = 300
+    watch_profile: str = "all"
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
@@ -68,6 +70,7 @@ class RealtimeState:
     def __post_init__(self) -> None:
         if self.window_size < 20:
             raise ValueError("window_size must be at least 20")
+        get_profile(self.watch_profile)
         self._lines = deque(self._lines, maxlen=self.window_size)
 
     def ingest(self, lines: list[str], now: float | None = None) -> int:
@@ -100,6 +103,10 @@ class RealtimeState:
             self._seen_fingerprints.pop(fp, None)
 
     @property
+    def profile(self) -> WatchProfile:
+        return get_profile(self.watch_profile)
+
+    @property
     def lines(self) -> list[str]:
         return list(self._lines)
 
@@ -109,15 +116,23 @@ class RealtimeState:
 
     @property
     def recent_findings(self) -> tuple[Finding, ...]:
-        return tuple(self._recent_findings)
+        return tuple(filter_findings(self.profile, list(self._recent_findings)))
 
     @property
     def events(self) -> list[Event]:
         return list(self._events_cache)
 
     @property
+    def focused_events(self) -> list[Event]:
+        return filter_events(self.profile, self.events)
+
+    @property
     def findings(self) -> list[Finding]:
         return list(self._findings_cache)
+
+    @property
+    def focused_findings(self) -> list[Finding]:
+        return filter_findings(self.profile, self.findings)
 
     @property
     def trends(self) -> TrendSnapshot:
@@ -160,8 +175,8 @@ def _counter_table(title: str, values: Counter[str], limit: int = 6) -> Table:
     return table
 
 
-def _recent_table(findings: list[Finding]) -> Table:
-    table = Table(title="Recent high-signal findings", expand=True, show_lines=True)
+def _recent_table(findings: list[Finding], profile: WatchProfile) -> Table:
+    table = Table(title=f"Recent findings — {profile.label}", expand=True, show_lines=True)
     table.add_column("Severity", width=10)
     table.add_column("Category", width=18)
     table.add_column("Finding", width=34)
@@ -169,13 +184,14 @@ def _recent_table(findings: list[Finding]) -> Table:
     for finding in findings[:8]:
         table.add_row(finding.severity, Text(finding.category), Text(finding.title), Text(finding.evidence))
     if not findings:
-        table.add_row("-", "-", "Waiting for detectable activity", "AegisLog is monitoring new log lines")
+        table.add_row("-", "-", f"No {profile.label.lower()} profile matches yet", "AegisLog continues monitoring all incoming lines")
     return table
 
 
 def render_realtime(state: RealtimeState) -> RenderableType:
-    events = state.events
-    findings = state.findings
+    profile = state.profile
+    events = state.focused_events
+    findings = state.focused_findings
     trend = state.trends
     severities = Counter(item.severity for item in findings)
     categories = Counter(item.category for item in findings)
@@ -186,17 +202,19 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     critical = severities.get("CRITICAL", 0)
     high = severities.get("HIGH", 0)
     medium = severities.get("MEDIUM", 0)
+    allowed_metrics = set(profile.trend_metrics)
+    focused_spikes = sum(1 for item in trend.metrics if item.name in allowed_metrics and item.state == "SPIKE")
 
     header = Panel(
-        Align.center(Text(f"AEGISLOG AI  v{__version__}\nREAL-TIME DEFENSIVE MONITOR\n{state.source}", style="bold")),
-        subtitle="Live file monitoring • rolling correlation • Ctrl+C to stop",
+        Align.center(Text(f"AEGISLOG AI  v{__version__}\nREAL-TIME DEFENSIVE MONITOR\n{state.source}\nPROFILE: {profile.label.upper()}", style="bold")),
+        subtitle=f"{profile.description} • Ctrl+C to stop",
     )
     metrics = Columns(
         [
             _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
             _metric("Event rate", f"{state.lines_per_second:.1f}/s"),
-            _metric("Rate spikes", str(trend.spike_count), f"{trend.window_seconds}s baseline"),
-            _metric("Active findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium"),
+            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s profile baseline"),
+            _metric("Profile findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium"),
             _metric("Incidents", str(len(incidents))),
             _metric("Anomalies", str(len(anomalies))),
             _metric("Risk", _risk(severities)),
@@ -206,9 +224,9 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     )
     overview = Columns(
         [
-            _counter_table("Finding categories", categories),
-            _counter_table("Log levels", levels),
-            _counter_table("Top services", services),
+            _counter_table("Profile categories", categories),
+            _counter_table("Profile log levels", levels),
+            _counter_table("Profile services", services),
         ],
         equal=True,
         expand=True,
@@ -216,11 +234,18 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     status = Panel(
         Text(
             f"Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
-            "New lines are analyzed automatically with rolling correlation, anomaly scoring and rate/baseline deviation detection."
+            f"The {profile.label} profile changes terminal emphasis only; all input remains locally analyzed and no remediation is performed."
         ),
         title="Live status",
     )
-    return Group(header, metrics, overview, render_trends(trend), _recent_table(list(state.recent_findings)), status)
+    return Group(
+        header,
+        metrics,
+        overview,
+        render_trends(trend, profile.trend_metrics),
+        _recent_table(list(state.recent_findings), profile),
+        status,
+    )
 
 
 def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], FileCursor]:
