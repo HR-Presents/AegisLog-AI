@@ -231,7 +231,7 @@ def _counter(title: str, values: Counter[str], limit: int = 6) -> Table:
 
 def _alerts_table(state: MultiSourceState) -> Table:
     profile = state.profile
-    table = Table(title=f"Live alert feed — {profile.label}", expand=True, show_lines=True)
+    table = Table(title=f"Live security alert feed — {profile.label}", expand=True, show_lines=True)
     table.add_column("#", justify="right", width=5)
     table.add_column("Severity", width=10)
     table.add_column("Source", width=18)
