@@ -11,6 +11,7 @@
 - Bounded remote AI response bodies and rejected non-object JSON responses.
 - Escaped log-derived and database-derived terminal table values.
 - Expanded CI to Python 3.10–3.13 and added Bandit, Twine, and release checksums.
+- Added a conventional, script-friendly `aegislog --version` terminal option.
 
 ## 0.9.0 - Release candidate hardening
 

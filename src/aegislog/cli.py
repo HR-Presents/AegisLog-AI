@@ -33,6 +33,25 @@ app = typer.Typer(help="AegisLog AI — defensive log intelligence in your termi
 console = Console()
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"AegisLog AI {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the installed AegisLog AI version and exit.",
+    ),
+) -> None:
+    """Defensive log intelligence and investigation from the terminal."""
+
+
 def _render(path: Path) -> None:
     total, findings = analyze_file(path)
     counts = Counter(f.severity for f in findings)

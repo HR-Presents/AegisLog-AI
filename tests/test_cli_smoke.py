@@ -5,6 +5,12 @@ from aegislog.cli import app
 runner = CliRunner()
 
 
+def test_version_flag():
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "AegisLog AI 1.0.0"
+
+
 def test_doctor():
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
