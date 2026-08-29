@@ -9,12 +9,15 @@ from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
 from .commands_v15 import incidents, intel_entities, investigate
 from .commands_v16 import case_history, case_show, save_investigation
+from .commands_v17 import native_analyze, native_sources
 
 replace_analyze_command(app)
 app.command("start")(start)
 app.command("dashboard")(dashboard)
 app.command("live")(live_dashboard)
 app.command("live-multi")(live_multi)
+app.command("native-sources")(native_sources)
+app.command("native-analyze")(native_analyze)
 app.command("incidents")(incidents)
 app.command("investigate")(investigate)
 app.command("intel-entities")(intel_entities)
