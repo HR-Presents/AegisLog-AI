@@ -14,6 +14,7 @@ from .commands_v11 import dashboard
 from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
 from .config import config_dir
+from .watch_profiles import get_profile, profile_choices
 
 console = Console()
 
@@ -100,6 +101,12 @@ def _choose_log_files() -> list[Path]:
     return paths
 
 
+def _choose_profile(default: str = "security") -> str:
+    choices = list(profile_choices())
+    selected = Prompt.ask("Watch profile", choices=choices, default=default)
+    return get_profile(selected).key
+
+
 def _native_choice() -> tuple[str, str, str] | None:
     import platform
 
@@ -112,11 +119,7 @@ def _native_choice() -> tuple[str, str, str] | None:
     channel = "System"
     container = ""
     if source == "windows":
-        channel = Prompt.ask(
-            "Windows channel",
-            choices=["System", "Application", "Security"],
-            default="System",
-        )
+        channel = Prompt.ask("Windows channel", choices=["System", "Application", "Security"], default="System")
     elif source == "docker":
         container = Prompt.ask("Docker container name or ID").strip()
         if not container:
@@ -141,7 +144,8 @@ def _native_live_menu() -> None:
     if choice is None:
         return
     source, channel, container = choice
-    native_live(source, channel=channel, container=container)
+    profile = _choose_profile("docker" if source == "docker" else "security")
+    native_live(source, channel=channel, container=container, profile=profile)
 
 
 def _explain_menu() -> None:
@@ -182,6 +186,7 @@ def _system_check() -> None:
     table.add_row("Configuration", str(config_dir()))
     table.add_row("Local engine", "READY")
     table.add_row("Incident explanation", "READY — local only")
+    table.add_row("Watch profiles", "READY — Security/Auth/Web/Docker/Operations")
     table.add_row("Real-time file monitor", "READY")
     table.add_row("Multi-source correlation", "READY")
     table.add_row("Native live monitor", "READY")
@@ -200,14 +205,11 @@ def _commands() -> None:
     table.add_row(f"{executable} explain <file> <incident-id>", "Explain an incident locally in plain analyst language")
     table.add_row(f"{executable} mitre <file>", "Show evidence-supported MITRE ATT&CK context")
     table.add_row(f"{executable} native-sources", "Show native OS/container sources")
-    table.add_row(f"{executable} native-analyze windows --channel Security", "Analyze Windows Event Logs")
-    table.add_row(f"{executable} native-analyze journald", "Analyze Linux journald")
-    table.add_row(f"{executable} native-analyze docker --container <name>", "Analyze Docker container logs")
-    table.add_row(f"{executable} native-live windows --channel Security", "Continuously monitor Windows Event Logs")
-    table.add_row(f"{executable} native-live journald", "Continuously monitor Linux journald")
-    table.add_row(f"{executable} native-live docker --container <name>", "Continuously monitor Docker logs")
-    table.add_row(f"{executable} live <file>", "Follow one growing log with the real-time dashboard")
-    table.add_row(f"{executable} live-multi <file1> <file2> ...", "Correlate multiple live logs in one terminal SOC")
+    table.add_row(f"{executable} live <file> --profile security", "Follow one log with a focused Security watch profile")
+    table.add_row(f"{executable} live-multi <file1> <file2> --profile authentication", "Correlate multiple logs with an Authentication profile")
+    table.add_row(f"{executable} native-live windows --channel Security --profile security", "Continuously monitor Windows Event Logs")
+    table.add_row(f"{executable} native-live journald --profile operations", "Continuously monitor Linux operations signals")
+    table.add_row(f"{executable} native-live docker --container <name> --profile docker", "Continuously monitor Docker-focused signals")
     table.add_row(f"{executable} dashboard <file>", "Analyze one log and show the investigation dashboard")
     table.add_row(f"{executable} doctor", "Check the local AegisLog environment")
     console.print(table)
@@ -220,11 +222,7 @@ def start() -> None:
         console.print(_header())
         console.print(_menu())
         console.print()
-        choice = Prompt.ask(
-            "Select",
-            choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "q", "Q"],
-            default="1",
-        )
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "q", "Q"], default="1")
         if choice.lower() == "q":
             console.print("[cyan]AegisLog closed safely.[/cyan]")
             return
@@ -236,13 +234,15 @@ def start() -> None:
         elif choice == "2":
             path = _choose_log_file()
             if path is not None:
+                profile = _choose_profile()
                 console.print()
-                live_dashboard(path)
+                live_dashboard(path, profile=profile)
         elif choice == "3":
             paths = _choose_log_files()
             if paths:
+                profile = _choose_profile()
                 console.print()
-                live_multi(paths)
+                live_multi(paths, profile=profile)
         elif choice == "4":
             console.print()
             _native_menu()
