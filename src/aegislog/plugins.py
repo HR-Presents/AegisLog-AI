@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import importlib.util
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,33 +29,26 @@ def plugin_dir() -> Path:
 def _compile_rule(raw: dict, source: str) -> PluginRule:
     required = {"id", "severity", "category", "title", "pattern", "recommendation"}
     missing = required - raw.keys()
-    if missing:
-        raise ValueError(f"{source}: missing rule fields: {', '.join(sorted(missing))}")
+    if missing: raise ValueError(f"{source}: missing rule fields: {', '.join(sorted(missing))}")
     severity = str(raw["severity"]).upper()
-    if severity not in {"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}:
-        raise ValueError(f"{source}: invalid severity {severity}")
+    if severity not in {"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}: raise ValueError(f"{source}: invalid severity {severity}")
     pattern = str(raw["pattern"])
-    if len(pattern) > 500:
-        raise ValueError(f"{source}: rule pattern is too long")
+    if len(pattern) > 500: raise ValueError(f"{source}: rule pattern is too long")
     return PluginRule(str(raw["id"]), severity, str(raw["category"]), str(raw["title"]), re.compile(pattern, re.I), str(raw["recommendation"]), source)
 
 
 def load_rules(directory: Path | None = None) -> tuple[list[PluginRule], list[str]]:
-    root = directory or plugin_dir()
-    rules: list[PluginRule] = []
-    errors: list[str] = []
-    for path in sorted(root.glob("*.py")):
+    """Load declarative JSON rule packs. Plugins are data, not executable code."""
+    root = directory or plugin_dir(); rules: list[PluginRule] = []; errors: list[str] = []
+    for path in sorted(root.glob("*.json")):
         try:
-            spec = importlib.util.spec_from_file_location(f"aegislog_user_rule_{path.stem}", path)
-            if spec is None or spec.loader is None:
-                raise ValueError("unable to load module")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            raw_rules = getattr(module, "RULES", None)
-            if not isinstance(raw_rules, list):
-                raise ValueError("plugin must define RULES as a list")
-            rules.extend(_compile_rule(item, path.name) for item in raw_rules if isinstance(item, dict))
-        except Exception as exc:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            raw_rules = payload.get("rules") if isinstance(payload, dict) else payload
+            if not isinstance(raw_rules, list): raise ValueError("rule pack must be a list or contain a 'rules' list")
+            for item in raw_rules:
+                if not isinstance(item, dict): raise ValueError("every rule must be an object")
+                rules.append(_compile_rule(item, path.name))
+        except (OSError, ValueError, json.JSONDecodeError, re.error) as exc:
             errors.append(f"{path.name}: {exc}")
     return rules, errors
 
@@ -64,9 +57,7 @@ def apply_rules(lines: list[str], rules: list[PluginRule]) -> list[Finding]:
     findings: list[Finding] = []
     for raw in lines:
         line = raw.strip()
-        if not line:
-            continue
+        if not line: continue
         for rule in rules:
-            if rule.pattern.search(line):
-                findings.append(Finding(rule.severity, rule.category, rule.title, line[:500], rule.recommendation))
+            if rule.pattern.search(line): findings.append(Finding(rule.severity, rule.category, rule.title, line[:500], rule.recommendation))
     return findings
