@@ -11,6 +11,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .commands_v11 import dashboard
+from .commands_v13 import live_dashboard
 from .config import config_dir
 
 console = Console()
@@ -45,9 +46,10 @@ def _menu() -> Table:
     table.add_column(style="bold cyan", width=4)
     table.add_column()
     table.add_row("1", "Analyze a log file")
-    table.add_row("2", "Run built-in demo analysis")
-    table.add_row("3", "System check")
-    table.add_row("4", "Show useful commands")
+    table.add_row("2", "Open real-time dashboard")
+    table.add_row("3", "Run built-in demo analysis")
+    table.add_row("4", "System check")
+    table.add_row("5", "Show useful commands")
     table.add_row("Q", "Exit AegisLog")
     return table
 
@@ -92,6 +94,7 @@ def _system_check() -> None:
     table.add_row("Platform", platform.platform())
     table.add_row("Configuration", str(config_dir()))
     table.add_row("Local engine", "READY")
+    table.add_row("Real-time monitor", "READY")
     console.print(table)
 
 
@@ -101,6 +104,8 @@ def _commands() -> None:
     table.add_column("Command", style="cyan")
     table.add_column("Purpose")
     table.add_row(executable, "Open this terminal control center")
+    table.add_row(f"{executable} live <file>", "Follow a growing log with the real-time dashboard")
+    table.add_row(f"{executable} live <file> --from-start", "Analyze existing lines, then continue monitoring")
     table.add_row(f"{executable} dashboard <file>", "Analyze one log and show the investigation dashboard")
     table.add_row(f"{executable} analyze <file>", "Analyze a log with dashboard and local rule packs")
     table.add_row(f"{executable} stream <file>", "Run bounded-memory streaming analysis")
@@ -116,7 +121,7 @@ def start() -> None:
         console.print(_header())
         console.print(_menu())
         console.print()
-        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "q", "Q"], default="1")
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "q", "Q"], default="1")
 
         if choice.lower() == "q":
             console.print("[cyan]AegisLog closed safely.[/cyan]")
@@ -128,11 +133,16 @@ def start() -> None:
                 console.print()
                 dashboard(path)
         elif choice == "2":
+            path = _choose_log_file()
+            if path is not None:
+                console.print()
+                live_dashboard(path)
+        elif choice == "3":
             console.print()
             dashboard(_resolve_demo())
-        elif choice == "3":
-            _system_check()
         elif choice == "4":
+            _system_check()
+        elif choice == "5":
             _commands()
 
         console.print()
