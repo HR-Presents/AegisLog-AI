@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.live import Live
 
-from .multisource import MultiSourceState, initial_offsets, poll_sources, render_multisource
+from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
 
 console = Console()
 
@@ -24,9 +24,9 @@ def live_multi(
     if len(unique) < 2:
         raise typer.BadParameter("Provide at least two different log files for multi-source monitoring.")
     state = MultiSourceState(sources=unique, window_size=window, trend_seconds=trend_seconds)
-    offsets = initial_offsets(unique, from_start=from_start)
+    cursors = initial_cursors(unique, from_start=from_start)
     if from_start:
-        batches, offsets = poll_sources(unique, offsets)
+        batches, cursors = poll_sources(unique, cursors)
         for path, lines in batches:
             state.ingest(path, lines)
 
@@ -34,7 +34,7 @@ def live_multi(
     try:
         with Live(render_multisource(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
             while True:
-                batches, offsets = poll_sources(unique, offsets)
+                batches, cursors = poll_sources(unique, cursors)
                 for path, lines in batches:
                     state.ingest(path, lines)
                 live.update(render_multisource(state))
