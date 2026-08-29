@@ -1,6 +1,8 @@
+from unittest.mock import patch
+
 from aegislog.ai import InvestigationContext, build_safe_prompt
 from aegislog.engine import Finding
-from aegislog.providers import ProviderError, run_provider
+from aegislog.providers import ProviderError, _validate_url, run_provider
 
 
 def test_prompt_marks_logs_untrusted_and_redacts_secret():
@@ -18,3 +20,13 @@ def test_unknown_provider_is_rejected():
     except ProviderError:
         return
     raise AssertionError("unknown provider should fail")
+
+
+def test_remote_provider_rejects_private_address():
+    fake = [(2, 1, 6, "", ("127.0.0.1", 443))]
+    with patch("aegislog.providers.socket.getaddrinfo", return_value=fake):
+        try:
+            _validate_url("https://provider.example/v1", allow_local=False)
+        except ProviderError:
+            return
+    raise AssertionError("private endpoint should be rejected for remote provider")
