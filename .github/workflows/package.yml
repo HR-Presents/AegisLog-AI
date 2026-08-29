@@ -48,6 +48,16 @@ jobs:
           ./.aegislog-venv/bin/aegislog --version
           ./.aegislog-venv/bin/aegislog doctor
           ./.aegislog-venv/bin/aegislog dashboard sample_logs/auth.log
+          rm -rf .aegislog-venv
+
+      - name: Verify clean customer archive contents
+        run: |
+          set -eux
+          test ! -e customer-dist/AegisLog-AI-Customer/.aegislog-venv
+          test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.1.0-py3-none-any.whl
+          test -f customer-dist/AegisLog-AI-Customer/vendor/typer-0.27.2-py3-none-any.whl
+          test -f customer-dist/AegisLog-AI-Customer/INSTALL_WINDOWS.bat
+          test -f customer-dist/AegisLog-AI-Customer/OPEN_AEGISLOG_TERMINAL.bat
 
       - name: Archive customer bundle
         run: |
