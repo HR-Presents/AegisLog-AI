@@ -116,20 +116,22 @@ jobs:
           .\dist\AegisLog.exe explain --help
           .\dist\AegisLog.exe mitre --help
 
-      - name: Generate SHA-256 checksum
+      - name: Stage immutable release assets
         shell: pwsh
         run: |
-          $hash = (Get-FileHash "dist\AegisLog.exe" -Algorithm SHA256).Hash.ToLower()
-          "$hash  AegisLog.exe" | Set-Content -Encoding ascii "AegisLog.exe.sha256"
+          New-Item -ItemType Directory -Force -Path "release-assets" | Out-Null
+          Copy-Item "dist\AegisLog.exe" "release-assets\AegisLog.exe"
+          $hash = (Get-FileHash "release-assets\AegisLog.exe" -Algorithm SHA256).Hash.ToLower()
+          "$hash  AegisLog.exe" | Set-Content -Encoding ascii "release-assets\AegisLog.exe.sha256"
+          $files = Get-ChildItem "release-assets" -File
+          if ($files.Count -ne 2) { throw "Release staging must contain exactly the executable and checksum" }
 
       - uses: actions/upload-artifact@v4
         with:
           name: AegisLog-v1.3.0-release-assets
           if-no-files-found: error
           retention-days: 30
-          path: |
-            dist/AegisLog.exe
-            AegisLog.exe.sha256
+          path: release-assets/*
 
   publish:
     needs: build-windows-exe
@@ -147,8 +149,10 @@ jobs:
         run: |
           set -euo pipefail
           cd release-assets
-          sha256sum --check AegisLog.exe.sha256
+          test -f AegisLog.exe
+          test -f AegisLog.exe.sha256
           test "$(find . -maxdepth 1 -type f | wc -l)" -eq 2
+          sha256sum --check AegisLog.exe.sha256
 
       - name: Re-check immutability immediately before publication
         env:
