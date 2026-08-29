@@ -32,7 +32,10 @@ jobs:
           cp dist/*.whl "$ROOT/package/"
           cp customer_bundle/* "$ROOT/"
           cp examples/auth.log "$ROOT/sample_logs/auth.log"
-          python -m pip download --dest "$ROOT/vendor" "rich>=13.7" "typer>=0.12"
+          # The archive is built on Linux but must install offline on Windows too.
+          # Typer declares colorama only when platform_system == "Windows", so a
+          # normal Linux dependency download will omit it unless we vendor it explicitly.
+          python -m pip download --dest "$ROOT/vendor" "rich>=13.7" "typer>=0.12" "colorama>=0.4.3"
           chmod +x "$ROOT"/*.sh
           (
             cd "$ROOT"
@@ -56,6 +59,7 @@ jobs:
           test ! -e customer-dist/AegisLog-AI-Customer/.aegislog-venv
           test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.1.0-py3-none-any.whl
           test -f customer-dist/AegisLog-AI-Customer/vendor/typer-0.27.2-py3-none-any.whl
+          test -n "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name 'colorama-*.whl' -print -quit)"
           test -f customer-dist/AegisLog-AI-Customer/INSTALL_WINDOWS.bat
           test -f customer-dist/AegisLog-AI-Customer/OPEN_AEGISLOG_TERMINAL.bat
 
@@ -98,7 +102,7 @@ jobs:
           Copy-Item "dist\*.whl" "$root\package\"
           Copy-Item "customer_bundle\*" "$root\"
           Copy-Item "examples\auth.log" "$root\sample_logs\auth.log"
-          python -m pip download --dest "$root\vendor" "rich>=13.7" "typer>=0.12"
+          python -m pip download --dest "$root\vendor" "rich>=13.7" "typer>=0.12" "colorama>=0.4.3"
 
       - name: Verify actual Windows customer installer
         shell: cmd
