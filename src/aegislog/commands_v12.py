@@ -53,12 +53,15 @@ def _menu() -> Table:
 
 
 def _resolve_demo() -> Path:
+    bundled = Path.cwd() / "sample_logs" / "auth.log"
+    if bundled.is_file():
+        return bundled
+
     demo = config_dir() / "demo_auth.log"
     try:
         if not demo.exists() or demo.read_text(encoding="utf-8") != _DEMO_LOG:
             demo.write_text(_DEMO_LOG, encoding="utf-8")
     except OSError:
-        # Fall back to the current directory if the user's config directory is unavailable.
         demo = Path.cwd() / "aegislog_demo_auth.log"
         demo.write_text(_DEMO_LOG, encoding="utf-8")
     return demo
