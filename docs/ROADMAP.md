@@ -1,38 +1,34 @@
 # Roadmap
 
 ## V0.1 — Foundation
-
 Installable terminal CLI, deterministic security/error rules, secret redaction, JSON reporting, initial CI and tests.
 
 ## V0.2 — Intelligence layer
-
-Structured generic/syslog/journald/web parsing, live file watch, lightweight anomaly scoring, incident correlation, local question-driven investigation, and security/privacy documentation.
+Structured parsing, live watch, anomaly scoring, incident correlation, local investigation, and security/privacy documentation.
 
 ## V0.3 — AI and collection layer
-
-Optional compatible AI and Ollama adapters, prompt-injection boundary, remote provider network protection, bounded journald/Docker collectors, incident history, and local fallback.
+Optional compatible AI and Ollama adapters, prompt-injection boundary, remote provider protection, bounded journald/Docker collectors, history, and local fallback.
 
 ## V0.4 — Analyst workflow
-
-SQLite-backed incident/evidence index, incident drill-down and timeline, baseline comparison, analyst-ready HTML/Markdown reports, and safer report rendering.
+SQLite incident/evidence index, drill-down and timeline, baseline comparison, HTML/Markdown reports, and safer report rendering.
 
 ## V0.5 — SOC hunting and extensibility
+Persisted hunting, defensive indicator extraction, declarative JSON rule packs, plugin-aware analysis, and expanded tests.
 
-- persisted incident hunting by text, severity, category, and source
-- defensive IP/domain indicator extraction
-- declarative JSON rule packs with failure isolation and no plugin code execution
-- plugin-aware analysis workflow
-- expanded tests for plugins and hunting primitives
+## V0.6 — Scale and correlation
+- multi-window behavioral profiling for level/source/time shifts
+- entity correlation across IP, host, user, service, and container evidence
+- bounded-memory streaming analysis for large files
+- correlation/streaming/behavior regression tests
+- CI lint scope focused on correctness errors while tests validate behavior
 
-## V0.6 — Planned scale and correlation
-
-- time-window behavioral baselines rather than sample-only comparisons
-- entity correlation across IP, host, user, service, and container
-- database schema migrations and richer evidence indexing
-- streaming analysis for large files without full-file reads
+## V0.7 — Planned release hardening
+- database schema migrations and richer evidence/entity indexing
+- expose entity graph, behavioral windows, and streaming mode throughout CLI/reporting
 - declarative parser extension interface
+- performance benchmarks and large-fixture tests
 - signed/reproducible release pipeline
+- stable configuration schema and migration policy
 
 ## V1.0 target
-
 A stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collectors/parsers, persistent investigation state, strong tests, release artifacts, and clear operational limitations.
