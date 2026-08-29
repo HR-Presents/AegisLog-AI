@@ -5,10 +5,12 @@ from .commands_v07 import behavior, entities, stream
 from .commands_v08 import entity, entity_top, index_entities
 from .commands_v11 import dashboard, replace_analyze_command
 from .commands_v12 import start
+from .commands_v13 import live_dashboard
 
 replace_analyze_command(app)
 app.command("start")(start)
 app.command("dashboard")(dashboard)
+app.command("live")(live_dashboard)
 app.command("stream")(stream)
 app.command("entities")(entities)
 app.command("behavior")(behavior)
