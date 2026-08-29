@@ -55,7 +55,7 @@ jobs:
         run: |
           set -eux
           test ! -e customer-dist/AegisLog-AI-Customer/.aegislog-venv
-          test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.2.0-py3-none-any.whl
+          test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.3.0-py3-none-any.whl
           test -n "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name 'typer-*.whl' -print -quit)"
           test -n "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name 'colorama-*.whl' -print -quit)"
           test -f customer-dist/AegisLog-AI-Customer/START_AEGISLOG.bat
@@ -66,9 +66,9 @@ jobs:
       - name: Archive customer bundle
         run: |
           cd customer-dist
-          zip -r ../dist/AegisLog-AI-v1.2.0-Customer-Bundle.zip AegisLog-AI-Customer
+          zip -r ../dist/AegisLog-AI-v1.3.0-Customer-Bundle.zip AegisLog-AI-Customer
           cd ../dist
-          sha256sum AegisLog-AI-v1.2.0-Customer-Bundle.zip > AegisLog-AI-v1.2.0-Customer-Bundle.zip.sha256
+          sha256sum AegisLog-AI-v1.3.0-Customer-Bundle.zip > AegisLog-AI-v1.3.0-Customer-Bundle.zip.sha256
 
       - uses: actions/upload-artifact@v4
         with:
@@ -81,8 +81,8 @@ jobs:
         with:
           name: customer-bundle
           path: |
-            dist/AegisLog-AI-v1.2.0-Customer-Bundle.zip
-            dist/AegisLog-AI-v1.2.0-Customer-Bundle.zip.sha256
+            dist/AegisLog-AI-v1.3.0-Customer-Bundle.zip
+            dist/AegisLog-AI-v1.3.0-Customer-Bundle.zip.sha256
 
   verify-windows-customer:
     runs-on: windows-latest
