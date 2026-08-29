@@ -4,6 +4,9 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 
+from rich.table import Table
+from rich.text import Text
+
 
 @dataclass(frozen=True)
 class TrendMetric:
@@ -128,3 +131,22 @@ class TrendTracker:
             current["Firewall blocks"],
             tuple(metrics),
         )
+
+
+def render_trends(snapshot: TrendSnapshot) -> Table:
+    table = Table(title=f"Rate & baseline intelligence ({snapshot.window_seconds}s window)", expand=True)
+    table.add_column("Signal", width=20)
+    table.add_column("Current/min", justify="right", width=12)
+    table.add_column("Baseline/min", justify="right", width=12)
+    table.add_column("Deviation", justify="right", width=11)
+    table.add_column("State", width=10)
+    for metric in snapshot.metrics:
+        ratio = f"{metric.deviation_ratio:.1f}x" if metric.deviation_ratio < 100 else ">99x"
+        table.add_row(
+            Text(metric.name),
+            f"{metric.current_per_minute:.1f}",
+            f"{metric.baseline_per_minute:.1f}",
+            ratio,
+            metric.state,
+        )
+    return table
