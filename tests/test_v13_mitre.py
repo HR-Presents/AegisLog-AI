@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+from aegislog.engine import Finding
+from aegislog.mitre import map_findings
+
+
+def test_maps_bruteforce_to_t1110() -> None:
+    findings = [Finding("HIGH", "auth", "SSH brute force", "Repeated failed password attempts")]
+    techniques = map_findings(findings)
+    assert any(item.id == "T1110" for item in techniques)
+
+
+def test_maps_env_probe_to_credentials_in_files() -> None:
+    findings = [Finding("HIGH", "web", "Suspicious .env probe", "GET /.env HTTP/1.1")]
+    techniques = map_findings(findings)
+    assert any(item.id == "T1552.001" for item in techniques)
+
+
+def test_unrelated_finding_is_not_forced_into_mitre() -> None:
+    findings = [Finding("MEDIUM", "ops", "Database timeout", "connection timeout")]
+    assert map_findings(findings) == ()
