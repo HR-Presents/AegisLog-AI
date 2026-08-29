@@ -16,6 +16,7 @@ from .ai import InvestigationContext, local_answer
 from .anomaly import score_events
 from .config import load_config, save_config
 from .engine import analyze_file, analyze_lines
+from .incidents import correlate
 from .parsers import parse_line
 
 app = typer.Typer(help="AegisLog AI — defensive log intelligence in your terminal.", no_args_is_help=True)
@@ -69,6 +70,25 @@ def anomalies(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> 
         console.print(f"[bold]{item.score:>5.1f}[/bold]  {item.key}  {item.reason}")
 
 
+@app.command()
+def incidents(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
+    """Correlate findings into compact investigation incidents."""
+    _, findings = analyze_file(path)
+    items = correlate(findings)
+    if not items:
+        console.print("No incidents created from current findings.")
+        return
+    table = Table(show_lines=True)
+    table.add_column("ID")
+    table.add_column("Severity")
+    table.add_column("Category")
+    table.add_column("Events")
+    table.add_column("Summary")
+    for item in items:
+        table.add_row(item.id, item.severity, item.category, str(item.count), item.title)
+    console.print(table)
+
+
 @app.command("ask")
 def ask_log(question: str, path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
     """Ask a defensive investigation question about a log file (local mode in V0.2)."""
@@ -107,7 +127,8 @@ def report(path: Path = typer.Argument(..., exists=True, dir_okay=False), output
     total, findings = analyze_file(path)
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     anomaly_results = score_events([parse_line(line) for line in lines])
-    payload = {"source": str(path), "lines": total, "findings": [f.__dict__ for f in findings], "anomalies": [a.__dict__ for a in anomaly_results]}
+    incident_results = correlate(findings)
+    payload = {"source": str(path), "lines": total, "findings": [f.__dict__ for f in findings], "anomalies": [a.__dict__ for a in anomaly_results], "incidents": [{**i.__dict__, "evidence": list(i.evidence)} for i in incident_results]}
     output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     console.print(f"Report written to {output}")
 
