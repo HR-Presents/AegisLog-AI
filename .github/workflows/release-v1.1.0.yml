@@ -33,8 +33,10 @@ jobs:
           assert data['project']['version'] == '1.1.0', data['project']['version']
           PY
 
-      - name: Install verification tooling
-        run: python -m pip install --upgrade "build>=1.2" "twine>=5.1" "ruff>=0.5" "pytest>=8.0" "bandit>=1.7" "pip-audit>=2.7"
+      - name: Install project and verification tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
 
       - name: Verify source
         run: |
