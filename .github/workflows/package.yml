@@ -14,12 +14,58 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install --upgrade build twine
-      - run: python -m build
-      - run: python -m twine check dist/*
-      - name: Generate SHA-256 checksums
-        run: cd dist && sha256sum * > SHA256SUMS
+
+      - name: Build Python package
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check dist/*
+
+      - name: Generate package checksums
+        run: cd dist && sha256sum aegislog_ai-* > SHA256SUMS
+
+      - name: Build customer distribution folder
+        run: |
+          set -eux
+          ROOT="customer-dist/AegisLog-AI-Customer"
+          mkdir -p "$ROOT/package" "$ROOT/vendor" "$ROOT/sample_logs"
+          cp dist/*.whl "$ROOT/package/"
+          cp customer_bundle/* "$ROOT/"
+          cp examples/auth.log "$ROOT/sample_logs/auth.log"
+          python -m pip download --dest "$ROOT/vendor" "rich>=13.7" "typer>=0.12"
+          chmod +x "$ROOT"/*.sh
+          (
+            cd "$ROOT"
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
+
+      - name: Verify offline customer install
+        run: |
+          set -eux
+          ROOT="$GITHUB_WORKSPACE/customer-dist/AegisLog-AI-Customer"
+          cd "$ROOT"
+          ./INSTALL_LINUX_MACOS.sh
+          ./.aegislog-venv/bin/aegislog --version
+          ./.aegislog-venv/bin/aegislog doctor
+          ./.aegislog-venv/bin/aegislog dashboard sample_logs/auth.log
+
+      - name: Archive customer bundle
+        run: |
+          cd customer-dist
+          zip -r ../dist/AegisLog-AI-Customer-Bundle.zip AegisLog-AI-Customer
+          cd ../dist
+          sha256sum AegisLog-AI-Customer-Bundle.zip > AegisLog-AI-Customer-Bundle.zip.sha256
+
       - uses: actions/upload-artifact@v4
         with:
           name: python-package
-          path: dist/*
+          path: |
+            dist/aegislog_ai-*
+            dist/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: customer-bundle
+          path: |
+            dist/AegisLog-AI-Customer-Bundle.zip
+            dist/AegisLog-AI-Customer-Bundle.zip.sha256
