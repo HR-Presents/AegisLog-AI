@@ -1,8 +1,8 @@
 # AegisLog AI
 
-**Terminal-first defensive log intelligence with optional AI investigation.**
+**Terminal-first defensive log intelligence and investigation.**
 
-AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using local deterministic detections, anomaly scoring, incident correlation, safe collection, and optional LLM-assisted explanation. Local analysis remains available without any AI service.
+AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using deterministic detections, anomaly scoring, incident correlation, historical baselines, persistent investigation state, local rule plugins, defensive indicator extraction, and optional LLM-assisted explanation. Core analysis works without an AI service.
 
 ## Quick start
 
@@ -15,11 +15,27 @@ pip install -e .
 
 aegislog doctor
 aegislog analyze examples/auth.log
-aegislog threats examples/auth.log
-aegislog anomalies examples/auth.log
 aegislog incidents examples/auth.log --persist
-aegislog history
+aegislog timeline
 ```
+
+## SOC-style investigation workflow
+
+```bash
+aegislog incidents auth.log --persist
+aegislog timeline
+aegislog hunt --severity HIGH
+aegislog hunt --query "authentication"
+aegislog incident 1
+aegislog indicators auth.log
+aegislog baseline normal.log current.log
+```
+
+Persisted incidents use a local SQLite database under the AegisLog configuration directory. `hunt` filters by text, severity, category and source.
+
+## Extensible detection rules
+
+AegisLog loads optional local Python rule packs from its `rules.d` configuration directory. Run `aegislog plugins` to inspect loaded packs and errors. A plugin defines a `RULES` list containing dictionaries with `id`, `severity`, `category`, `title`, `pattern`, and `recommendation`. Broken plugins are isolated instead of preventing the core analyzer from running. Only install rule plugins you trust because Python rule files execute locally as code.
 
 ## Live and system telemetry
 
@@ -34,47 +50,32 @@ Collectors are bounded and read-only. AegisLog never automatically elevates priv
 
 ## Ask AegisLog
 
-Local investigation requires no model:
-
 ```bash
 aegislog ask "What are the strongest security signals?" examples/auth.log --local
-```
 
-For a local Ollama model:
-
-```bash
 aegislog config --provider ollama --model llama3.2
 aegislog ask "What likely happened?" examples/auth.log
 ```
 
-For an OpenAI-compatible endpoint:
+For a remote compatible service, set `AEGISLOG_API_KEY`, configure `openai-compatible`, and select a model. Keys are not saved in configuration. Provider context is minimized and redacted, telemetry is marked as untrusted, private-network remote endpoints are rejected, and redirects are disabled. See `docs/AI_PROVIDERS.md`.
+
+## Reports
 
 ```bash
-export AEGISLOG_API_KEY='your-key'
-aegislog config --provider openai-compatible --model YOUR_MODEL
-aegislog ask "Explain the likely root cause" examples/auth.log
+aegislog report auth.log --output report.json
+aegislog report auth.log --output report.md
+aegislog report auth.log --output report.html
 ```
 
-AegisLog does not save API keys in configuration. Before provider calls it minimizes context, redacts recognized secrets, and explicitly marks log content as untrusted telemetry rather than model instructions. Remote OpenAI-compatible endpoints are restricted from resolving to local/private network addresses; the Ollama adapter is the explicit local-model path. See `docs/AI_PROVIDERS.md`.
+HTML report fields escape untrusted log-derived values.
 
 ## Main commands
 
-- `analyze` — local rule-backed analysis
-- `threats` — high/critical security findings
-- `anomalies` — lightweight rarity/frequency anomalies
-- `incidents` — correlate and optionally persist related findings
-- `history` — view persisted incident records
-- `watch` — analyze appended log events live
-- `collect` — bounded journald or Docker collection
-- `ask` — local or configured AI-assisted investigation
-- `report` — JSON findings/anomaly/incident report
-- `scan` — scan candidate logs in a directory
-- `config` — set non-secret provider preferences
-- `doctor` — inspect runtime configuration
+`analyze`, `threats`, `anomalies`, `incidents`, `history`, `incident`, `timeline`, `hunt`, `indicators`, `baseline`, `plugins`, `watch`, `collect`, `ask`, `report`, `scan`, `config`, and `doctor`.
 
 ## Security model
 
-AegisLog is defensive tooling. Findings are investigative signals, not proof of compromise. Log data is considered hostile input: terminal control data is sanitized and AI prompts label telemetry as untrusted. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
+AegisLog is defensive tooling. Findings and extracted indicators are investigative signals, not proof of compromise. Log data is hostile input: terminal control data is sanitized and AI prompts label telemetry as untrusted. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
 
 ## Development
 
@@ -83,8 +84,6 @@ pip install -e '.[dev]'
 pytest
 ruff check .
 ```
-
-The repository includes CI, packaging checks, dependency auditing, synthetic fixtures, installation helpers, architecture notes, privacy documentation, a threat model and operational guidance under `docs/`.
 
 ## License
 
