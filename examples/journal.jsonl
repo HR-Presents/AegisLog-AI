@@ -1,0 +1,3 @@
+{"PRIORITY":"6","SYSLOG_IDENTIFIER":"api","MESSAGE":"service started"}
+{"PRIORITY":"3","SYSLOG_IDENTIFIER":"api","MESSAGE":"ERROR upstream database timeout"}
+{"PRIORITY":"4","SYSLOG_IDENTIFIER":"sshd","MESSAGE":"Failed password for root from 192.0.2.44 port 2210 ssh2"}
