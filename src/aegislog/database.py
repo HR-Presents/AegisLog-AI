@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 from .config import config_dir
+from .migrations import migrate
 
 
 def database_path() -> Path:
@@ -36,6 +37,7 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_incidents_category ON incidents(category);
         """
     )
+    migrate(db)
     return db
 
 
