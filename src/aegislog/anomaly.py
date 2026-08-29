@@ -14,18 +14,31 @@ class Anomaly:
     reason: str
 
 
+INTERESTING_LEVELS = {"warning", "error", "critical"}
+
+
 def score_events(events: list[Event]) -> list[Anomaly]:
-    """Lightweight local frequency anomaly scoring; no external model required."""
-    if not events:
+    """Lightweight local anomaly scoring focused on rare concerning event classes."""
+    relevant = [e for e in events if e.message and (e.level or "").lower() in INTERESTING_LEVELS]
+    if not relevant:
         return []
-    keys = [f"{e.service or 'unknown'}:{(e.level or 'unknown').lower()}" for e in events if e.message]
+
+    keys = [f"{e.service or 'unknown'}:{(e.level or 'unknown').lower()}" for e in relevant]
     counts = Counter(keys)
-    total = max(len(keys), 1)
+    total_events = max(sum(1 for e in events if e.message), 1)
     anomalies: list[Anomaly] = []
+
     for key, count in counts.items():
-        ratio = count / total
+        ratio = count / total_events
         rarity = -math.log10(max(ratio, 1e-9))
-        score = min(100.0, 20.0 + rarity * 30.0)
-        if count <= 3 and total >= 10 and score >= 45:
-            anomalies.append(Anomaly(round(score, 1), key, f"Rare event class: {count}/{total} events"))
+        score = min(100.0, 30.0 + rarity * 32.0)
+        if count <= 3 and total_events >= 10 and score >= 50:
+            anomalies.append(
+                Anomaly(
+                    round(score, 1),
+                    key,
+                    f"Rare concerning event class: {count}/{total_events} total events",
+                )
+            )
+
     return sorted(anomalies, key=lambda a: a.score, reverse=True)
