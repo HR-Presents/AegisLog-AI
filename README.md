@@ -4,7 +4,41 @@
 
 AegisLog AI analyzes Linux, authentication, web, system, Docker and application telemetry using deterministic detections, anomaly scoring, incident correlation, behavioral baselines, persistent investigation state, declarative rule packs, entity correlation, bounded-memory streaming, stateful live analysis, and optional LLM-assisted explanation. Core analysis works without an AI service.
 
-## Quick start
+## Customer bundle quick start
+
+AegisLog AI 1.1 includes a self-contained customer distribution bundle. The bundle contains the AegisLog wheel, offline Python dependencies, Windows and Linux/macOS installers, ready-terminal launchers, dashboard launchers, uninstallers, a sample log, and SHA-256 checksums. Customers do not need access to this GitHub repository after receiving the bundle. Python 3.10 or newer is still required on the target machine.
+
+### Windows
+
+1. Extract `AegisLog-AI-v1.1.0-Customer-Bundle.zip`.
+2. Open the `AegisLog-AI-Customer` folder.
+3. Double-click `INSTALL_WINDOWS.bat`.
+4. Double-click `OPEN_AEGISLOG_TERMINAL.bat`.
+5. Analyze a log:
+
+```text
+aegislog dashboard C:\path\to\auth.log
+```
+
+For the shortest path, double-click `RUN_DASHBOARD.bat` after installation and paste the log path when prompted.
+
+### Linux / macOS
+
+```bash
+chmod +x INSTALL_LINUX_MACOS.sh OPEN_AEGISLOG_TERMINAL.sh RUN_DASHBOARD.sh UNINSTALL_LINUX_MACOS.sh
+./INSTALL_LINUX_MACOS.sh
+./OPEN_AEGISLOG_TERMINAL.sh
+```
+
+Then run:
+
+```bash
+aegislog dashboard /path/to/auth.log
+```
+
+The installers create a private `.aegislog-venv` inside the extracted customer folder. They install the bundled wheel and dependencies locally rather than relying on a global Python Scripts directory or GitHub access.
+
+## Developer quick start
 
 ```bash
 git clone https://github.com/HR-Presents/AegisLog-AI.git
@@ -19,11 +53,16 @@ aegislog incidents examples/auth.log --persist
 aegislog timeline
 ```
 
-For an isolated command-line installation, use `pipx install .` from a checked-out
-release. Upgrade with `pipx upgrade aegislog-ai` after a package release and
-uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration,
-rules, and investigation state under `~/.config/aegislog`; uninstalling the package
-does not delete analyst data.
+For an isolated command-line installation, use `pipx install .` from a checked-out release. Upgrade with `pipx upgrade aegislog-ai` after a package release and uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration, rules, and investigation state under `~/.config/aegislog`; uninstalling the package does not delete analyst data.
+
+## Terminal analysis dashboard
+
+```bash
+aegislog analyze auth.log
+aegislog dashboard auth.log
+```
+
+`analyze` opens the terminal dashboard by default. The dashboard shows total lines analyzed, overall risk state, severity counts, categories, parsed log levels, top services, correlated incidents, anomaly scores, detailed findings, evidence, and investigation recommendations. Log-derived values are rendered as untrusted literal text.
 
 ## Persistent entity investigation
 
@@ -78,7 +117,7 @@ aegislog collect journal --target ssh.service --output ssh.log
 aegislog collect docker --target my-container --output container.log
 ```
 
-`watch` now maintains a bounded rolling correlation window, allowing repeated events to be detected across incoming lines instead of treating every line independently. Collectors remain bounded and read-only.
+`watch` maintains a bounded rolling correlation window, allowing repeated events to be detected across incoming lines instead of treating every line independently. Collectors remain bounded and read-only.
 
 ## Ask AegisLog
 
@@ -111,7 +150,7 @@ The benchmark is for reproducible regression comparison rather than marketing pe
 
 ## Main commands
 
-`analyze`, `threats`, `anomalies`, `incidents`, `history`, `incident`, `timeline`, `hunt`, `indicators`, `baseline`, `plugins`, `stream`, `entities`, `behavior`, `index-entities`, `entity`, `entity-top`, `watch`, `collect`, `ask`, `report`, `scan`, `config`, and `doctor`.
+`analyze`, `dashboard`, `threats`, `anomalies`, `incidents`, `history`, `incident`, `timeline`, `hunt`, `indicators`, `baseline`, `plugins`, `stream`, `entities`, `behavior`, `index-entities`, `entity`, `entity-top`, `watch`, `collect`, `ask`, `report`, `scan`, `config`, and `doctor`.
 
 ## Security model
 
@@ -130,9 +169,7 @@ twine check dist/*
 
 ## Release status
 
-This branch is the V1.0.0 release candidate. A maintainer must verify the complete
-GitHub Actions matrix and release checksums before creating the `v1.0.0` tag. No
-automatic remediation or privileged system changes are performed.
+AegisLog AI 1.1.0 is being prepared on PR #2. CI, security checks, package validation, Linux offline customer installation, Windows customer installer verification, terminal dashboard smoke tests, and customer ZIP generation are automated before merge. No merge, tag, release publication, or repository visibility change is performed by this branch.
 
 ## License
 

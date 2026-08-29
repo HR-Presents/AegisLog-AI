@@ -1,5 +1,6 @@
 from typer.testing import CliRunner
 
+from aegislog import __version__
 from aegislog.cli import app
 
 runner = CliRunner()
@@ -8,7 +9,7 @@ runner = CliRunner()
 def test_version_flag():
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "AegisLog AI 1.0.0"
+    assert result.stdout.strip() == f"AegisLog AI {__version__}"
 
 
 def test_doctor():
