@@ -5,6 +5,8 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from .sanitize import terminal_safe
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -18,7 +20,7 @@ class Finding:
 RULES = [
     ("CRITICAL", "authentication", re.compile(r"failed password|authentication failure", re.I), "Authentication failures detected", "Review source addresses and successful logins; harden authentication and rate limits."),
     ("HIGH", "privilege", re.compile(r"sudo:.*(authentication failure|incorrect password)|user NOT in sudoers", re.I), "Suspicious privilege activity", "Review sudo history, account privileges, and related authentication events."),
-    ("HIGH", "web", re.compile(r"(?:union select|\.\./|/etc/passwd|<script|%3cscript)", re.I), "Suspicious web request pattern", "Review the request context, application logs, WAF controls, and affected endpoint."),
+    ("HIGH", "web", re.compile(r"(?:union(?:%20|\s)+select|\.\./|/etc/passwd|<script|%3cscript)", re.I), "Suspicious web request pattern", "Review the request context, application logs, WAF controls, and affected endpoint."),
     ("MEDIUM", "service", re.compile(r"segfault|panic|fatal|crash|out of memory|oom-killer", re.I), "Service or system failure", "Inspect surrounding events, resource pressure, and the affected service configuration."),
     ("MEDIUM", "error", re.compile(r"\berror\b|\bexception\b|\bdenied\b|\btimeout\b", re.I), "Operational error detected", "Inspect surrounding lines and the affected component for root cause."),
 ]
@@ -31,6 +33,7 @@ SECRET_PATTERNS = [
 
 
 def redact(text: str) -> str:
+    text = terminal_safe(text)
     for pattern in SECRET_PATTERNS:
         text = pattern.sub(lambda m: f"{m.group(1)}=[REDACTED]" if m.lastindex else "[REDACTED]", text)
     return text
