@@ -133,14 +133,17 @@ class TrendTracker:
         )
 
 
-def render_trends(snapshot: TrendSnapshot) -> Table:
-    table = Table(title=f"Rate & baseline intelligence ({snapshot.window_seconds}s window)", expand=True)
+def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None = None) -> Table:
+    title = f"Rate & baseline intelligence ({snapshot.window_seconds}s window)"
+    table = Table(title=title, expand=True)
     table.add_column("Signal", width=20)
     table.add_column("Current/min", justify="right", width=12)
     table.add_column("Baseline/min", justify="right", width=12)
     table.add_column("Deviation", justify="right", width=11)
     table.add_column("State", width=10)
-    for metric in snapshot.metrics:
+    allowed = set(metric_names or ())
+    metrics = [metric for metric in snapshot.metrics if not allowed or metric.name in allowed]
+    for metric in metrics:
         ratio = f"{metric.deviation_ratio:.1f}x" if metric.deviation_ratio < 100 else ">99x"
         table.add_row(
             Text(metric.name),
@@ -149,4 +152,6 @@ def render_trends(snapshot: TrendSnapshot) -> Table:
             ratio,
             metric.state,
         )
+    if not metrics:
+        table.add_row("No profile metrics", "0.0", "0.0", "1.0x", "NORMAL")
     return table
