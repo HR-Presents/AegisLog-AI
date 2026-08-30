@@ -30,6 +30,18 @@ def test_live_dashboard_explains_waiting_for_new_lines() -> None:
 
 
 def test_finding_key_ignores_evidence_growth() -> None:
-    first = Finding("HIGH", "authentication", "Possible brute-force activity from 203.0.113.50", "5 authentication failures")
-    second = Finding("HIGH", "authentication", "Possible brute-force activity from 203.0.113.50", "6 authentication failures")
+    first = Finding(
+        "HIGH",
+        "authentication",
+        "Possible brute-force activity from 203.0.113.50",
+        "5 authentication failures",
+        "Review authentication activity.",
+    )
+    second = Finding(
+        "HIGH",
+        "authentication",
+        "Possible brute-force activity from 203.0.113.50",
+        "6 authentication failures",
+        "Review authentication activity.",
+    )
     assert RealtimeState._finding_key(first) == RealtimeState._finding_key(second)
