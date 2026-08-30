@@ -53,16 +53,30 @@ aegislog incidents examples/auth.log --persist
 aegislog timeline
 ```
 
-For an isolated command-line installation, use `pipx install .` from a checked-out release. Upgrade with `pipx upgrade aegislog-ai` after a package release and uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration, rules, and investigation state under `~/.config/aegislog`; uninstalling the package does not delete analyst data.
-
-## Terminal analysis dashboard
+## Interactive terminal dashboard
 
 ```bash
-aegislog analyze auth.log
-aegislog dashboard auth.log
+aegislog dashboard /var/log/auth.log
+# or
+aegislog analyze /var/log/auth.log
 ```
 
-`analyze` opens the terminal dashboard by default. The dashboard shows total lines analyzed, overall risk state, severity counts, categories, parsed log levels, top services, correlated incidents, anomaly scores, detailed findings, evidence, and investigation recommendations. Log-derived values are rendered as untrusted literal text.
+In an interactive terminal, `analyze` opens the dashboard automatically; redirected
+or piped runs keep stable text output for automation. The full-screen dashboard
+analyzes the file locally and displays live summary
+cards, searchable findings, correlated incidents, anomaly scores, extracted
+indicators, recommendations, and an analysis overview. Use the mouse or arrow
+keys to navigate. Open the Findings tab and type in the filter box to narrow
+results. Press `F5` to
+re-analyze, `F6` for live mode, `F8` to export JSON, `Esc` to clear the filter,
+and `Q` to quit.
+
+For an isolated command-line installation, use `pipx install .` from a checked-out
+release. Upgrade with `pipx upgrade aegislog-ai` after a package release and
+uninstall with `pipx uninstall aegislog-ai`. AegisLog stores local configuration,
+rules, and investigation state under `~/.config/aegislog`; uninstalling the package
+does not delete analyst data. Log-derived values are rendered as untrusted
+literal text rather than terminal markup.
 
 ## Persistent entity investigation
 

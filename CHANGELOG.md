@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 - Unreleased
+
+- Added a full-screen interactive terminal dashboard powered by Textual.
+- Added summary metrics, searchable findings, incidents, anomalies, indicators,
+  recommendations, scrolling tables, tabs, and keyboard navigation.
+- Added `aegislog dashboard <log>` and `aegislog analyze <log> --dashboard`.
+- Added refresh-in-place analysis for changing log files.
+- Added dashboard pipeline and headless interaction regression tests.
+
 ## 1.0.0 - Release candidate
 
 - Promoted the complete terminal analysis, SOC workflow, persistent entity graph,

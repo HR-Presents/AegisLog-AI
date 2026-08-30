@@ -1,29 +1,27 @@
 from __future__ import annotations
 
+import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from .dashboard import analyze_dashboard, render_dashboard
+from .dashboard import run_dashboard
 from .plugins import apply_rules, load_rules
 
 console = Console()
+_legacy_analyze: Callable[..., None] | None = None
 
 
 def dashboard(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
     """Open the full terminal investigation dashboard for one log file."""
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-        console=console,
-    ) as progress:
-        task = progress.add_task(f"Analyzing {path.name}...", total=None)
-        data = analyze_dashboard(path)
-        progress.update(task, description="Building terminal dashboard...")
-    console.print(render_dashboard(data))
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        if _legacy_analyze is None:
+            raise RuntimeError("Legacy analyze command is unavailable")
+        _legacy_analyze(path=path, plugins=False, dashboard=False)
+        return
+    run_dashboard(path)
 
 
 def analyze_dashboard_command(
@@ -31,6 +29,11 @@ def analyze_dashboard_command(
     plugins: bool = typer.Option(True, "--plugins/--no-plugins", help="Include local declarative detection packs."),
 ) -> None:
     """Analyze a log and open the complete AegisLog terminal dashboard."""
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        if _legacy_analyze is None:
+            raise RuntimeError("Legacy analyze command is unavailable")
+        _legacy_analyze(path=path, plugins=plugins, dashboard=False)
+        return
     dashboard(path)
     if plugins:
         rules, errors = load_rules()
@@ -46,9 +49,11 @@ def analyze_dashboard_command(
 
 def replace_analyze_command(app: typer.Typer) -> None:
     """Upgrade the legacy analyze callback without duplicating the public command."""
+    global _legacy_analyze
     for command in app.registered_commands:
         callback = getattr(command, "callback", None)
         if callback is not None and getattr(callback, "__name__", "") == "analyze":
+            _legacy_analyze = callback
             command.callback = analyze_dashboard_command
             command.name = "analyze"
             return

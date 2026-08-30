@@ -20,6 +20,7 @@ from .baseline import compare as compare_baseline
 from .collectors import CollectorError, docker as collect_docker, journal as collect_journal
 from .config import load_config, save_config
 from .database import add_incidents, get_incident, list_incidents, timeline as database_timeline
+from .dashboard import run_dashboard
 from .engine import analyze_file
 from .exporters import write_report
 from .hunt import extract_indicators, search_incidents
@@ -63,8 +64,15 @@ def _render(path: Path) -> None:
 
 
 @app.command()
-def analyze(path: Path = typer.Argument(..., exists=True, dir_okay=False), plugins: bool = True) -> None:
+def analyze(
+    path: Path = typer.Argument(..., exists=True, dir_okay=False),
+    plugins: bool = True,
+    dashboard: bool = typer.Option(False, "--dashboard", "-d", help="Open the interactive terminal dashboard after analysis."),
+) -> None:
     """Analyze one log file, optionally including local rule plugins."""
+    if dashboard:
+        run_dashboard(path)
+        return
     _render(path)
     if plugins:
         rules, errors = load_rules(); lines = path.read_text(encoding="utf-8", errors="replace").splitlines(); custom = apply_rules(lines, rules)

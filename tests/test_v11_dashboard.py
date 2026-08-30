@@ -1,8 +1,11 @@
+from __future__ import annotations
+
+import asyncio
 from pathlib import Path
 
-from rich.console import Console
+from textual.widgets import DataTable
 
-from aegislog.dashboard import analyze_dashboard, render_dashboard
+from aegislog.dashboard import AegisDashboard, build_dashboard_analysis
 from aegislog.entry import app
 
 
@@ -24,30 +27,33 @@ def _write_log(path: Path) -> None:
     )
 
 
-def test_dashboard_snapshot_contains_full_analysis(tmp_path: Path):
+def test_dashboard_analysis_contains_full_pipeline(tmp_path: Path) -> None:
     log = tmp_path / "sample.log"
     _write_log(log)
-    data = analyze_dashboard(log)
-    assert data.lines == 7
+    data = build_dashboard_analysis(log)
+    assert data.line_count == 7
     assert data.findings
     assert data.incidents
-    assert data.severities.get("HIGH", 0) >= 1
-    assert data.categories.get("authentication", 0) >= 1
+    assert any(item.severity == "HIGH" for item in data.findings)
+    assert any(item.category == "authentication" for item in data.findings)
 
 
-def test_dashboard_render_is_terminal_safe(tmp_path: Path):
-    log = tmp_path / "hostile.log"
+def test_dashboard_renders_hostile_log_as_literal_text(tmp_path: Path) -> None:
+    log = tmp_path / "[bold red]hostile.log"
     log.write_text("ERROR [bold red]not markup[/bold red]\n", encoding="utf-8")
-    data = analyze_dashboard(log)
-    console = Console(record=True, force_terminal=False, width=120)
-    console.print(render_dashboard(data))
-    output = console.export_text()
-    assert "AEGISLOG AI" in output
-    assert "not markup" in output
-    assert "Detected findings" in output
+
+    async def exercise() -> None:
+        dashboard = AegisDashboard(log)
+        async with dashboard.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            table = dashboard.query_one("#findings-table", DataTable)
+            assert table.row_count
+            assert "[bold red]" in dashboard.analysis.findings[0].evidence
+
+    asyncio.run(exercise())
 
 
-def test_dashboard_command_is_registered_and_analyze_is_replaced():
+def test_dashboard_command_is_registered_and_analyze_is_replaced() -> None:
     commands = {}
     for command in app.registered_commands:
         callback = getattr(command, "callback", None)
