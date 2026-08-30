@@ -1,21 +1,14 @@
 from pathlib import Path
-import re
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # Python 3.10
-    import tomli as tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_v140_version_metadata_matches():
-    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    init_text = (ROOT / "src" / "aegislog" / "__init__.py").read_text(encoding="utf-8")
-    match = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
-    assert project["project"]["version"] == "1.4.0"
-    assert match and match.group(1) == "1.4.0"
+def test_v140_release_metadata_is_preserved_in_historical_workflow():
+    workflow = (ROOT / ".github" / "workflows" / "release-v1.4.0.yml").read_text(encoding="utf-8")
+    assert "RELEASE_TAG: v1.4.0" in workflow
+    assert "RELEASE_VERSION: 1.4.0" in workflow
+    assert '== "1.4.0"' in workflow
 
 
 def test_v140_release_workflow_is_manual_and_refuses_mutation():
