@@ -26,13 +26,16 @@ def test_cursor_detects_replaced_file_even_when_new_file_is_larger(tmp_path: Pat
     assert cursor.offset == path.stat().st_size
 
 
-def test_realtime_seen_fingerprints_expire() -> None:
+def test_realtime_seen_fingerprints_expire_without_duplicating_recent_rows() -> None:
     state = RealtimeState(source="web.log", window_size=50, alert_ttl_seconds=5)
     line = 'Aug 29 12:00:00 host nginx[1]: 203.0.113.2 - - "GET /.env HTTP/1.1" 404 153\n'
     state.ingest([line], now=10.0)
-    first_count = len(state.recent_findings)
+    assert len(state._seen_fingerprints) == 1
+    state._expire_seen(20.0)
+    assert not state._seen_fingerprints
+
     state.ingest([line], now=20.0)
-    assert len(state.recent_findings) > first_count
+    assert len(state.recent_findings) == 1
 
 
 def test_multisource_alert_uses_evidence_source(tmp_path: Path) -> None:

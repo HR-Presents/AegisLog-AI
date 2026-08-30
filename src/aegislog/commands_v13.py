@@ -32,9 +32,11 @@ def live_dashboard(
         initial, cursor = read_new_lines_cursor(path, cursor)
         state.ingest(initial)
 
+    mode = "existing content + new lines" if from_start else "new lines appended after startup"
     console.print(
-        f"[cyan]Starting AegisLog real-time monitor with {selected.label} profile. "
-        "Press Ctrl+C to stop safely.[/cyan]"
+        f"[cyan]Starting AegisLog real-time monitor with {selected.label} profile.[/cyan]\n"
+        f"[dim]Monitoring: {mode}. Existing content is skipped by default so old events are not reported as live. "
+        "Use --from-start when you intentionally want the current file analyzed first. Press Ctrl+C to stop safely.[/dim]"
     )
     try:
         with Live(render_realtime(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
