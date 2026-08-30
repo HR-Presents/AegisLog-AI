@@ -141,6 +141,35 @@ def _choose_profile(default: str = "security") -> str:
     return get_profile(selected).key
 
 
+def _menu_action_error(label: str, exc: Exception) -> None:
+    detail = str(exc).strip() or exc.__class__.__name__
+    console.print(Panel(Text(detail), title=f"{label} could not start", border_style="red"))
+    console.print("[dim]AegisLog stayed open safely. You can return to the menu or run the equivalent command from Command mode.[/dim]")
+
+
+def _launch_live_dashboard(path: Path, profile: str) -> None:
+    """Launch live mode with real Python defaults instead of Typer OptionInfo objects."""
+    try:
+        live_dashboard(path, from_start=False, refresh=1.0, window=500, profile=profile)
+    except Exception as exc:
+        _menu_action_error("Real-time file dashboard", exc)
+
+
+def _launch_live_multi(paths: list[Path], profile: str) -> None:
+    """Launch multi-source live mode safely from the interactive control center."""
+    try:
+        live_multi(
+            paths,
+            from_start=False,
+            refresh=1.0,
+            window=1000,
+            trend_seconds=60,
+            profile=profile,
+        )
+    except Exception as exc:
+        _menu_action_error("Multi-source live SOC", exc)
+
+
 def _native_choice() -> tuple[str, str, str] | None:
     import platform
 
@@ -168,7 +197,10 @@ def _native_menu() -> None:
     if choice is None:
         return
     source, channel, container = choice
-    native_analyze(source, channel=channel, container=container)
+    try:
+        native_analyze(source, limit=300, channel=channel, container=container)
+    except Exception as exc:
+        _menu_action_error("Native analysis", exc)
 
 
 def _native_live_menu() -> None:
@@ -179,7 +211,19 @@ def _native_live_menu() -> None:
         return
     source, channel, container = choice
     profile = _choose_profile("docker" if source == "docker" else "security")
-    native_live(source, channel=channel, container=container, profile=profile)
+    try:
+        native_live(
+            source,
+            refresh=2.0,
+            window=500,
+            limit=300,
+            from_start=False,
+            channel=channel,
+            container=container,
+            profile=profile,
+        )
+    except Exception as exc:
+        _menu_action_error("Native real-time monitor", exc)
 
 
 def _explain_menu() -> None:
@@ -337,13 +381,13 @@ def start() -> None:
             if path is not None:
                 profile = _choose_profile()
                 console.print()
-                live_dashboard(path, profile=profile)
+                _launch_live_dashboard(path, profile)
         elif choice == "3":
             paths = _choose_log_files()
             if paths:
                 profile = _choose_profile()
                 console.print()
-                live_multi(paths, profile=profile)
+                _launch_live_multi(paths, profile)
         elif choice == "4":
             console.print()
             _native_menu()
