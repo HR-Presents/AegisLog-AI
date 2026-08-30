@@ -60,10 +60,11 @@ class RealtimeState:
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
+    last_activity_at: float | None = None
     trend_tracker: TrendTracker = field(default_factory=TrendTracker)
     _lines: deque[str] = field(default_factory=deque)
     _recent_findings: deque[Finding] = field(default_factory=lambda: deque(maxlen=12))
-    _seen_fingerprints: dict[tuple[str, str, str, str], float] = field(default_factory=dict)
+    _seen_fingerprints: dict[tuple[str, str, str], float] = field(default_factory=dict)
     _events_cache: list[Event] = field(default_factory=list)
     _findings_cache: list[Finding] = field(default_factory=list)
 
@@ -73,10 +74,17 @@ class RealtimeState:
         get_profile(self.watch_profile)
         self._lines = deque(self._lines, maxlen=self.window_size)
 
+    @staticmethod
+    def _finding_key(finding: Finding) -> tuple[str, str, str]:
+        # Evidence often changes as a burst grows (for example 5 -> 6 failures).
+        # Keep one live row for the logical detection instead of stacking stale copies.
+        return (finding.severity, finding.category, finding.title)
+
     def ingest(self, lines: list[str], now: float | None = None) -> int:
         if not lines:
             return 0
         stamp = time.monotonic() if now is None else now
+        self.last_activity_at = stamp
         for line in lines:
             self._lines.append(line)
             self.total_lines += 1
@@ -85,10 +93,13 @@ class RealtimeState:
         self._refresh_snapshot()
         self._expire_seen(stamp)
         for finding in self._findings_cache:
-            fp = (finding.severity, finding.category, finding.title, finding.evidence)
-            if fp not in self._seen_fingerprints:
-                self._recent_findings.appendleft(finding)
-            self._seen_fingerprints[fp] = stamp
+            key = self._finding_key(finding)
+            self._recent_findings = deque(
+                (item for item in self._recent_findings if self._finding_key(item) != key),
+                maxlen=12,
+            )
+            self._recent_findings.appendleft(finding)
+            self._seen_fingerprints[key] = stamp
         return len(lines)
 
     def _refresh_snapshot(self) -> None:
@@ -146,6 +157,12 @@ class RealtimeState:
     def lines_per_second(self) -> float:
         return self.total_lines / self.elapsed
 
+    @property
+    def activity_age(self) -> float | None:
+        if self.last_activity_at is None:
+            return None
+        return max(time.monotonic() - self.last_activity_at, 0.0)
+
 
 def _risk(severities: Counter[str]) -> str:
     if severities.get("CRITICAL"):
@@ -184,7 +201,7 @@ def _recent_table(findings: list[Finding], profile: WatchProfile) -> Table:
     for finding in findings[:8]:
         table.add_row(finding.severity, Text(finding.category), Text(finding.title), Text(finding.evidence))
     if not findings:
-        table.add_row("-", "-", f"No {profile.label.lower()} profile matches yet", "AegisLog continues monitoring all incoming lines")
+        table.add_row("-", "-", f"No {profile.label.lower()} profile matches yet", "Waiting for matching activity; all incoming lines are still analyzed locally")
     return table
 
 
@@ -204,6 +221,13 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     medium = severities.get("MEDIUM", 0)
     allowed_metrics = set(profile.trend_metrics)
     focused_spikes = sum(1 for item in trend.metrics if item.name in allowed_metrics and item.state == "SPIKE")
+    activity_age = state.activity_age
+    if activity_age is None:
+        activity = "waiting for new lines"
+    elif activity_age < 2:
+        activity = "receiving now"
+    else:
+        activity = f"last activity {activity_age:.0f}s ago"
 
     header = Panel(
         Align.center(Text(f"AEGISLOG AI  v{__version__}\nREAL-TIME DEFENSIVE MONITOR\n{state.source}\nPROFILE: {profile.label.upper()}", style="bold")),
@@ -212,8 +236,8 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     metrics = Columns(
         [
             _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
-            _metric("Event rate", f"{state.lines_per_second:.1f}/s"),
-            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s profile baseline"),
+            _metric("Average rate", f"{state.lines_per_second:.1f}/s", activity),
+            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline"),
             _metric("Profile findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium"),
             _metric("Incidents", str(len(incidents))),
             _metric("Anomalies", str(len(anomalies))),
@@ -231,9 +255,13 @@ def render_realtime(state: RealtimeState) -> RenderableType:
         equal=True,
         expand=True,
     )
+    if state.total_lines == 0:
+        mode_note = "Waiting for NEW lines appended after monitoring started. Existing file contents are intentionally skipped unless --from-start is used. "
+    else:
+        mode_note = "Following new appended lines. "
     status = Panel(
         Text(
-            f"Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
+            f"{mode_note}Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
             f"The {profile.label} profile changes terminal emphasis only; all input remains locally analyzed and no remediation is performed."
         ),
         title="Live status",
