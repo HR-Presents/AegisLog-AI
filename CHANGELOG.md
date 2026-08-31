@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.4.2 - 2026-08-30
+
+- Fixed interactive control-center launch paths for the real-time file dashboard, multi-source live SOC, native analysis, and native real-time monitor.
+- Added menu-level exception containment so launch failures are reported inside AegisLog instead of unexpectedly closing the control center.
+- Added regression coverage for interactive launch defaults and crash containment.
+- Retained the v1.4.1 live-monitoring improvements, Windows telemetry normalization, Security Event intelligence, incident IDs, MITRE context, watch profiles, native collectors, and local-first/read-only analysis.
+- Published the Windows single-file `AegisLog.exe` with a SHA-256 checksum.
+
+## 1.4.1 - 2026-08-30
+
+- Clarified live-monitor startup behavior: by default AegisLog follows newly appended lines, with `--from-start` available when existing file content should also be processed.
+- Reworked live-rate and activity wording to distinguish average rate, rolling activity, waiting state, and time since last activity.
+- Deduplicated growing versions of the same live finding, including repeated authentication-failure scenarios.
+- Improved first-run live dashboard messaging and added regression coverage based on real Windows testing.
+
+## 1.4.0 - 2026-08-29
+
+- Improved Windows Event Log timestamp, provider, level, and service normalization.
+- Added friendly permission guidance for protected Windows Security Event Log access while keeping normal operation unprivileged.
+- Improved Docker readiness checks to distinguish missing CLI, unavailable engine/access, and ready state.
+- Surfaced actionable `INC-XXXXXXXX` incident IDs and aligned dashboard guidance with `incidents`, `investigate`, and `explain` workflows.
+- Added defensive Windows Security Event context for selected audit events, including failed logons, privileged logons, process creation, account changes, group membership changes, lockouts, and audit-log clearing.
+- Added regression coverage based on real Windows acceptance-test findings.
+- Published the Windows single-file executable and checksum while preserving the local-first, read-only defensive model.
+
 ## 1.0.0 - Release candidate
 
 - Promoted the complete terminal analysis, SOC workflow, persistent entity graph,
