@@ -7,7 +7,7 @@ AegisLog AI analyzes authentication, Linux, Windows Event Log, web, Docker, syst
 ## Documentation
 
 - **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, command reference, Watch Mode Profiles, live monitoring, native Windows/journald/Docker collection, incidents, investigation, Explain This Incident, MITRE ATT&CK context, case history, checksum verification, recommended workflows, and troubleshooting.
-- **v1.3.0 release notes:** [`docs/RELEASE_V1.3.0.md`](docs/RELEASE_V1.3.0.md)
+- **v1.4.2 release notes:** [`docs/RELEASE_V1.4.2.md`](docs/RELEASE_V1.4.2.md)
 - **AI provider documentation:** [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md)
 
 For exact syntax supported by the executable you downloaded, use:
@@ -25,7 +25,7 @@ The primary Windows delivery is one file:
 AegisLog.exe
 ```
 
-1. Download `AegisLog.exe` from the v1.3.0 release.
+1. Download `AegisLog.exe` from the v1.4.2 release.
 2. Optionally verify it against `AegisLog.exe.sha256`.
 3. Double-click `AegisLog.exe`.
 4. Choose what you want to analyze from the terminal control center.
@@ -181,9 +181,9 @@ AegisLog is defensive tooling. Findings, anomaly scores, confidence values, corr
 
 ## Release engineering
 
-v1.3.0 is published through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.3.0` tag or GitHub release.
+v1.4.2 is published through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.4.2` tag or GitHub release.
 
-Release notes and customer instructions are in `docs/RELEASE_V1.3.0.md`.
+Release notes and customer instructions are in `docs/RELEASE_V1.4.2.md`.
 
 ## License
 
