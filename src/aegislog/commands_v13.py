@@ -46,7 +46,7 @@ def live_dashboard(
     )
     if from_start:
         console.print(render_realtime(state))
-        console.print(live_initial_status("file"))
+        console.print(live_initial_status("file", prefix="Initial scan complete."))
 
     try:
         with Live(
