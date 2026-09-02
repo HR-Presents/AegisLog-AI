@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.live import Live
 
-from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
+from .live_ux import live_initial_status, live_source_status, live_startup_panel, live_stopped_status
 from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
 from .watch_profiles import get_profile
 
@@ -58,6 +58,7 @@ def live_multi(
         console.print(render_multisource(state))
         console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
 
+    missing_sources: set[Path] = set()
     try:
         with Live(
             render_multisource(state),
@@ -67,10 +68,17 @@ def live_multi(
             transient=False,
         ) as live:
             while True:
+                current_missing = {path for path in unique if not path.exists() or not path.is_file()}
+                for path in sorted(current_missing - missing_sources, key=str):
+                    console.print(live_source_status(str(path), available=False))
+                for path in sorted(missing_sources - current_missing, key=str):
+                    console.print(live_source_status(str(path), available=True))
+                missing_sources = current_missing
+
                 batches, cursors = poll_sources(unique, cursors)
                 for path, lines in batches:
                     state.ingest(path, lines)
                 live.update(render_multisource(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print(live_stopped_status("Multi-source"))
+        console.print(live_stopped_status("Multi-source", degraded=bool(missing_sources)))
