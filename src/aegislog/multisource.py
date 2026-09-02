@@ -18,6 +18,7 @@ from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
 from .realtime import FileCursor, initial_cursor, read_new_lines, read_new_lines_cursor
+from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, INFO, MUTED, SUCCESS, WARNING, risk_style, severity_text
 from .trends import TrendSnapshot, TrendTracker, render_trends
 from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
 
@@ -211,37 +212,56 @@ def _risk(counts: Counter[str]) -> str:
     return "CLEAR"
 
 
-def _metric(title: str, value: str, subtitle: str = "") -> Panel:
-    body = Text(value, justify="center", style="bold")
+def _metric(title: str, value: str, subtitle: str = "", value_style: str = "bold", border_style: str = ACCENT_SOFT) -> Panel:
+    body = Text(value, justify="center", style=value_style)
     if subtitle:
-        body.append(f"\n{subtitle}", style="dim")
-    return Panel(Align.center(body), title=title, padding=(0, 1))
+        body.append(f"\n{subtitle}", style=MUTED)
+    return Panel(Align.center(body), title=title, padding=(0, 1), border_style=border_style)
 
 
 def _counter(title: str, values: Counter[str], limit: int = 6) -> Table:
-    table = Table(title=title, expand=True)
+    table = Table(title=title, expand=True, border_style=ACCENT_SOFT)
     table.add_column("Name")
-    table.add_column("Count", justify="right")
+    table.add_column("Count", justify="right", style=ACCENT)
     for name, count in values.most_common(limit):
         table.add_row(Text(str(name)), str(count))
     if not values:
-        table.add_row("None", "0")
+        table.add_row(Text("None", style=MUTED), Text("0", style=MUTED))
     return table
 
 
 def _alerts_table(state: MultiSourceState) -> Table:
     profile = state.profile
-    table = Table(title=f"Live security alert feed — {profile.label}", expand=True, show_lines=True)
-    table.add_column("#", justify="right", width=5)
+    table = Table(
+        title=f"Live security alert feed — {profile.label}",
+        expand=True,
+        show_lines=True,
+        border_style=INCIDENT,
+    )
+    table.add_column("#", justify="right", width=5, style=ACCENT)
     table.add_column("Severity", width=10)
     table.add_column("Source", width=18)
     table.add_column("Category", width=18)
     table.add_column("Alert", width=34)
     table.add_column("Evidence")
     for item in state.alerts[:10]:
-        table.add_row(str(item.sequence), item.severity, Text(item.source), Text(item.category), Text(item.title), Text(item.evidence))
+        table.add_row(
+            str(item.sequence),
+            severity_text(item.severity),
+            Text(item.source),
+            Text(item.category),
+            Text(item.title),
+            Text(item.evidence),
+        )
     if not state.alerts:
-        table.add_row("-", "-", "-", "-", f"No {profile.label.lower()} alerts yet", "All sources remain under local monitoring")
+        table.add_row(
+            Text("-", style=MUTED),
+            Text("-", style=MUTED),
+            Text("-", style=MUTED),
+            Text("-", style=MUTED),
+            Text(f"No {profile.label.lower()} alerts yet", style=SUCCESS),
+            Text("All sources remain under local monitoring", style=MUTED),
+        )
     return table
 
 
@@ -259,20 +279,33 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     sources = ", ".join(path.name for path in state.sources)
     allowed_metrics = set(profile.trend_metrics)
     focused_spikes = sum(1 for item in trend.metrics if item.name in allowed_metrics and item.state == "SPIKE")
+    risk = _risk(severity)
+
+    header_text = Text(f"AEGISLOG AI  v{__version__}", style=f"bold {ACCENT}")
+    header_text.append("\nMULTI-SOURCE REAL-TIME SOC", style="bold white")
+    header_text.append(f"\n{sources}", style=ACCENT_SOFT)
+    header_text.append(f"\nPROFILE: {profile.label.upper()}", style=INFO)
     header = Panel(
-        Align.center(Text(f"AEGISLOG AI  v{__version__}\nMULTI-SOURCE REAL-TIME SOC\n{sources}\nPROFILE: {profile.label.upper()}", style="bold")),
+        Align.center(header_text),
         subtitle=f"{profile.description} • local/read-only • Ctrl+C to stop",
+        border_style=ACCENT,
     )
     metrics = Columns(
         [
-            _metric("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines"),
-            _metric("Events", f"{state.total_lines:,}"),
-            _metric("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s"),
-            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s profile baseline"),
-            _metric("Profile findings", str(len(findings))),
-            _metric("Incidents", str(len(incidents))),
-            _metric("Anomalies", str(len(anomalies))),
-            _metric("Risk", _risk(severity)),
+            _metric("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines", f"bold {ACCENT}"),
+            _metric("Events", f"{state.total_lines:,}", value_style=f"bold {ACCENT}"),
+            _metric("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s", f"bold {INFO}"),
+            _metric(
+                "Rate spikes",
+                str(focused_spikes),
+                f"{trend.window_seconds}s profile baseline",
+                f"bold {WARNING}" if focused_spikes else f"bold {SUCCESS}",
+                WARNING if focused_spikes else SUCCESS,
+            ),
+            _metric("Profile findings", str(len(findings)), value_style=f"bold {WARNING}" if findings else f"bold {SUCCESS}"),
+            _metric("Incidents", str(len(incidents)), value_style=f"bold {INCIDENT}" if incidents else f"bold {SUCCESS}", border_style=INCIDENT if incidents else SUCCESS),
+            _metric("Anomalies", str(len(anomalies)), value_style=f"bold {ANOMALY}" if anomalies else f"bold {SUCCESS}", border_style=ANOMALY if anomalies else SUCCESS),
+            _metric("Risk", risk, value_style=f"bold {risk_style(risk)}", border_style=risk_style(risk)),
         ],
         equal=True,
         expand=True,
@@ -287,11 +320,12 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
         equal=True,
         expand=True,
     )
-    status = Panel(
-        Text(
-            f"{state.total_bytes:,} bytes ingested. The {profile.label} profile changes terminal emphasis only. "
-            f"Correlation remains local/read-only and rate baselines use the most recent {state.trend_seconds}s of arrivals."
-        ),
-        title="Monitoring status",
+    status_text = Text()
+    status_text.append(f"{state.total_bytes:,} bytes ingested. ", style=ACCENT)
+    status_text.append(f"The {profile.label} profile changes terminal emphasis only. ")
+    status_text.append(
+        f"Correlation remains local/read-only and rate baselines use the most recent {state.trend_seconds}s of arrivals.",
+        style=MUTED,
     )
+    status = Panel(status_text, title="Monitoring status", border_style=SUCCESS)
     return Group(header, metrics, overview, render_trends(trend, profile.trend_metrics), _alerts_table(state), status)
