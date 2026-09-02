@@ -43,7 +43,7 @@ aegislog dashboard examples/auth.log
 
 - **Documentation index:** [`docs/README.md`](docs/README.md) — installation, usage, security model, architecture, and project references.
 - **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, commands, live monitoring, native collection, incidents, investigation, ATT&CK context, cases, checksum verification, and troubleshooting.
-- **v1.4.6 release notes:** [`docs/RELEASE_V1.4.6.md`](docs/RELEASE_V1.4.6.md)
+- **v1.5.0 release notes:** [`docs/RELEASE_V1.5.0.md`](docs/RELEASE_V1.5.0.md)
 - **AI provider documentation:** [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md)
 
 For exact syntax supported by the executable you downloaded, use:
@@ -237,9 +237,9 @@ For data-handling boundaries and assumptions, read the [threat model](docs/THREA
 
 ## Release engineering
 
-v1.4.6 is published through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.4.6` tag or GitHub release.
+v1.5.0 is published through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.5.0` tag or GitHub release.
 
-Release notes and customer instructions are in `docs/RELEASE_V1.4.6.md`.
+Release notes and customer instructions are in `docs/RELEASE_V1.5.0.md`.
 
 ## License
 
