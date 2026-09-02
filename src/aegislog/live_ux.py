@@ -55,6 +55,19 @@ def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
     return status
 
 
+def live_source_status(source: str, *, available: bool) -> Text:
+    """Render a one-line source transition without implying host modification."""
+    if available:
+        status = Text("Source recovered: ", style=f"bold {SUCCESS}")
+        status.append(source, style="white")
+        status.append(". Monitoring resumed automatically from the safe cursor.", style=MUTED)
+        return status
+    status = Text("Source temporarily unavailable: ", style=f"bold {WARNING}")
+    status.append(source, style="white")
+    status.append(". AegisLog will keep the current dashboard and retry read-only polling.", style=MUTED)
+    return status
+
+
 def live_stopped_status(kind: str, *, degraded: bool = False) -> Text:
     style = WARNING if degraded else SUCCESS
     status = Text(f"\n{kind} monitoring stopped safely. ", style=f"bold {style}")
