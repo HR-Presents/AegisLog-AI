@@ -15,7 +15,7 @@ AegisLog AI helps defenders turn authentication, Linux, Windows Event Log, web, 
 - **Local-first by default:** core detection, correlation, investigation, and explanation stay on your machine.
 - **Read-only defensive operation:** analyzes files and supported native telemetry without changing accounts, firewalls, services, or host configuration.
 - **Terminal-first workflow:** use an interactive control center or focused commands for repeatable investigations.
-- **Evidence before certainty:** findings, anomaly scores, and ATT&CK context are investigation leads—not claims of compromise or attribution.
+- **Evidence before certainty:** findings, anomaly scores, priorities, and ATT&CK context are investigation leads—not claims of compromise or attribution.
 - **Optional AI integration:** compatible remote providers are opt-in; the complete core workflow works without them.
 - **MIT licensed:** inspect, adapt, and contribute under the [MIT License](LICENSE).
 
@@ -43,7 +43,7 @@ aegislog dashboard examples/auth.log
 
 - **Documentation index:** [`docs/README.md`](docs/README.md) — installation, usage, security model, architecture, and project references.
 - **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, commands, live monitoring, native collection, incidents, investigation, ATT&CK context, cases, checksum verification, and troubleshooting.
-- **v1.5.0 release notes:** [`docs/RELEASE_V1.5.0.md`](docs/RELEASE_V1.5.0.md)
+- **v1.6.0 release notes:** [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md)
 - **AI provider documentation:** [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md)
 
 For exact syntax supported by the executable you downloaded, use:
@@ -92,6 +92,12 @@ AegisLog.exe case-history
 
 See the [complete user guide](docs/USER_GUIDE.md) for explanations and practical workflows for these commands.
 
+## v1.6 highlights
+
+v1.6.0 adds a clearer analyst triage summary during investigations, stronger platform-specific diagnostics for Windows Event Log, journald, and Docker, safer operator visibility when live sources disappear and recover, and stronger hard bounds for long-running multi-source state.
+
+These improvements keep the same product boundary: AegisLog remains local-first, read-only, defensive, and evidence-led. It does not treat a severity score, confidence value, anomaly, incident priority, or ATT&CK mapping as proof of compromise or attacker attribution.
+
 ## Demo and screenshots
 
 Run the included safe demo against sample data:
@@ -136,6 +142,8 @@ Multi-source monitoring correlates several growing files in one terminal SOC vie
 AegisLog.exe live-multi auth.log nginx.log application.log
 ```
 
+If a watched file temporarily disappears or becomes unavailable, v1.6.0 keeps the current dashboard visible, reports the source state, and retries read-only polling. When the source returns, monitoring resumes using the safe cursor path. Multi-source arrival and alert-fingerprint histories are also hard-bounded for long-running sessions.
+
 The rate/trend engine tracks failed logins, errors, and firewall blocks per minute, maintains an adaptive local baseline, and marks meaningful short-window deviations as elevated activity or spikes.
 
 ## Native telemetry
@@ -152,7 +160,7 @@ AegisLog.exe native-live journald
 AegisLog.exe native-live docker --container <name>
 ```
 
-Native collection is bounded and read-only. Supported sources depend on the operating system and installed tooling.
+Native collection is bounded and read-only. Supported sources depend on the operating system and installed tooling. v1.6.0 improves diagnostics so unsupported sources and temporarily unavailable sources are reported more clearly, with source-specific troubleshooting that does not change host security policy.
 
 ## Incident investigation
 
@@ -168,6 +176,8 @@ AegisLog.exe case-show <incident-id>
 AegisLog.exe mitre auth.log
 AegisLog.exe explain auth.log <incident-id>
 ```
+
+v1.6.0 adds an analyst triage summary that uses existing local evidence, severity, and confidence signals to help prioritize review. The triage priority is guidance only and is explicitly not proof of compromise, attribution, or attacker intent.
 
 `explain` produces a deterministic local analyst explanation with a summary, why the activity matters, evidence, evidence-consistent ATT&CK context, safe next investigation steps, and an explicit uncertainty caveat. It does not require sending log content to an external AI service.
 
@@ -224,7 +234,7 @@ aegislog hunt --severity HIGH
 
 ## Security model
 
-AegisLog is defensive tooling. Findings, anomaly scores, confidence values, correlations, ATT&CK mappings, and behavioral deltas are investigative signals, not proof of compromise or attacker attribution. Log-derived terminal text is treated as untrusted and sanitized. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
+AegisLog is defensive tooling. Findings, anomaly scores, confidence values, correlations, incident priorities, ATT&CK mappings, and behavioral deltas are investigative signals, not proof of compromise or attacker attribution. Log-derived terminal text is treated as untrusted and sanitized. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
 
 For data-handling boundaries and assumptions, read the [threat model](docs/THREAT_MODEL.md), [privacy guide](docs/PRIVACY.md), and [security policy](SECURITY.md). To report a vulnerability, follow the private reporting path in [SECURITY.md](SECURITY.md); do not disclose sensitive details in a public issue.
 
@@ -237,9 +247,9 @@ For data-handling boundaries and assumptions, read the [threat model](docs/THREA
 
 ## Release engineering
 
-v1.5.0 is published through an explicit manual release workflow. Publication requires an exact confirmation value, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.5.0` tag or GitHub release.
+v1.6.0 is published through an explicit manual release workflow. Publication requires the exact confirmation value `RELEASE-v1.6.0`, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.6.0` tag or GitHub release.
 
-Release notes and customer instructions are in `docs/RELEASE_V1.5.0.md`.
+Release notes and customer instructions are in `docs/RELEASE_V1.6.0.md`.
 
 ## License
 

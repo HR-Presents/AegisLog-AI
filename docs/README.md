@@ -32,6 +32,6 @@ Use this page as the map for AegisLog AI documentation. For a guided, end-to-end
 
 ## Latest release
 
-- [v1.5.0 release notes](RELEASE_V1.5.0.md)
+- [v1.6.0 release notes](RELEASE_V1.6.0.md)
 - [Upgrading](UPGRADING.md)
 - [Latest GitHub release](https://github.com/HR-Presents/AegisLog-AI/releases/latest)

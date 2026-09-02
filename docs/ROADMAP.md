@@ -1,70 +1,69 @@
 # Roadmap
 
-AegisLog AI is currently released as **v1.5.0**. Stable release work stays on `main`; new feature development is isolated on `develop/v1.6.0` and feature branches based from it.
+AegisLog AI is currently released as **v1.6.0**. Stable release work stays on `main`. New development should begin from a fresh development branch only when there is a concrete, reviewable goal; v1.6.0 itself is considered complete.
 
 ## Completed foundation
 
 The V0.1–V1.0 foundation delivered the terminal CLI, deterministic detections, structured parsing, redaction, live monitoring, anomaly scoring, incident correlation, persistent investigation state, native collection, declarative rules, bounded-memory analysis, reporting, CI/security hardening, package validation, and reproducible release engineering.
 
-## Current stable line — v1.5.x
+## Current stable line — v1.6.x
 
-### v1.5.0 — current stable release
+### v1.6.0 — current stable release
 
-v1.5.0 strengthened daily analyst workflows without changing AegisLog's defensive boundaries.
+v1.6.0 focused on analyst productivity, trustworthy local telemetry handling, and long-running operational reliability while preserving AegisLog's defensive boundaries.
 
-- Ordered analyst next actions across incidents and investigations.
-- Runtime-aware command examples for source installs and frozen Windows builds.
-- Shared semantic terminal styling for severity, confidence, incidents, anomalies, and evidence.
-- Consistent live-monitoring startup/status UX across single-file, multi-source, and native modes.
-- Immediate initial live results preserved before continuous refresh.
-- Clear read-only and safe Ctrl+C operator guidance.
-- Bounded trend-history aggregation for high-frequency workloads.
-- Stress-style regression coverage and a dedicated live-state benchmark.
-- Version-locked package, customer-bundle, and guarded release metadata.
-- Standalone Windows `AegisLog.exe` plus SHA-256 checksum delivery.
+- Added analyst triage summaries to investigation output using existing local severity, confidence, timeline, and entity evidence.
+- Kept triage guidance explicitly non-attributive and non-conclusive.
+- Improved Windows Event Log, journald, and Docker diagnostics by distinguishing unsupported sources from temporarily unavailable sources.
+- Added source-specific, read-only troubleshooting guidance without changing host policy or collector permissions.
+- Added one-time live source-loss and recovery visibility for single-file monitoring.
+- Extended source-loss and recovery visibility to multi-source monitoring while preserving the current dashboard during temporary loss.
+- Preserved safe cursor behavior when monitored files return, rotate, or are replaced.
+- Aggregated multi-source arrival history by ingest batch rather than by individual line.
+- Added hard bounds for arrival-history buckets and alert-fingerprint state.
+- Added focused regressions for 50,000-line ingest batches, runtime-state ceilings, source recovery, native diagnostics, and analyst triage.
+- Preserved deterministic local analysis, read-only collection, explicit uncertainty language, and no automatic remediation.
+- Published the standalone Windows `AegisLog.exe` and matching SHA-256 checksum through the guarded v1.6.0 release workflow.
 
-## Active development line — v1.6.x
+## Near-term maintenance priorities
 
-The v1.6 line should focus on deeper analyst productivity, trustworthy local telemetry handling, and long-running operational reliability rather than adding broad new attack-oriented capabilities.
+The next work should be driven by real operator feedback and measurable reliability needs rather than version-number pressure.
 
-### Priority 1 — investigation workspace quality
+### Reliability and support
 
-- Make incident-to-investigation navigation faster and more consistent.
-- Improve timeline grouping, evidence readability, entity context, and analyst next-action continuity.
-- Add safer export/report ergonomics for sharing sanitized investigation results.
-- Keep all explanations evidence-led and explicitly non-attributive.
+- Fix reproducible defects found in v1.6.0 without changing the defensive product boundary.
+- Keep source-loss, rotation, empty-read, and recovery regression coverage strong.
+- Maintain hard bounds for long-running live and multi-source state.
+- Profile performance before adding optimizations that could alter analysis semantics.
 
-### Priority 2 — live monitoring resilience
+### Analyst workflow quality
 
-- Continue bounded-resource hardening for long-running single-file, multi-source, and native monitoring.
-- Add stronger regression coverage around source rotation, temporary source loss, empty reads, and recovery.
-- Improve operator visibility into source health without changing the monitored host.
-- Preserve immediate initial results and safe Ctrl+C shutdown behavior.
+- Improve investigation readability, timeline grouping, and evidence navigation when user feedback identifies specific friction.
+- Improve sanitized export/report ergonomics without exposing unredacted telemetry by default.
+- Keep incident priorities and explanations evidence-led, conservative, and explicitly non-attributive.
 
-### Priority 3 — native telemetry quality
+### Native telemetry quality
 
-- Improve platform-specific diagnostics for Windows Event Log, journald, and Docker collectors.
-- Add clearer supported/unsupported state reporting and actionable troubleshooting guidance.
-- Keep collectors bounded and read-only; no service, firewall, account, or host-configuration changes.
+- Expand platform-specific diagnostics only where supported collectors can remain bounded and read-only.
+- Keep unsupported/unavailable states clear and avoid troubleshooting steps that weaken host security controls.
+- Validate Windows Event Log, journald, and Docker behavior against real supported environments as changes are made.
 
-### Priority 4 — release and distribution trust
+### Release and distribution trust
 
-- Evaluate practical Windows code-signing options without making signing a hard requirement for development builds.
 - Keep checksum-first verification and immutable-style release safeguards.
-- Reduce opportunities for release metadata, documentation, and package names to drift out of sync.
+- Evaluate practical Windows code-signing options separately from ordinary development builds.
+- Keep package versions, release notes, workflow names, documentation, and artifact names synchronized through regression tests.
 
-### Priority 5 — performance and test depth
+### Optional AI boundaries
 
-- Expand benchmark coverage for sustained event rates and multi-source correlation workloads.
-- Add regression tests for pathological high-volume input while preserving bounded memory behavior.
-- Profile expensive terminal rendering or correlation paths before optimizing them.
-
-### Priority 6 — optional AI boundaries
-
-- Keep deterministic local analysis as the primary workflow.
+- Deterministic local analysis remains the primary workflow.
 - Any optional AI assistance must remain opt-in, minimized/redacted, and secondary to local evidence.
-- Do not treat generated explanations as proof, attribution, or autonomous remediation decisions.
+- Generated explanations must not be treated as proof, attribution, or autonomous remediation decisions.
+
+## Future development line
+
+A future v1.7.x line should not be opened solely to add features. It should start only after one or more concrete goals are selected from operator feedback, reliability data, or clearly scoped defensive workflow improvements. When that happens, use a dedicated development branch and feature PRs before preparing any release candidate.
 
 ## Non-goals
 
-v1.6.x should not introduce exploitation, malware, credential theft, persistence, evasion, destructive actions, automatic remediation, or tooling intended to compromise systems. AegisLog remains a defensive, local-first, read-only investigation platform.
+Future AegisLog work should not introduce exploitation, malware, credential theft, persistence, evasion, destructive actions, automatic remediation, or tooling intended to compromise systems. AegisLog remains a defensive, local-first, read-only investigation platform.
