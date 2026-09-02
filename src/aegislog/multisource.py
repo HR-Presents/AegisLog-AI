@@ -40,12 +40,14 @@ class MultiSourceState:
     trend_seconds: int = 60
     alert_ttl_seconds: int = 300
     watch_profile: str = "all"
+    max_arrival_buckets: int = 4096
+    max_seen_fingerprints: int = 4096
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
     trend_tracker: TrendTracker = field(default_factory=TrendTracker)
     _lines: deque[tuple[str, str]] = field(default_factory=deque)
-    _arrivals: deque[float] = field(default_factory=deque)
+    _arrivals: deque[tuple[float, int]] = field(default_factory=deque)
     _alerts: deque[LiveAlert] = field(default_factory=lambda: deque(maxlen=15))
     _seen: dict[tuple[str, str, str, str], float] = field(default_factory=dict)
     _sequence: int = 0
@@ -56,6 +58,10 @@ class MultiSourceState:
     def __post_init__(self) -> None:
         if self.window_size < 20:
             raise ValueError("window_size must be at least 20")
+        if self.max_arrival_buckets < 2:
+            raise ValueError("max_arrival_buckets must be at least 2")
+        if self.max_seen_fingerprints < 1:
+            raise ValueError("max_seen_fingerprints must be at least 1")
         get_profile(self.watch_profile)
         self._lines = deque(self._lines, maxlen=self.window_size)
         if self.trend_tracker.window_seconds != self.trend_seconds:
@@ -68,19 +74,30 @@ class MultiSourceState:
         label = source.name
         for line in lines:
             self._lines.append((label, line))
-            self._arrivals.append(stamp)
             self.total_lines += 1
             self.total_bytes += len(line.encode("utf-8", errors="replace"))
             self.source_counts[label] += 1
+        self._record_arrivals(stamp, len(lines))
         self.trend_tracker.ingest(lines, stamp)
         self._trim_arrivals(stamp)
         self._refresh_snapshot()
         self._refresh_alerts(stamp)
         return len(lines)
 
+    def _record_arrivals(self, stamp: float, count: int) -> None:
+        if self._arrivals and self._arrivals[-1][0] == stamp:
+            previous_stamp, previous_count = self._arrivals.pop()
+            self._arrivals.append((previous_stamp, previous_count + count))
+        else:
+            self._arrivals.append((stamp, count))
+        while len(self._arrivals) > self.max_arrival_buckets:
+            first_stamp, first_count = self._arrivals.popleft()
+            second_stamp, second_count = self._arrivals.popleft()
+            self._arrivals.appendleft((second_stamp, first_count + second_count))
+
     def _trim_arrivals(self, now: float) -> None:
         cutoff = now - self.trend_seconds
-        while self._arrivals and self._arrivals[0] < cutoff:
+        while self._arrivals and self._arrivals[0][0] < cutoff:
             self._arrivals.popleft()
 
     def _refresh_snapshot(self) -> None:
@@ -92,6 +109,14 @@ class MultiSourceState:
         cutoff = now - max(self.alert_ttl_seconds, 1)
         expired = [fp for fp, seen_at in self._seen.items() if seen_at < cutoff]
         for fp in expired:
+            self._seen.pop(fp, None)
+
+    def _bound_seen(self) -> None:
+        overflow = len(self._seen) - self.max_seen_fingerprints
+        if overflow <= 0:
+            return
+        oldest = sorted(self._seen.items(), key=lambda item: item[1])[:overflow]
+        for fp, _ in oldest:
             self._seen.pop(fp, None)
 
     def _source_for_finding(self, finding: Finding) -> str:
@@ -122,6 +147,7 @@ class MultiSourceState:
                     )
                 )
             self._seen[fp] = now
+        self._bound_seen()
 
     @property
     def profile(self) -> WatchProfile:
@@ -162,7 +188,7 @@ class MultiSourceState:
     @property
     def recent_eps(self) -> float:
         self._trim_arrivals(time.monotonic())
-        return len(self._arrivals) / max(float(self.trend_seconds), 1.0)
+        return sum(count for _, count in self._arrivals) / max(float(self.trend_seconds), 1.0)
 
     @property
     def lifetime_eps(self) -> float:
