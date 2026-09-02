@@ -7,10 +7,11 @@ from rich.console import Console
 from rich.live import Live
 from rich.text import Text
 
+from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
 from .native_collectors import CollectorError
 from .native_live import NativeLivePoller
 from .realtime import RealtimeState, render_realtime
-from .theme import ACCENT, MUTED, SUCCESS, WARNING
+from .theme import WARNING
 from .watch_profiles import get_profile
 
 console = Console()
@@ -43,15 +44,26 @@ def native_live(
         raise typer.Exit(code=2) from exc
     if initial:
         state.ingest(initial)
-    message = Text("Starting native real-time monitoring", style=f"bold {ACCENT}")
-    message.append(f" with {selected.label} profile. ", style=SUCCESS)
-    message.append("The dashboard refreshes in place. Press Ctrl+C to stop safely and return.", style=MUTED)
-    console.print(message)
+
+    collector_detail = f"limit={limit}"
+    if normalized == "windows":
+        collector_detail += f", channel={channel}"
+    elif normalized == "docker" and container:
+        collector_detail += f", container={container}"
+    console.print(
+        live_startup_panel(
+            title="NATIVE TELEMETRY MONITOR",
+            sources=(f"native:{normalized}",),
+            profile=selected.label,
+            mode="Current snapshot + new events" if from_start else "New native events after startup",
+            window=window,
+            refresh=refresh,
+            extra=collector_detail,
+        )
+    )
     if from_start:
         console.print(render_realtime(state))
-        status = Text("Initial native scan complete. ", style=f"bold {SUCCESS}")
-        status.append("Live collection is still active and will refresh as new native events arrive.", style=MUTED)
-        console.print(status)
+        console.print(live_initial_status("native"))
 
     try:
         with Live(
@@ -76,5 +88,4 @@ def native_live(
                 live.update(render_realtime(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        stopped = Text("\nNative real-time monitoring stopped safely.", style=SUCCESS)
-        console.print(stopped)
+        console.print(live_stopped_status("Native"))
