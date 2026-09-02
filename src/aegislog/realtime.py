@@ -19,6 +19,7 @@ from .anomaly import score_events
 from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
+from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, MUTED, SUCCESS, risk_style, severity_text
 from .trends import TrendSnapshot, TrendTracker, render_trends
 from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
 
@@ -76,8 +77,6 @@ class RealtimeState:
 
     @staticmethod
     def _finding_key(finding: Finding) -> tuple[str, str, str]:
-        # Evidence often changes as a burst grows (for example 5 -> 6 failures).
-        # Keep one live row for the logical detection instead of stacking stale copies.
         return (finding.severity, finding.category, finding.title)
 
     def ingest(self, lines: list[str], now: float | None = None) -> int:
@@ -174,34 +173,45 @@ def _risk(severities: Counter[str]) -> str:
     return "CLEAR"
 
 
-def _metric(title: str, value: str, subtitle: str = "") -> Panel:
-    text = Text(value, justify="center", style="bold")
+def _metric(title: str, value: str, subtitle: str = "", *, value_style: str = "bold", border_style: str = ACCENT_SOFT) -> Panel:
+    text = Text(value, justify="center", style=value_style)
     if subtitle:
-        text.append(f"\n{subtitle}", style="dim")
-    return Panel(Align.center(text), title=title, padding=(0, 1))
+        text.append(f"\n{subtitle}", style=MUTED)
+    return Panel(Align.center(text), title=title, title_align="left", border_style=border_style, padding=(0, 1))
 
 
 def _counter_table(title: str, values: Counter[str], limit: int = 6) -> Table:
-    table = Table(title=title, expand=True)
+    table = Table(title=title, title_style=f"bold {ACCENT}", expand=True, border_style=ACCENT_SOFT)
     table.add_column("Name")
-    table.add_column("Count", justify="right")
+    table.add_column("Count", justify="right", style=ACCENT)
     for name, count in values.most_common(limit):
         table.add_row(Text(str(name)), str(count))
     if not values:
-        table.add_row("None", "0")
+        table.add_row(Text("None", style=MUTED), "0")
     return table
 
 
 def _recent_table(findings: list[Finding], profile: WatchProfile) -> Table:
-    table = Table(title=f"Recent findings — {profile.label}", expand=True, show_lines=True)
+    table = Table(
+        title=f"Recent findings — {profile.label}",
+        title_style=f"bold {ACCENT}",
+        expand=True,
+        show_lines=True,
+        border_style=ACCENT_SOFT,
+    )
     table.add_column("Severity", width=10)
     table.add_column("Category", width=18)
     table.add_column("Finding", width=34)
     table.add_column("Evidence")
     for finding in findings[:8]:
-        table.add_row(finding.severity, Text(finding.category), Text(finding.title), Text(finding.evidence))
+        table.add_row(severity_text(finding.severity), Text(finding.category), Text(finding.title), Text(finding.evidence))
     if not findings:
-        table.add_row("-", "-", f"No {profile.label.lower()} profile matches yet", "Waiting for matching activity; all incoming lines are still analyzed locally")
+        table.add_row(
+            "-",
+            "-",
+            Text(f"No {profile.label.lower()} profile matches yet", style=SUCCESS),
+            Text("Waiting for matching activity; all incoming lines are still analyzed locally", style=MUTED),
+        )
     return table
 
 
@@ -229,19 +239,30 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     else:
         activity = f"last activity {activity_age:.0f}s ago"
 
+    header_text = Text(justify="center")
+    header_text.append("AEGISLOG AI", style=f"bold {ACCENT}")
+    header_text.append(f"  v{__version__}\n", style=MUTED)
+    header_text.append("REAL-TIME DEFENSIVE MONITOR\n", style="bold white")
+    header_text.append(state.source, style=ACCENT_SOFT)
+    header_text.append("\nPROFILE: ", style=MUTED)
+    header_text.append(profile.label.upper(), style=f"bold {ACCENT}")
     header = Panel(
-        Align.center(Text(f"AEGISLOG AI  v{__version__}\nREAL-TIME DEFENSIVE MONITOR\n{state.source}\nPROFILE: {profile.label.upper()}", style="bold")),
+        Align.center(header_text),
+        border_style=ACCENT,
         subtitle=f"{profile.description} • Ctrl+C to stop",
+        subtitle_align="right",
     )
+
+    risk = _risk(severities)
     metrics = Columns(
         [
-            _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
-            _metric("Average rate", f"{state.lines_per_second:.1f}/s", activity),
-            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline"),
-            _metric("Profile findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium"),
-            _metric("Incidents", str(len(incidents))),
-            _metric("Anomalies", str(len(anomalies))),
-            _metric("Risk", _risk(severities)),
+            _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}", value_style=f"bold {ACCENT}"),
+            _metric("Average rate", f"{state.lines_per_second:.1f}/s", activity, value_style="bold white"),
+            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline", value_style="bold yellow" if focused_spikes else f"bold {SUCCESS}", border_style="yellow" if focused_spikes else SUCCESS),
+            _metric("Profile findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium", value_style="bold white"),
+            _metric("Incidents", str(len(incidents)), value_style=f"bold {INCIDENT}", border_style=INCIDENT),
+            _metric("Anomalies", str(len(anomalies)), value_style=f"bold {ANOMALY}", border_style=ANOMALY),
+            _metric("Risk", risk, value_style=f"bold {risk_style(risk)}", border_style=risk_style(risk)),
         ],
         equal=True,
         expand=True,
@@ -257,15 +278,17 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     )
     if state.total_lines == 0:
         mode_note = "Waiting for NEW lines appended after monitoring started. Existing file contents are intentionally skipped unless --from-start is used. "
+        status_style = "yellow"
     else:
         mode_note = "Following new appended lines. "
-    status = Panel(
-        Text(
-            f"{mode_note}Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
-            f"The {profile.label} profile changes terminal emphasis only; all input remains locally analyzed and no remediation is performed."
-        ),
-        title="Live status",
+        status_style = SUCCESS
+    status_text = Text(mode_note, style=status_style)
+    status_text.append(
+        f"Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
+        f"The {profile.label} profile changes terminal emphasis only; all input remains locally analyzed and no remediation is performed.",
+        style="white",
     )
+    status = Panel(status_text, title="Live status", title_align="left", border_style=status_style)
     return Group(
         header,
         metrics,

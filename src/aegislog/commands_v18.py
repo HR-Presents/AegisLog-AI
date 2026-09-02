@@ -5,10 +5,12 @@ import time
 import typer
 from rich.console import Console
 from rich.live import Live
+from rich.text import Text
 
 from .native_collectors import CollectorError
 from .native_live import NativeLivePoller
 from .realtime import RealtimeState, render_realtime
+from .theme import ACCENT, MUTED, SUCCESS, WARNING
 from .watch_profiles import get_profile
 
 console = Console()
@@ -35,14 +37,16 @@ def native_live(
     try:
         initial = poller.prime(include_existing=from_start)
     except CollectorError as exc:
-        console.print(f"[red]Native live collection failed:[/red] {exc}")
+        message = Text("Native live collection failed: ", style="bold bright_red")
+        message.append(str(exc))
+        console.print(message)
         raise typer.Exit(code=2) from exc
     if initial:
         state.ingest(initial)
-    console.print(
-        f"[cyan]Starting native real-time monitoring with {selected.label} profile. "
-        "Press Ctrl+C to stop safely.[/cyan]"
-    )
+    message = Text("Starting native real-time monitoring", style=f"bold {ACCENT}")
+    message.append(f" with {selected.label} profile. ", style=SUCCESS)
+    message.append("Press Ctrl+C to stop safely.", style=MUTED)
+    console.print(message)
     try:
         with Live(render_realtime(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
             while True:
@@ -52,10 +56,13 @@ def native_live(
                         state.ingest(lines)
                 except CollectorError as exc:
                     live.update(render_realtime(state))
-                    console.print(f"[yellow]Native source temporarily unavailable:[/yellow] {exc}")
+                    warning = Text("Native source temporarily unavailable: ", style=f"bold {WARNING}")
+                    warning.append(str(exc))
+                    console.print(warning)
                     time.sleep(refresh)
                     continue
                 live.update(render_realtime(state))
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print("\n[cyan]Native real-time monitoring stopped safely.[/cyan]")
+        stopped = Text("\nNative real-time monitoring stopped safely.", style=SUCCESS)
+        console.print(stopped)
