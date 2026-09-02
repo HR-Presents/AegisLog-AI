@@ -63,7 +63,7 @@ def native_live(
     )
     if from_start:
         console.print(render_realtime(state))
-        console.print(live_initial_status("native"))
+        console.print(live_initial_status("native", prefix="Initial native scan complete."))
 
     try:
         with Live(
