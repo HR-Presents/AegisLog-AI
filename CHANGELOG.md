@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.0 - 2026-09-02
+
+- Added analyst triage summaries to investigation workflows using existing severity and confidence signals, with explicit non-attribution guidance.
+- Improved native telemetry diagnostics for Windows Event Logs, journald, and Docker by distinguishing unsupported and temporarily unavailable sources and adding read-only troubleshooting guidance.
+- Hardened single-file and multi-source live monitoring for temporary source loss and recovery while preserving the active dashboard and safe cursor behavior.
+- Bounded long-running multi-source arrival history and alert fingerprint state, including aggregation for large ingest batches and conservative oldest-state compaction/eviction.
+- Added focused v1.6 regression coverage for analyst triage, native diagnostics, source recovery, 50,000-line ingest batches, bounded runtime state, and release metadata.
+- Preserved the defensive, local-first, read-only security model; findings, anomalies, incident priorities, and ATT&CK mappings remain investigative signals rather than proof or attribution.
+- Prepared version-locked v1.6.0 package, release-note, checksum, and immutable release workflow metadata.
+
 ## 1.5.0 - 2026-09-02
 
 - Improved incident and investigation terminal workflows with ordered, incident-specific analyst next actions and clearer evidence-led guidance.

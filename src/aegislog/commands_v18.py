@@ -9,6 +9,7 @@ from rich.text import Text
 
 from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
 from .native_collectors import CollectorError
+from .native_diagnostics import failure_guidance
 from .native_live import NativeLivePoller
 from .realtime import RealtimeState, render_realtime
 from .theme import WARNING
@@ -41,6 +42,7 @@ def native_live(
         message = Text("Native live collection failed: ", style="bold bright_red")
         message.append(str(exc))
         console.print(message)
+        console.print(failure_guidance(normalized, str(exc)))
         raise typer.Exit(code=2) from exc
     if initial:
         state.ingest(initial)
@@ -83,6 +85,7 @@ def native_live(
                     warning = Text("Native source temporarily unavailable: ", style=f"bold {WARNING}")
                     warning.append(str(exc))
                     console.print(warning)
+                    console.print(failure_guidance(normalized, str(exc)))
                     time.sleep(refresh)
                     continue
                 live.update(render_realtime(state), refresh=True)

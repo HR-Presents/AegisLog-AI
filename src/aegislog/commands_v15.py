@@ -10,6 +10,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .investigation import InvestigationIncident, load_investigation
+from .investigation_ux import incident_triage_panel
 from .mitre import map_findings
 from .theme import ACCENT, ACCENT_SOFT, INCIDENT, INFO, MUTED, WARNING, severity_text
 
@@ -134,6 +135,7 @@ def investigate(
         subtitle="Evidence-led defensive analysis",
         border_style=INCIDENT,
     ))
+    console.print(incident_triage_panel(incident))
 
     entities = Table(title="Associated entities", title_style=f"bold {ACCENT}", border_style=ACCENT_SOFT)
     entities.add_column("Entity", style=ACCENT)

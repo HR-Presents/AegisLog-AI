@@ -10,6 +10,7 @@ from rich.text import Text
 
 from .commands_v11 import dashboard
 from .native_collectors import CollectorError, collect, source_status
+from .native_diagnostics import failure_guidance, source_state
 from .theme import ACCENT, MUTED, SUCCESS, WARNING
 
 console = Console()
@@ -22,9 +23,15 @@ def native_sources() -> None:
     table.add_column("Status")
     table.add_column("Details", style=MUTED)
     for item in source_status():
-        status = Text("READY", style=f"bold {SUCCESS}") if item.available else Text("NOT ON THIS OS", style=MUTED)
-        table.add_row(Text(item.label), status, Text(item.detail))
+        label, style = source_state(item)
+        table.add_row(Text(item.label), Text(label, style=style), Text(item.detail))
     console.print(table)
+    console.print(
+        Text(
+            "Native collectors are read-only. Unsupported sources stay disabled; unavailable sources should be fixed at the source/permission layer rather than by changing host policy.",
+            style=MUTED,
+        )
+    )
 
 
 def _dashboard_lines(lines: list[str], source: str) -> None:
@@ -59,6 +66,7 @@ def native_analyze(
         message = Text("Native collection failed: ", style="bold bright_red")
         message.append(str(exc))
         console.print(message)
+        console.print(failure_guidance(source, str(exc)))
         raise typer.Exit(code=2) from exc
     message = Text(f"Collected {len(lines):,} events", style=SUCCESS)
     message.append(" from ")
