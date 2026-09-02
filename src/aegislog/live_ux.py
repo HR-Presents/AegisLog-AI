@@ -48,8 +48,9 @@ def live_startup_panel(
     )
 
 
-def live_initial_status(kind: str) -> Text:
-    status = Text(f"Initial {kind} scan complete. ", style=f"bold {SUCCESS}")
+def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
+    message = prefix or f"Initial {kind} scan complete."
+    status = Text(f"{message} ", style=f"bold {SUCCESS}")
     status.append("Live monitoring remains active and will refresh when new telemetry arrives.", style=MUTED)
     return status
 
