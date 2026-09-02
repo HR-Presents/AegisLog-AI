@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.live import Live
 
-from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
+from .live_ux import live_initial_status, live_source_status, live_startup_panel, live_stopped_status
 from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
 from .watch_profiles import get_profile
 
@@ -48,6 +48,7 @@ def live_dashboard(
         console.print(render_realtime(state))
         console.print(live_initial_status("file", prefix="Initial scan complete."))
 
+    source_missing = False
     try:
         with Live(
             render_realtime(state),
@@ -57,14 +58,20 @@ def live_dashboard(
             transient=False,
         ) as live:
             while True:
-                if not path.exists():
+                if not path.exists() or not path.is_file():
                     live.update(render_realtime(state), refresh=True)
+                    if not source_missing:
+                        console.print(live_source_status(str(path), available=False))
+                        source_missing = True
                     time.sleep(refresh)
                     continue
+                if source_missing:
+                    console.print(live_source_status(str(path), available=True))
+                    source_missing = False
                 lines, cursor = read_new_lines_cursor(path, cursor)
                 if lines:
                     state.ingest(lines)
                 live.update(render_realtime(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print(live_stopped_status("File"))
+        console.print(live_stopped_status("File", degraded=source_missing))
