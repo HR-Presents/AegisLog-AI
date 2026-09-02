@@ -1,12 +1,48 @@
 # AegisLog AI
 
-**Terminal-first defensive log intelligence, live monitoring, and investigation.**
+**Open-source, terminal-first defensive security for local log analysis, live monitoring, and incident investigation.**
 
-AegisLog AI analyzes authentication, Linux, Windows Event Log, web, Docker, system, and application telemetry using deterministic detections, anomaly scoring, incident correlation, entity intelligence, behavioral baselines, MITRE ATT&CK context, persistent cases, real-time rate/trend analysis, and optional LLM-assisted explanation. Core analysis works locally without an AI service.
+[![CI](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/HR-Presents/AegisLog-AI?display_name=tag)](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+AegisLog AI helps defenders turn authentication, Linux, Windows Event Log, web, Docker, system, and application telemetry into evidence-led findings and investigations. Its core analysis is deterministic, runs locally, and does not require an AI account or external service. Collection and analysis are read-only: AegisLog does not remediate, reconfigure, or modify the systems it observes.
+
+> **Get started on Windows:** [Download the latest `AegisLog.exe`](https://github.com/HR-Presents/AegisLog-AI/releases/latest) — one console executable with no Python installation required. A matching SHA-256 checksum is included with the release.
+
+## Why AegisLog
+
+- **Local-first by default:** core detection, correlation, investigation, and explanation stay on your machine.
+- **Read-only defensive operation:** analyzes files and supported native telemetry without changing accounts, firewalls, services, or host configuration.
+- **Terminal-first workflow:** use an interactive control center or focused commands for repeatable investigations.
+- **Evidence before certainty:** findings, anomaly scores, and ATT&CK context are investigation leads—not claims of compromise or attribution.
+- **Optional AI integration:** compatible remote providers are opt-in; the complete core workflow works without them.
+- **MIT licensed:** inspect, adapt, and contribute under the [MIT License](LICENSE).
+
+## Quick start
+
+### Windows (recommended)
+
+1. Open the [latest release](https://github.com/HR-Presents/AegisLog-AI/releases/latest).
+2. Download `AegisLog.exe` and, optionally, `AegisLog.exe.sha256` for verification.
+3. Run `AegisLog.exe` to open the terminal control center.
+
+### Python 3.10+
+
+```bash
+git clone https://github.com/HR-Presents/AegisLog-AI.git
+cd AegisLog-AI
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .
+aegislog doctor
+aegislog dashboard examples/auth.log
+```
 
 ## Documentation
 
-- **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, command reference, Watch Mode Profiles, live monitoring, native Windows/journald/Docker collection, incidents, investigation, Explain This Incident, MITRE ATT&CK context, case history, checksum verification, recommended workflows, and troubleshooting.
+- **Documentation index:** [`docs/README.md`](docs/README.md) — installation, usage, security model, architecture, and project references.
+- **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, commands, live monitoring, native collection, incidents, investigation, ATT&CK context, cases, checksum verification, and troubleshooting.
 - **v1.4.2 release notes:** [`docs/RELEASE_V1.4.2.md`](docs/RELEASE_V1.4.2.md)
 - **AI provider documentation:** [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md)
 
@@ -17,7 +53,7 @@ AegisLog.exe --help
 AegisLog.exe <command> --help
 ```
 
-## Windows customer quick start
+## Windows release details
 
 The primary Windows delivery is one file:
 
@@ -55,6 +91,17 @@ AegisLog.exe case-history
 ```
 
 See the [complete user guide](docs/USER_GUIDE.md) for explanations and practical workflows for these commands.
+
+## Demo and screenshots
+
+Run the included safe demo against sample data:
+
+```bash
+aegislog dashboard examples/auth.log
+aegislog incidents examples/auth.log
+```
+
+See the [demo walkthrough](docs/DEMO.md) and [screenshot capture guide](docs/SCREENSHOT_SCRIPT.md). Public screenshots are intentionally not embedded until they can be captured from the current stable release with reviewed, synthetic data; no fabricated product UI is used here.
 
 ## Watch Mode Profiles
 
@@ -178,6 +225,15 @@ aegislog hunt --severity HIGH
 ## Security model
 
 AegisLog is defensive tooling. Findings, anomaly scores, confidence values, correlations, ATT&CK mappings, and behavioral deltas are investigative signals, not proof of compromise or attacker attribution. Log-derived terminal text is treated as untrusted and sanitized. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
+
+For data-handling boundaries and assumptions, read the [threat model](docs/THREAT_MODEL.md), [privacy guide](docs/PRIVACY.md), and [security policy](SECURITY.md). To report a vulnerability, follow the private reporting path in [SECURITY.md](SECURITY.md); do not disclose sensitive details in a public issue.
+
+## Contributing and support
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- [Report a bug](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=bug_report.md) using sanitized logs and reproducible steps.
+- [Request a feature](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=feature_request.md) that fits the defensive, local-first scope.
+- For usage questions, check the [FAQ](docs/FAQ.md) and [troubleshooting guide](docs/TROUBLESHOOTING.md) before opening an issue.
 
 ## Release engineering
 
