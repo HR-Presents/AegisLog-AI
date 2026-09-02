@@ -30,10 +30,21 @@ def test_v142_release_notes_remain_available_as_history():
     assert "read-only" in notes
 
 
-def test_current_v143_release_workflow_remains_present():
-    workflow = (WORKFLOWS / "release-v1.4.3.yml").read_text(encoding="utf-8")
+def test_historical_v143_release_workflow_is_removed():
+    assert not (WORKFLOWS / "release-v1.4.3.yml").exists()
+
+
+def test_v143_release_notes_remain_available_as_history():
+    notes = (ROOT / "docs" / "RELEASE_V1.4.3.md").read_text(encoding="utf-8")
+    assert notes.startswith("# AegisLog AI v1.4.3")
+    assert "AegisLog.exe" in notes
+    assert "read-only" in notes
+
+
+def test_current_v144_release_workflow_remains_present():
+    workflow = (WORKFLOWS / "release-v1.4.4.yml").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in workflow
-    assert "RELEASE-v1.4.3" in workflow
-    assert "RELEASE_TAG: v1.4.3" in workflow
+    assert "RELEASE-v1.4.4" in workflow
+    assert "RELEASE_TAG: v1.4.4" in workflow
     assert "gh release create" in workflow
     assert "gh release upload" not in workflow
