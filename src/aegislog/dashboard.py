@@ -17,7 +17,7 @@ from .anomaly import Anomaly, score_events
 from .engine import Finding, analyze_lines
 from .incidents import Incident, correlate
 from .parsers import Event, parse_line
-from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, INFO, MUTED, SUCCESS, WARNING, risk_style, severity_style, severity_text
+from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, INFO, MUTED, SUCCESS, WARNING, risk_style, severity_text
 
 
 @dataclass(frozen=True)
