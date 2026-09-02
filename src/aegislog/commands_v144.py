@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from rich.console import Console
+from rich.prompt import Prompt
 from rich.text import Text
 
 from .commands_v11 import dashboard
 from .commands_v12 import (
     _choose_log_file,
-    _choose_log_files,
     _choose_profile,
     _command_prompt,
     _commands,
@@ -18,6 +18,7 @@ from .commands_v12 import (
     _menu_action_error,
     _native_choice,
     _native_menu,
+    _path,
     _resolve_demo,
     _run_inline_command,
     _system_check,
@@ -35,6 +36,37 @@ def _pause_for_menu() -> None:
         console.input(f"\n[{MUTED}]Press Enter to return to the AegisLog menu[/{MUTED}]")
     except (KeyboardInterrupt, EOFError):
         pass
+
+
+def _choose_multisource_files() -> list[Path]:
+    """Collect multi-source paths one at a time for a drag-and-drop friendly UX."""
+    console.print(Text("Add at least two different log files. Enter each file separately.", style=MUTED))
+    console.print(Text("After file 2, choose Start monitoring or keep adding more files.", style=MUTED))
+    paths: list[Path] = []
+    number = 1
+    while True:
+        raw = Prompt.ask(f"[bold]Log file {number}[/bold]").strip()
+        if not raw:
+            console.print(Text("Enter an existing log file, or type back to cancel.", style=WARNING))
+            continue
+        if raw.lower() in {"b", "back", "cancel"}:
+            return []
+        path = _path(raw)
+        if path is None:
+            continue
+        resolved = path.resolve()
+        if any(existing.resolve() == resolved for existing in paths):
+            console.print(Text("That file is already selected. Choose a different log file.", style=WARNING))
+            continue
+        paths.append(path)
+        console.print(Text(f"Added file {len(paths)}: {path.name}", style=SUCCESS))
+        number += 1
+        if len(paths) >= 2:
+            more = Prompt.ask("Next", choices=["start", "add", "back"], default="start")
+            if more == "start":
+                return paths
+            if more == "back":
+                return []
 
 
 def _launch_live_file(path: Path, profile: str) -> None:
@@ -103,8 +135,6 @@ def start() -> None:
             )
         )
         try:
-            from rich.prompt import Prompt
-
             choice = Prompt.ask(f"[bold {ACCENT}]Select or command[/bold {ACCENT}]", default="1").strip()
         except (KeyboardInterrupt, EOFError):
             console.print()
@@ -129,7 +159,7 @@ def start() -> None:
                     console.print()
                     _launch_live_file(path, profile)
             elif choice == "3":
-                paths = _choose_log_files()
+                paths = _choose_multisource_files()
                 if paths:
                     profile = _choose_profile()
                     console.print()
