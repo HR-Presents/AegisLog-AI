@@ -1,31 +1,72 @@
+<div align="center">
+
 # AegisLog AI
 
-**Open-source, terminal-first defensive security for local log analysis, live monitoring, and incident investigation.**
+### Terminal-first defensive security for local log analysis, live monitoring, and incident investigation
 
 [![CI](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/HR-Presents/AegisLog-AI?display_name=tag)](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Security](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml)
+[![Latest release](https://img.shields.io/github/v/release/HR-Presents/AegisLog-AI?display_name=tag&style=flat-square)](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
-AegisLog AI helps defenders turn authentication, Linux, Windows Event Log, web, Docker, system, and application telemetry into evidence-led findings and investigations. Its core analysis is deterministic, runs locally, and does not require an AI account or external service. Collection and analysis are read-only: AegisLog does not remediate, reconfigure, or modify the systems it observes.
+**Stable release: v1.6.0**
 
-> **Get started on Windows:** [Download the latest `AegisLog.exe`](https://github.com/HR-Presents/AegisLog-AI/releases/latest) — one console executable with no Python installation required. A matching SHA-256 checksum is included with the release.
+[Download AegisLog.exe](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0) · [Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Release Notes](docs/RELEASE_V1.6.0.md)
 
-## Why AegisLog
+</div>
 
-- **Local-first by default:** core detection, correlation, investigation, and explanation stay on your machine.
-- **Read-only defensive operation:** analyzes files and supported native telemetry without changing accounts, firewalls, services, or host configuration.
-- **Terminal-first workflow:** use an interactive control center or focused commands for repeatable investigations.
-- **Evidence before certainty:** findings, anomaly scores, priorities, and ATT&CK context are investigation leads—not claims of compromise or attribution.
-- **Optional AI integration:** compatible remote providers are opt-in; the complete core workflow works without them.
-- **MIT licensed:** inspect, adapt, and contribute under the [MIT License](LICENSE).
+---
+
+## What AegisLog AI is
+
+AegisLog AI is an **open-source, local-first defensive security platform** built for analysts who want practical terminal workflows without sending their core telemetry to an external service.
+
+It turns authentication, Linux, Windows Event Log, web, Docker, system, and application telemetry into structured findings, correlated incidents, investigation timelines, analyst triage, entity context, anomaly signals, MITRE ATT&CK context, and evidence-led explanations.
+
+The core workflow is deterministic and read-only. AegisLog does not automatically remediate hosts, change firewall rules, modify accounts or services, deploy persistence, evade controls, or perform exploitation.
+
+> **Windows users:** the recommended distribution is a standalone `AegisLog.exe`. Normal use does not require Python, a virtual environment, a requirements file, an installer, or a support folder.
+
+---
+
+## Why use it
+
+- **Local-first analysis** — core detection, correlation, investigation, triage, and explanation run locally.
+- **Read-only operation** — AegisLog observes and analyzes telemetry without changing the monitored system.
+- **Terminal-first UX** — interactive control center, dashboards, focused commands, live monitoring, and investigation workflows.
+- **Evidence-led results** — findings, confidence values, anomaly scores, incident priorities, and ATT&CK mappings are investigation signals, not proof of compromise or attribution.
+- **Native telemetry support** — Windows Event Log, journald, Docker, and file-based sources where supported.
+- **Bounded runtime behavior** — rolling windows and bounded long-running state are used to avoid unbounded growth during sustained monitoring.
+- **Optional AI only** — compatible external providers are opt-in and secondary; the complete core workflow works without them.
+- **Open source** — MIT licensed and designed for inspection, extension, and defensive use.
+
+---
+
+## v1.6.0 highlights
+
+AegisLog AI v1.6.0 focuses on analyst workflow quality and operational reliability rather than broadening into offensive capability.
+
+- **Analyst triage summary** during investigations, using existing severity and confidence evidence to help prioritize review.
+- **Improved native diagnostics** for Windows Event Log, journald, and Docker, including clearer unsupported-versus-unavailable states.
+- **Safer live-source resilience** when watched files temporarily disappear or recover, while keeping the current dashboard visible.
+- **Bounded multi-source runtime state** for arrival history and alert fingerprints during long-running monitoring.
+- **Focused regression coverage** for triage, native diagnostics, source loss/recovery, high-volume ingestion, and runtime ceilings.
+- **Guarded release engineering** with quality/security gates, one-file Windows builds, smoke tests, checksums, and immutable-style release checks.
+
+AegisLog remains **defensive, local-first, read-only, and non-attributive**. A severity score, confidence value, anomaly, triage priority, or ATT&CK mapping is not treated as proof of compromise or attacker identity.
+
+---
 
 ## Quick start
 
-### Windows (recommended)
+### Windows — recommended
 
-1. Open the [latest release](https://github.com/HR-Presents/AegisLog-AI/releases/latest).
-2. Download `AegisLog.exe` and, optionally, `AegisLog.exe.sha256` for verification.
-3. Run `AegisLog.exe` to open the terminal control center.
+1. Open the [v1.6.0 release](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0).
+2. Download `AegisLog.exe`.
+3. Download `AegisLog.exe.sha256` if you want to verify the binary.
+4. Run `AegisLog.exe` to open the terminal control center.
+
+The executable is currently unsigned, so Windows SmartScreen or endpoint-security reputation warnings can appear even when the published checksum matches.
 
 ### Python 3.10+
 
@@ -39,42 +80,19 @@ aegislog doctor
 aegislog dashboard examples/auth.log
 ```
 
-## Documentation
+---
 
-- **Documentation index:** [`docs/README.md`](docs/README.md) — installation, usage, security model, architecture, and project references.
-- **Complete usage guide:** [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Windows setup, commands, live monitoring, native collection, incidents, investigation, ATT&CK context, cases, checksum verification, and troubleshooting.
-- **v1.6.0 release notes:** [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md)
-- **AI provider documentation:** [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md)
+## Terminal control center
 
-For exact syntax supported by the executable you downloaded, use:
-
-```text
-AegisLog.exe --help
-AegisLog.exe <command> --help
-```
-
-## Windows release details
-
-The primary Windows delivery is one file:
+Running AegisLog with no command opens the interactive terminal control center.
 
 ```text
 AegisLog.exe
 ```
 
-1. Download `AegisLog.exe` from the latest release.
-2. Optionally verify it against `AegisLog.exe.sha256`.
-3. Double-click `AegisLog.exe`.
-4. Choose what you want to analyze from the terminal control center.
+From there you can move into file analysis, live dashboards, multi-source monitoring, native telemetry, incident investigation, case history, explanations, and diagnostics.
 
-No Python installation, virtual environment, requirements file, installer, or support folder is required for the one-file Windows executable.
-
-The binary is a console application. Unless a release explicitly says otherwise, do not assume it is digitally signed; Windows SmartScreen or antivirus reputation warnings can occur with unsigned PyInstaller one-file applications.
-
-## Terminal control center
-
-Running `AegisLog.exe` with no arguments opens the interactive control center. It provides access to file analysis, live dashboards, multi-source monitoring, native telemetry, incident explanation, system checks, and command help.
-
-Useful Windows commands include:
+Useful Windows commands:
 
 ```text
 AegisLog.exe dashboard C:\path\to\auth.log
@@ -86,39 +104,57 @@ AegisLog.exe native-live windows --channel Security --profile security
 AegisLog.exe incidents C:\path\to\auth.log
 AegisLog.exe investigate C:\path\to\auth.log <incident-id>
 AegisLog.exe explain C:\path\to\auth.log <incident-id>
+AegisLog.exe intel-entities C:\path\to\auth.log
 AegisLog.exe mitre C:\path\to\auth.log
 AegisLog.exe case-history
 ```
 
-See the [complete user guide](docs/USER_GUIDE.md) for explanations and practical workflows for these commands.
+For exact syntax supported by your build:
 
-## v1.6 highlights
-
-v1.6.0 adds a clearer analyst triage summary during investigations, stronger platform-specific diagnostics for Windows Event Log, journald, and Docker, safer operator visibility when live sources disappear and recover, and stronger hard bounds for long-running multi-source state.
-
-These improvements keep the same product boundary: AegisLog remains local-first, read-only, defensive, and evidence-led. It does not treat a severity score, confidence value, anomaly, incident priority, or ATT&CK mapping as proof of compromise or attacker attribution.
-
-## Demo and screenshots
-
-Run the included safe demo against sample data:
-
-```bash
-aegislog dashboard examples/auth.log
-aegislog incidents examples/auth.log
+```text
+AegisLog.exe --help
+AegisLog.exe <command> --help
 ```
 
-See the [demo walkthrough](docs/DEMO.md) and [screenshot capture guide](docs/SCREENSHOT_SCRIPT.md). Public screenshots are intentionally not embedded until they can be captured from the current stable release with reviewed, synthetic data; no fabricated product UI is used here.
+---
 
-## Watch Mode Profiles
+## Core workflows
 
-Live monitoring can be focused without changing the underlying read-only ingestion. Available profiles are:
+### File analysis and dashboard
 
-- `all` — full defensive live view
-- `security` — broad security-relevant activity
-- `authentication` — login failures, account activity, and auth-related rate signals
-- `web` — web probes, suspicious requests, and application-facing activity
-- `docker` — container/service-oriented telemetry
-- `operations` — errors, failures, availability, and operational health signals
+```text
+AegisLog.exe analyze auth.log
+AegisLog.exe dashboard auth.log
+```
+
+The terminal dashboard can show total lines analyzed, risk state, severity counts, categories, parsed levels, top services, incidents, anomaly context, detailed findings, evidence, and recommended investigation steps.
+
+Log-derived text is treated as untrusted and rendered safely in the terminal.
+
+### Live monitoring
+
+Single-file monitoring follows a growing source using a bounded rolling analysis window:
+
+```text
+AegisLog.exe live server.log
+```
+
+Multi-source monitoring correlates several growing files in one terminal SOC-style view:
+
+```text
+AegisLog.exe live-multi auth.log nginx.log application.log
+```
+
+If a watched file becomes temporarily unavailable, v1.6.0 reports the source state, keeps the current dashboard visible, retries using read-only polling, and recognizes recovery when the source returns.
+
+Live monitoring supports focused profiles:
+
+- `all`
+- `security`
+- `authentication`
+- `web`
+- `docker`
+- `operations`
 
 Examples:
 
@@ -128,27 +164,9 @@ AegisLog.exe live-multi auth.log nginx.log --profile web
 AegisLog.exe native-live docker --container api --profile docker
 ```
 
-## Real-time defensive monitoring
+### Native telemetry
 
-Single-file live monitoring follows a growing log and maintains a bounded rolling analysis window. The dashboard shows event rate, findings, incidents, anomaly context, risk, recent high-signal detections, and adaptive rate/baseline intelligence.
-
-```text
-AegisLog.exe live server.log
-```
-
-Multi-source monitoring correlates several growing files in one terminal SOC view:
-
-```text
-AegisLog.exe live-multi auth.log nginx.log application.log
-```
-
-If a watched file temporarily disappears or becomes unavailable, v1.6.0 keeps the current dashboard visible, reports the source state, and retries read-only polling. When the source returns, monitoring resumes using the safe cursor path. Multi-source arrival and alert-fingerprint histories are also hard-bounded for long-running sessions.
-
-The rate/trend engine tracks failed logins, errors, and firewall blocks per minute, maintains an adaptive local baseline, and marks meaningful short-window deviations as elevated activity or spikes.
-
-## Native telemetry
-
-AegisLog can collect supported native sources without first exporting them to a file:
+AegisLog can collect supported native sources without requiring a prior manual export:
 
 ```text
 AegisLog.exe native-sources
@@ -160,37 +178,96 @@ AegisLog.exe native-live journald
 AegisLog.exe native-live docker --container <name>
 ```
 
-Native collection is bounded and read-only. Supported sources depend on the operating system and installed tooling. v1.6.0 improves diagnostics so unsupported sources and temporarily unavailable sources are reported more clearly, with source-specific troubleshooting that does not change host security policy.
+Native collection is bounded and read-only. Support depends on the operating system and installed tooling. v1.6.0 provides clearer operator diagnostics for unsupported and temporarily unavailable sources without changing host security policy.
 
-## Incident investigation
-
-AegisLog can build evidence-led incidents with confidence, timelines, entities, persistent case history, and MITRE ATT&CK context.
+### Incident investigation
 
 ```text
 AegisLog.exe incidents auth.log
 AegisLog.exe investigate auth.log <incident-id>
+AegisLog.exe explain auth.log <incident-id>
 AegisLog.exe intel-entities auth.log
+AegisLog.exe mitre auth.log
 AegisLog.exe save-investigation auth.log <incident-id>
 AegisLog.exe case-history
 AegisLog.exe case-show <incident-id>
-AegisLog.exe mitre auth.log
-AegisLog.exe explain auth.log <incident-id>
 ```
 
-v1.6.0 adds an analyst triage summary that uses existing local evidence, severity, and confidence signals to help prioritize review. The triage priority is guidance only and is explicitly not proof of compromise, attribution, or attacker intent.
+Investigations can include severity, confidence, triage priority, timeline events, evidence, entity context, ATT&CK context, and safe next actions.
 
-`explain` produces a deterministic local analyst explanation with a summary, why the activity matters, evidence, evidence-consistent ATT&CK context, safe next investigation steps, and an explicit uncertainty caveat. It does not require sending log content to an external AI service.
+The v1.6 triage summary is intentionally conservative. It helps analysts decide what deserves attention first, but explicitly does **not** claim compromise, attacker intent, or attribution.
 
-## Terminal analysis dashboard
+`explain` produces a deterministic local analyst explanation with evidence, context, safe next investigation steps, and uncertainty language. It does not require sending log content to an external AI service.
 
-```text
-AegisLog.exe analyze auth.log
-AegisLog.exe dashboard auth.log
+---
+
+## Reports, baselines, and scale
+
+AegisLog also supports structured reporting, streaming analysis, baselines, behavior comparison, hunting, entity indexing, and indicator extraction.
+
+```bash
+aegislog report auth.log --output report.json
+aegislog stream huge-server.log --chunk-size 2000
+aegislog baseline normal.log current.log
+aegislog behavior --baseline monday.log --baseline tuesday.log --current today.log
+aegislog hunt --severity HIGH
 ```
 
-The dashboard shows total lines analyzed, overall risk state, severity counts, categories, parsed levels, top services, correlated incidents, anomaly scores, detailed findings, evidence, and investigation recommendations. Log-derived values are rendered as untrusted literal text.
+Long-running state is designed around bounded structures. v1.6.0 adds hard ceilings for multi-source arrival history and alert fingerprint tracking so sustained workloads do not create unbounded state growth.
 
-## Developer quick start
+---
+
+## Declarative detection rules
+
+AegisLog loads declarative JSON rule packs from its `rules.d` configuration directory. Python files placed there are not imported or executed as rules.
+
+```json
+{
+  "rules": [
+    {
+      "id": "custom-01",
+      "severity": "HIGH",
+      "category": "application",
+      "title": "Sensitive service failure",
+      "pattern": "payment-worker.*fatal",
+      "recommendation": "Review the affected worker and surrounding telemetry."
+    }
+  ]
+}
+```
+
+---
+
+## Optional AI providers
+
+AegisLog does **not** require an AI account for its core workflow.
+
+Optional compatible providers can be configured for assisted analysis where supported. Remote-provider context is minimized and redacted, telemetry is treated as untrusted, private-network remote endpoints are rejected, and redirects are disabled.
+
+See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for the provider model and data-handling boundaries.
+
+---
+
+## Security model
+
+AegisLog is defensive tooling.
+
+Findings, anomaly scores, confidence values, correlations, triage priorities, ATT&CK mappings, and behavioral deltas are **investigative signals**. They are not proof of compromise, attacker attribution, or malicious intent by themselves.
+
+AegisLog does not perform exploitation, automatic remediation, credential theft, persistence, privilege escalation, evasion, firewall changes, service changes, or account modifications.
+
+For the full security and privacy model, read:
+
+- [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
+- [`docs/PRIVACY.md`](docs/PRIVACY.md)
+- [`docs/NO_AUTOREMEDIATION.md`](docs/NO_AUTOREMEDIATION.md)
+- [`SECURITY.md`](SECURITY.md)
+
+To report a vulnerability, use the private reporting path described in `SECURITY.md`; do not place sensitive details in a public issue.
+
+---
+
+## Developer setup
 
 ```bash
 git clone https://github.com/HR-Presents/AegisLog-AI.git
@@ -206,51 +283,62 @@ ruff check .
 bandit -q -r src
 ```
 
-AegisLog requires Python 3.10+ when run from source or installed as a Python package. The standalone Windows release executable bundles its own runtime.
+AegisLog requires Python 3.10+ when run from source or installed as a Python package. The standalone Windows executable bundles its runtime for normal customer use.
 
-## Declarative detection rules
-
-AegisLog loads declarative JSON rule packs from its `rules.d` configuration directory. Python files in the rule directory are not imported or executed.
-
-```json
-{"rules":[{"id":"custom-01","severity":"HIGH","category":"application","title":"Sensitive service failure","pattern":"payment-worker.*fatal","recommendation":"Review the affected worker and surrounding telemetry."}]}
-```
-
-## Optional AI providers
-
-Core analysis is deterministic and local. Optional compatible AI providers can be configured for assisted analysis where supported. Remote provider context is minimized and redacted, telemetry is treated as untrusted, private-network remote endpoints are rejected, and redirects are disabled. See `docs/AI_PROVIDERS.md`.
-
-## Reports and scale
-
-AegisLog also supports report generation, bounded-memory streaming, historical baselines, behavior comparison, hunting, entity indexing, and indicator extraction.
-
-```bash
-aegislog report auth.log --output report.json
-aegislog stream huge-server.log --chunk-size 2000
-aegislog baseline normal.log current.log
-aegislog behavior --baseline monday.log --baseline tuesday.log --current today.log
-aegislog hunt --severity HIGH
-```
-
-## Security model
-
-AegisLog is defensive tooling. Findings, anomaly scores, confidence values, correlations, incident priorities, ATT&CK mappings, and behavioral deltas are investigative signals, not proof of compromise or attacker attribution. Log-derived terminal text is treated as untrusted and sanitized. The tool does not perform exploitation, automatic remediation, privilege escalation, service changes, firewall changes, or account modifications.
-
-For data-handling boundaries and assumptions, read the [threat model](docs/THREAT_MODEL.md), [privacy guide](docs/PRIVACY.md), and [security policy](SECURITY.md). To report a vulnerability, follow the private reporting path in [SECURITY.md](SECURITY.md); do not disclose sensitive details in a public issue.
-
-## Contributing and support
-
-- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-- [Report a bug](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=bug_report.md) using sanitized logs and reproducible steps.
-- [Request a feature](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=feature_request.md) that fits the defensive, local-first scope.
-- For usage questions, check the [FAQ](docs/FAQ.md) and [troubleshooting guide](docs/TROUBLESHOOTING.md) before opening an issue.
+---
 
 ## Release engineering
 
-v1.6.0 is published through an explicit manual release workflow. Publication requires the exact confirmation value `RELEASE-v1.6.0`, must run from `main`, validates package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, verifies its SHA-256 checksum, and refuses to reuse or mutate an existing `v1.6.0` tag or GitHub release.
+The stable v1.6.0 release is published through an explicit manual GitHub Actions workflow.
 
-Release notes and customer instructions are in `docs/RELEASE_V1.6.0.md`.
+Publication requires the exact confirmation value `RELEASE-v1.6.0`, must run from `main`, verifies package/runtime version metadata, runs quality and security gates, builds and smoke-tests the one-file Windows executable, generates and verifies its SHA-256 checksum, and refuses to reuse an existing v1.6.0 tag or GitHub release.
+
+Published customer assets:
+
+```text
+AegisLog.exe
+AegisLog.exe.sha256
+```
+
+Current executable SHA-256:
+
+```text
+4eb81c9f66c865867e81987f2467bc9576019c805085e26f5da009566e86a02f
+```
+
+See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific details.
+
+---
+
+## Documentation
+
+- [`docs/README.md`](docs/README.md) — documentation index
+- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — complete usage guide
+- [`docs/INSTALL.md`](docs/INSTALL.md) — installation and checksum verification
+- [`docs/COMMANDS.md`](docs/COMMANDS.md) — command reference
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — troubleshooting
+- [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — performance and bounded-state notes
+- [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) — current project status
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — maintenance and future-direction notes
+- [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) — stable release notes
+
+---
+
+## Contributing and support
+
+- Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
+- Use the bug-report issue template with sanitized logs and reproducible steps.
+- Feature requests should stay within the defensive, local-first scope.
+- Check the FAQ and troubleshooting guide before opening a support issue.
+
+---
 
 ## License
 
 MIT
+
+<div align="center">
+
+**AegisLog AI v1.6.0 — local-first defensive analysis, built for evidence-led investigation.**
+
+</div>
