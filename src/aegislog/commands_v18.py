@@ -47,6 +47,12 @@ def native_live(
     message.append(f" with {selected.label} profile. ", style=SUCCESS)
     message.append("The dashboard refreshes in place. Press Ctrl+C to stop safely and return.", style=MUTED)
     console.print(message)
+    if from_start:
+        console.print(render_realtime(state))
+        status = Text("Initial native scan complete. ", style=f"bold {SUCCESS}")
+        status.append("Live collection is still active and will refresh as new native events arrive.", style=MUTED)
+        console.print(status)
+
     try:
         with Live(
             render_realtime(state),
