@@ -41,15 +41,13 @@ def _pause_for_menu() -> None:
 def _choose_multisource_files() -> list[Path]:
     """Collect multi-source paths one at a time for a drag-and-drop friendly UX."""
     console.print(Text("Add at least two different log files. Enter each file separately.", style=MUTED))
-    console.print(Text("After file 2, press Enter at the next prompt to start monitoring, or add more files.", style=MUTED))
+    console.print(Text("After file 2, choose Start monitoring or keep adding more files.", style=MUTED))
     paths: list[Path] = []
     number = 1
     while True:
-        raw = Prompt.ask(f"[bold]Log file {number}[/bold]", default="" if len(paths) >= 2 else None).strip()
+        raw = Prompt.ask(f"[bold]Log file {number}[/bold]").strip()
         if not raw:
-            if len(paths) >= 2:
-                return paths
-            console.print(Text("Please add at least two different existing log files.", style=WARNING))
+            console.print(Text("Enter an existing log file, or type back to cancel.", style=WARNING))
             continue
         if raw.lower() in {"b", "back", "cancel"}:
             return []
@@ -64,7 +62,7 @@ def _choose_multisource_files() -> list[Path]:
         console.print(Text(f"Added file {len(paths)}: {path.name}", style=SUCCESS))
         number += 1
         if len(paths) >= 2:
-            more = Prompt.ask("Add another file?", choices=["yes", "start", "back"], default="start")
+            more = Prompt.ask("Next", choices=["start", "add", "back"], default="start")
             if more == "start":
                 return paths
             if more == "back":
