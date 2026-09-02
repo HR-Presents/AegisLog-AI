@@ -43,15 +43,25 @@ def live_multi(
 
     console.print(
         f"[cyan]Starting AegisLog multi-source SOC with {selected.label} profile. "
+        "Existing content is loaded first in interactive mode. The dashboard refreshes in place even when no new lines arrive. "
         "Press Ctrl+C to stop safely.[/cyan]"
     )
     try:
-        with Live(render_multisource(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
+        # Do not use the terminal's alternate screen. Keeping the normal console buffer
+        # makes the packaged Windows EXE behave like the hardened single-file/native
+        # monitors and lets users inspect terminal history instead of feeling trapped.
+        with Live(
+            render_multisource(state),
+            console=console,
+            refresh_per_second=max(1, int(round(1 / refresh))),
+            screen=False,
+            transient=False,
+        ) as live:
             while True:
                 batches, cursors = poll_sources(unique, cursors)
                 for path, lines in batches:
                     state.ingest(path, lines)
-                live.update(render_multisource(state))
+                live.update(render_multisource(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         console.print("\n[cyan]Multi-source monitoring stopped safely.[/cyan]")
