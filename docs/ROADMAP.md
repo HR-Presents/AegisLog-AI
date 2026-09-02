@@ -1,42 +1,35 @@
 # Roadmap
 
-## V0.1 — Foundation
-Installable terminal CLI, deterministic security/error rules, secret redaction, JSON reporting, initial CI and tests.
+AegisLog AI has progressed beyond its original pre-1.0 roadmap and is currently released as **v1.4.6**.
 
-## V0.2 — Intelligence layer
-Structured parsing, live watch, anomaly scoring, incident correlation, local investigation, and security/privacy documentation.
+## Completed foundation
 
-## V0.3 — AI and collection layer
-Optional compatible AI and Ollama adapters, prompt-injection boundary, remote provider protection, bounded journald/Docker collectors, history, and local fallback.
+The original V0.1–V1.0 roadmap delivered the terminal CLI, deterministic detections, structured parsing, redaction, live monitoring, anomaly scoring, incident correlation, persistent investigation state, native collection, declarative rules, bounded-memory analysis, reporting, CI/security hardening, package validation, and reproducible release engineering.
 
-## V0.4 — Analyst workflow
-SQLite incident/evidence index, drill-down and timeline, baseline comparison, HTML/Markdown reports, and safer report rendering.
+## Current stable line — v1.4.x
 
-## V0.5 — SOC hunting and extensibility
-Persisted hunting, defensive indicator extraction, declarative JSON rule packs, plugin-aware analysis, and expanded tests.
+The v1.4.x line focuses on Windows terminal usability, one-file distribution, live SOC workflows, incident explanation quality, release reliability, and product polish.
 
-## V0.6 — Scale and correlation
-Multi-window behavioral profiling, entity correlation across IP/host/user/service/container evidence, bounded-memory streaming analysis, and regression tests.
+### v1.4.6 — current stable release
 
-## V0.7 — Release hardening
-Direct scale CLI commands, versioned SQLite migrations, future-schema rejection, streaming retention bounds, benchmark harness, and stabilized CI/security/package builds.
+- Immediate initial dashboard rendering for live single-file monitoring.
+- Immediate initial correlated dashboard rendering for multi-source monitoring.
+- Immediate initial snapshot rendering for native live monitoring.
+- Improved semantic terminal colors for incident explanations.
+- Regression coverage for live rendering and incident explanation presentation.
+- Version-locked, manually guarded Windows release workflow with smoke tests and SHA-256 release assets.
 
-## V0.8 — Persistent correlation
-- persisted entity graph and historical entity pivots
-- ranked entity investigation across incidents
-- stateful bounded-window live correlation
-- hardened Rich terminal rendering for log-derived text
-- JSON report schema/tool/timestamp metadata
-- SPDX-style package license metadata
+## Next development line — v1.5.x
 
-## V0.9 — Final release candidate hardening (complete)
-- configuration schema versioning and migration
-- declarative parser extensions
-- richer redaction for authorization headers, JWTs, emails and optional IP privacy
-- large-fixture regression/performance jobs
-- installation/update/uninstall lifecycle polish
-- release artifact verification and checksums
-- final documentation and detection-semantics audit
+The next minor release should prioritize improvements that materially strengthen day-to-day defensive use rather than another cosmetic patch.
 
-## V1.0 release candidate
-Stable defensive terminal platform with documented detection semantics, privacy-preserving optional AI, extensible collection/parsing, persistent investigation state, reproducible release artifacts, strong automated tests, and clear operational limitations.
+Candidate priorities:
+
+- Improve analyst workflow ergonomics across dashboard, incidents, investigation, and live monitoring.
+- Strengthen Windows distribution trust and release verification, including evaluating code-signing options.
+- Expand practical regression coverage for native telemetry and long-running live workflows.
+- Improve documentation freshness and make release/current-status metadata easier to keep synchronized.
+- Continue performance and bounded-resource hardening for larger local datasets.
+- Keep optional AI integrations privacy-preserving and secondary to deterministic local analysis.
+
+Any v1.5.x feature work should preserve AegisLog's defensive, local-first, read-only security model.
