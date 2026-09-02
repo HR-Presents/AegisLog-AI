@@ -56,7 +56,7 @@ def live_multi(
     )
     if from_start:
         console.print(render_multisource(state))
-        console.print(live_initial_status("multi-source"))
+        console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
 
     try:
         with Live(
