@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.0 - 2026-09-02
+
+- Improved incident and investigation terminal workflows with ordered, incident-specific analyst next actions and clearer evidence-led guidance.
+- Added runtime-aware command examples so standalone Windows builds show `AegisLog.exe` while source installs continue to show `aegislog`.
+- Unified operator startup/status presentation across single-file, multi-source, and native live monitoring while preserving immediate initial-result rendering.
+- Hardened long-running live trend state with ingest-cycle aggregation, bounded history, and count-preserving compaction under unusually high event rates.
+- Added stress regressions for large batches and bounded rolling live/multi-source windows plus a dedicated live-state benchmark.
+- Preserved the defensive, local-first, read-only security model; findings and ATT&CK mappings remain investigative signals rather than proof or attribution.
+- Prepared version-locked v1.5.0 package, customer-bundle, release-note, checksum, and immutable release workflow metadata.
+
 ## 1.4.2 - 2026-08-30
 
 - Fixed interactive control-center launch paths for the real-time file dashboard, multi-source live SOC, native analysis, and native real-time monitor.

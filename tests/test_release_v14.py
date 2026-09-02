@@ -63,10 +63,18 @@ def test_v145_release_notes_remain_available_as_history():
     assert "read-only" in notes
 
 
-def test_current_v146_release_workflow_remains_present():
+def test_v146_release_workflow_remains_available_as_history():
     workflow = (WORKFLOWS / "release-v1.4.6.yml").read_text(encoding="utf-8")
-    assert "workflow_dispatch:" in workflow
     assert "RELEASE-v1.4.6" in workflow
     assert "RELEASE_TAG: v1.4.6" in workflow
+    assert "gh release create" in workflow
+    assert "gh release upload" not in workflow
+
+
+def test_current_v150_release_workflow_is_present():
+    workflow = (WORKFLOWS / "release-v1.5.0.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert "RELEASE-v1.5.0" in workflow
+    assert "RELEASE_TAG: v1.5.0" in workflow
     assert "gh release create" in workflow
     assert "gh release upload" not in workflow

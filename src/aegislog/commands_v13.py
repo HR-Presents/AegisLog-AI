@@ -6,10 +6,9 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.live import Live
-from rich.text import Text
 
+from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
 from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
-from .theme import ACCENT, MUTED, SUCCESS
 from .watch_profiles import get_profile
 
 console = Console()
@@ -34,17 +33,20 @@ def live_dashboard(
         initial, cursor = read_new_lines_cursor(path, cursor)
         state.ingest(initial)
 
-    mode = "existing content + new lines" if from_start else "new lines appended after startup"
+    mode = "Existing content + new lines" if from_start else "New lines appended after startup"
     console.print(
-        f"[cyan]Starting AegisLog real-time monitor with {selected.label} profile.[/cyan]\n"
-        f"[dim]Monitoring: {mode}. The dashboard refreshes in place even when no new lines arrive. "
-        "Press Ctrl+C to stop safely and return to the caller.[/dim]"
+        live_startup_panel(
+            title="LIVE FILE MONITOR",
+            sources=(str(path),),
+            profile=selected.label,
+            mode=mode,
+            window=window,
+            refresh=refresh,
+        )
     )
     if from_start:
         console.print(render_realtime(state))
-        status = Text("Initial scan complete. ", style=f"bold {SUCCESS}")
-        status.append("Live monitoring is still active and will refresh when the file changes.", style=MUTED)
-        console.print(status)
+        console.print(live_initial_status("file", prefix="Initial scan complete."))
 
     try:
         with Live(
@@ -65,4 +67,4 @@ def live_dashboard(
                 live.update(render_realtime(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print(Text("\nReal-time monitoring stopped safely.", style=ACCENT))
+        console.print(live_stopped_status("File"))

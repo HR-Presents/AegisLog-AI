@@ -36,7 +36,8 @@ class TrendSnapshot:
 class TrendTracker:
     window_seconds: int = 60
     alpha: float = 0.20
-    _events: deque[tuple[float, bool, bool, bool]] = field(default_factory=deque)
+    max_buckets: int = 4096
+    _events: deque[tuple[float, int, int, int]] = field(default_factory=deque)
     _baseline: dict[str, float] = field(default_factory=dict)
     _latest: TrendSnapshot | None = None
 
@@ -45,6 +46,8 @@ class TrendTracker:
             raise ValueError("window_seconds must be at least 10")
         if not 0.0 < self.alpha <= 1.0:
             raise ValueError("alpha must be within (0, 1]")
+        if self.max_buckets < 64:
+            raise ValueError("max_buckets must be at least 64")
 
     @staticmethod
     def _classify(line: str) -> tuple[bool, bool, bool]:
@@ -78,12 +81,51 @@ class TrendTracker:
         while self._events and self._events[0][0] < cutoff:
             self._events.popleft()
 
+    def _append_bucket(self, stamp: float, failed: int, errors: int, firewall: int) -> None:
+        if not (failed or errors or firewall):
+            return
+        if self._events and self._events[-1][0] == stamp:
+            previous = self._events.pop()
+            self._events.append(
+                (
+                    stamp,
+                    previous[1] + failed,
+                    previous[2] + errors,
+                    previous[3] + firewall,
+                )
+            )
+        else:
+            self._events.append((stamp, failed, errors, firewall))
+
+        # Under normal live polling this stays near window_seconds / refresh.
+        # The hard ceiling protects callers that ingest at unusually high frequency.
+        while len(self._events) > self.max_buckets:
+            oldest = self._events.popleft()
+            if not self._events:
+                self._events.append(oldest)
+                break
+            next_bucket = self._events.popleft()
+            self._events.appendleft(
+                (
+                    next_bucket[0],
+                    oldest[1] + next_bucket[1],
+                    oldest[2] + next_bucket[2],
+                    oldest[3] + next_bucket[3],
+                )
+            )
+
     def ingest(self, lines: list[str], now: float | None = None) -> TrendSnapshot:
         stamp = time.monotonic() if now is None else now
         self._trim(stamp)
+        failed = 0
+        errors = 0
+        firewall = 0
         for line in lines:
-            auth, error, firewall = self._classify(line)
-            self._events.append((stamp, auth, error, firewall))
+            auth, error, blocked = self._classify(line)
+            failed += int(auth)
+            errors += int(error)
+            firewall += int(blocked)
+        self._append_bucket(stamp, failed, errors, firewall)
         self._trim(stamp)
         current = self._rates()
         metrics: list[TrendMetric] = []
@@ -106,9 +148,9 @@ class TrendTracker:
 
     def _rates(self) -> dict[str, float]:
         scale = 60.0 / float(self.window_seconds)
-        failed = sum(1 for _, auth, _, _ in self._events if auth) * scale
-        errors = sum(1 for _, _, error, _ in self._events if error) * scale
-        firewall = sum(1 for _, _, _, blocked in self._events if blocked) * scale
+        failed = sum(auth for _, auth, _, _ in self._events) * scale
+        errors = sum(error for _, _, error, _ in self._events) * scale
+        firewall = sum(blocked for _, _, _, blocked in self._events) * scale
         return {
             "Failed logins": failed,
             "Errors": errors,
