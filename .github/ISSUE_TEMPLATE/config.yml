@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/HR-Presents/AegisLog-AI/security/policy
+    about: Read the private reporting instructions before sharing security-sensitive details.
+  - name: Documentation and troubleshooting
+    url: https://github.com/HR-Presents/AegisLog-AI/blob/main/docs/README.md
+    about: Check the user guide, FAQ, and troubleshooting documentation before opening an issue.
