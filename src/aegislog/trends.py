@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from rich.table import Table
 from rich.text import Text
 
+from .theme import ACCENT, INFO, SUCCESS, WARNING
+
 
 @dataclass(frozen=True)
 class TrendMetric:
@@ -133,11 +135,19 @@ class TrendTracker:
         )
 
 
+def _state_style(state: str) -> str:
+    if state == "SPIKE":
+        return "bold bright_red"
+    if state == "ELEVATED":
+        return WARNING
+    return SUCCESS
+
+
 def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None = None) -> Table:
     title = f"Rate & baseline intelligence ({snapshot.window_seconds}s window)"
-    table = Table(title=title, expand=True)
-    table.add_column("Signal", width=20)
-    table.add_column("Current/min", justify="right", width=12)
+    table = Table(title=title, expand=True, border_style=ACCENT)
+    table.add_column("Signal", width=20, style=ACCENT)
+    table.add_column("Current/min", justify="right", width=12, style=INFO)
     table.add_column("Baseline/min", justify="right", width=12)
     table.add_column("Deviation", justify="right", width=11)
     table.add_column("State", width=10)
@@ -145,13 +155,14 @@ def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None 
     metrics = [metric for metric in snapshot.metrics if not allowed or metric.name in allowed]
     for metric in metrics:
         ratio = f"{metric.deviation_ratio:.1f}x" if metric.deviation_ratio < 100 else ">99x"
+        state_style = _state_style(metric.state)
         table.add_row(
             Text(metric.name),
-            f"{metric.current_per_minute:.1f}",
+            Text(f"{metric.current_per_minute:.1f}", style=state_style if metric.state != "NORMAL" else INFO),
             f"{metric.baseline_per_minute:.1f}",
-            ratio,
-            metric.state,
+            Text(ratio, style=state_style if metric.state != "NORMAL" else "dim"),
+            Text(metric.state, style=state_style),
         )
     if not metrics:
-        table.add_row("No profile metrics", "0.0", "0.0", "1.0x", "NORMAL")
+        table.add_row("No profile metrics", "0.0", "0.0", "1.0x", Text("NORMAL", style=SUCCESS))
     return table
