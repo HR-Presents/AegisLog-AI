@@ -6,10 +6,9 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.live import Live
-from rich.text import Text
 
+from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
 from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
-from .theme import MUTED, SUCCESS
 from .watch_profiles import get_profile
 
 console = Console()
@@ -43,16 +42,21 @@ def live_multi(
         for path, lines in batches:
             state.ingest(path, lines)
 
+    mode = "Existing content + new lines" if from_start else "New lines appended after startup"
     console.print(
-        f"[cyan]Starting AegisLog multi-source SOC with {selected.label} profile. "
-        "Existing content is loaded first in interactive mode. The dashboard refreshes in place even when no new lines arrive. "
-        "Press Ctrl+C to stop safely.[/cyan]"
+        live_startup_panel(
+            title="MULTI-SOURCE SOC MONITOR",
+            sources=(str(path) for path in unique),
+            profile=selected.label,
+            mode=mode,
+            window=window,
+            refresh=refresh,
+            extra=f"Trend window {trend_seconds}s",
+        )
     )
     if from_start:
         console.print(render_multisource(state))
-        status = Text("Initial multi-source scan complete. ", style=f"bold {SUCCESS}")
-        status.append("Live correlation is still active and will refresh as source files change.", style=MUTED)
-        console.print(status)
+        console.print(live_initial_status("multi-source"))
 
     try:
         with Live(
@@ -69,4 +73,4 @@ def live_multi(
                 live.update(render_multisource(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print("\n[cyan]Multi-source monitoring stopped safely.[/cyan]")
+        console.print(live_stopped_status("Multi-source"))
