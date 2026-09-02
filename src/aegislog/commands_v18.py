@@ -45,23 +45,29 @@ def native_live(
         state.ingest(initial)
     message = Text("Starting native real-time monitoring", style=f"bold {ACCENT}")
     message.append(f" with {selected.label} profile. ", style=SUCCESS)
-    message.append("Press Ctrl+C to stop safely.", style=MUTED)
+    message.append("The dashboard refreshes in place. Press Ctrl+C to stop safely and return.", style=MUTED)
     console.print(message)
     try:
-        with Live(render_realtime(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
+        with Live(
+            render_realtime(state),
+            console=console,
+            refresh_per_second=max(1, int(round(1 / refresh))),
+            screen=False,
+            transient=False,
+        ) as live:
             while True:
                 try:
                     lines = poller.poll()
                     if lines:
                         state.ingest(lines)
                 except CollectorError as exc:
-                    live.update(render_realtime(state))
+                    live.update(render_realtime(state), refresh=True)
                     warning = Text("Native source temporarily unavailable: ", style=f"bold {WARNING}")
                     warning.append(str(exc))
                     console.print(warning)
                     time.sleep(refresh)
                     continue
-                live.update(render_realtime(state))
+                live.update(render_realtime(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         stopped = Text("\nNative real-time monitoring stopped safely.", style=SUCCESS)

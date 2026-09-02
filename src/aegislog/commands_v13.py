@@ -35,20 +35,26 @@ def live_dashboard(
     mode = "existing content + new lines" if from_start else "new lines appended after startup"
     console.print(
         f"[cyan]Starting AegisLog real-time monitor with {selected.label} profile.[/cyan]\n"
-        f"[dim]Monitoring: {mode}. Existing content is skipped by default so old events are not reported as live. "
-        "Use --from-start when you intentionally want the current file analyzed first. Press Ctrl+C to stop safely.[/dim]"
+        f"[dim]Monitoring: {mode}. The dashboard refreshes in place even when no new lines arrive. "
+        "Press Ctrl+C to stop safely and return to the caller.[/dim]"
     )
     try:
-        with Live(render_realtime(state), console=console, refresh_per_second=max(1, int(round(1 / refresh))), screen=True) as live:
+        with Live(
+            render_realtime(state),
+            console=console,
+            refresh_per_second=max(1, int(round(1 / refresh))),
+            screen=False,
+            transient=False,
+        ) as live:
             while True:
                 if not path.exists():
-                    live.update(render_realtime(state))
+                    live.update(render_realtime(state), refresh=True)
                     time.sleep(refresh)
                     continue
                 lines, cursor = read_new_lines_cursor(path, cursor)
                 if lines:
                     state.ingest(lines)
-                live.update(render_realtime(state))
+                live.update(render_realtime(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         console.print("\n[cyan]Real-time monitoring stopped safely.[/cyan]")
