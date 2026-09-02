@@ -6,8 +6,10 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.live import Live
+from rich.text import Text
 
 from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
+from .theme import MUTED, SUCCESS
 from .watch_profiles import get_profile
 
 console = Console()
@@ -46,10 +48,13 @@ def live_multi(
         "Existing content is loaded first in interactive mode. The dashboard refreshes in place even when no new lines arrive. "
         "Press Ctrl+C to stop safely.[/cyan]"
     )
+    if from_start:
+        console.print(render_multisource(state))
+        status = Text("Initial multi-source scan complete. ", style=f"bold {SUCCESS}")
+        status.append("Live correlation is still active and will refresh as source files change.", style=MUTED)
+        console.print(status)
+
     try:
-        # Do not use the terminal's alternate screen. Keeping the normal console buffer
-        # makes the packaged Windows EXE behave like the hardened single-file/native
-        # monitors and lets users inspect terminal history instead of feeling trapped.
         with Live(
             render_multisource(state),
             console=console,

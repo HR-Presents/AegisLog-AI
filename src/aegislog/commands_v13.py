@@ -6,8 +6,10 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.live import Live
+from rich.text import Text
 
 from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
+from .theme import ACCENT, MUTED, SUCCESS
 from .watch_profiles import get_profile
 
 console = Console()
@@ -38,6 +40,12 @@ def live_dashboard(
         f"[dim]Monitoring: {mode}. The dashboard refreshes in place even when no new lines arrive. "
         "Press Ctrl+C to stop safely and return to the caller.[/dim]"
     )
+    if from_start:
+        console.print(render_realtime(state))
+        status = Text("Initial scan complete. ", style=f"bold {SUCCESS}")
+        status.append("Live monitoring is still active and will refresh when the file changes.", style=MUTED)
+        console.print(status)
+
     try:
         with Live(
             render_realtime(state),
@@ -57,4 +65,4 @@ def live_dashboard(
                 live.update(render_realtime(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print("\n[cyan]Real-time monitoring stopped safely.[/cyan]")
+        console.print(Text("\nReal-time monitoring stopped safely.", style=ACCENT))
