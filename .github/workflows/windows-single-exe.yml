@@ -50,6 +50,26 @@ jobs:
           .\dist\AegisLog.exe explain --help
           .\dist\AegisLog.exe mitre --help
 
+      - name: Verify signing adapter fails closed without certificate material
+        shell: pwsh
+        run: |
+          try {
+            ./packaging/sign_windows.ps1 `
+              -Path "dist\AegisLog.exe" `
+              -PfxPath (Join-Path $env:RUNNER_TEMP "missing-signing-cert.pfx") `
+              -PfxPassword "synthetic-test-only" `
+              -ExpectedThumbprint "0000000000000000000000000000000000000000" `
+              -TimestampUrl "https://example.invalid/timestamp"
+            throw "Signing adapter unexpectedly accepted missing certificate material"
+          }
+          catch {
+            $message = $_.Exception.Message
+            if ($message -notmatch "Signing PFX not found") {
+              throw
+            }
+            Write-Host "Signing adapter correctly failed closed: $message"
+          }
+
       - name: Verify unsigned artifact is rejected by release guard
         shell: pwsh
         run: |
