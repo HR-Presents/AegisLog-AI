@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-v1.6.0
@@ -22,6 +22,8 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Require explicit main-branch dispatch
         shell: bash
@@ -29,10 +31,10 @@ jobs:
           set -euo pipefail
           test "${{ github.ref }}" = "refs/heads/main"
           test "${{ inputs.confirmation }}" = "RELEASE-v1.6.0"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Verify version metadata
@@ -73,9 +75,13 @@ jobs:
   build-windows-exe:
     needs: validate
     runs-on: windows-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Install build dependencies
@@ -116,7 +122,11 @@ jobs:
           "$hash  AegisLog.exe" | Set-Content -Encoding ascii "release-assets\AegisLog.exe.sha256"
           $files = Get-ChildItem "release-assets" -File
           if ($files.Count -ne 2) { throw "Release staging must contain exactly executable and checksum" }
-      - uses: actions/upload-artifact@v4
+      - name: Attest executable provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: release-assets/AegisLog.exe
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: AegisLog-v1.6.0-release-assets
           if-no-files-found: error
@@ -126,9 +136,11 @@ jobs:
   publish:
     needs: build-windows-exe
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: AegisLog-v1.6.0-release-assets
           path: release-assets
