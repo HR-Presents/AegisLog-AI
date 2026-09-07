@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -142,38 +142,125 @@ class AnalysisState:
     Timestamped authentication failures are retained only inside a moving event-time window.
     Out-of-order events inside that window are accepted and sorted; events older than the
     current window are expired immediately. Events without timestamps use a separate bounded
-    event-order bucket and are explicitly described as such in evidence.
+    event-order bucket and are explicitly described as such in evidence. Source cardinality,
+    retained authentication events, and non-auth findings are all globally bounded.
     """
 
-    def __init__(self, auth_window_seconds: int = 300, max_auth_events: int = 10_000):
-        if auth_window_seconds < 1 or max_auth_events < 1:
-            raise ValueError("correlation limits must be positive")
+    def __init__(
+        self,
+        auth_window_seconds: int = 300,
+        max_auth_events: int = 10_000,
+        max_auth_sources: int = 2_048,
+        max_findings: int = 5_000,
+    ):
+        if auth_window_seconds < 1 or max_auth_events < 1 or max_auth_sources < 1 or max_findings < 0:
+            raise ValueError("correlation limits must be valid")
         self.auth_window_seconds = auth_window_seconds
         self.max_auth_events = max_auth_events
-        self._auth: dict[str, deque[AuthEvent]] = defaultdict(deque)
-        self._missing_ts: dict[str, deque[AuthEvent]] = defaultdict(deque)
+        self.max_auth_sources = max_auth_sources
+        self.max_findings = max_findings
+        self._auth: OrderedDict[str, deque[AuthEvent]] = OrderedDict()
+        self._missing_ts: OrderedDict[str, deque[AuthEvent]] = OrderedDict()
         self._latest_ts: datetime | None = None
         self._other_findings: list[Finding] = []
         self.dropped_auth_events = 0
         self.expired_auth_events = 0
+        self.dropped_findings = 0
+        self.dropped_auth_sources = 0
+
+    def _append_finding(self, finding: Finding) -> None:
+        if len(self._other_findings) < self.max_findings:
+            self._other_findings.append(finding)
+        else:
+            self.dropped_findings += 1
+
+    def _total_auth_sources(self) -> int:
+        return len(set(self._auth) | set(self._missing_ts))
+
+    def _drop_source(self, key: str) -> None:
+        dropped = 0
+        if key in self._auth:
+            dropped += len(self._auth.pop(key))
+        if key in self._missing_ts:
+            dropped += len(self._missing_ts.pop(key))
+        self.dropped_auth_events += dropped
+        self.dropped_auth_sources += 1
+
+    def _ensure_source_capacity(self, key: str) -> bool:
+        if key in self._auth or key in self._missing_ts:
+            return True
+        if self._total_auth_sources() < self.max_auth_sources:
+            return True
+
+        candidates: list[tuple[datetime, str]] = []
+        for name, events in self._auth.items():
+            if events and events[-1].timestamp is not None:
+                candidates.append((events[-1].timestamp, name))
+        if candidates:
+            _, oldest_key = min(candidates, key=lambda item: item[0])
+        elif self._missing_ts:
+            oldest_key = next(iter(self._missing_ts))
+        else:
+            return False
+        self._drop_source(oldest_key)
+        return True
 
     def _expire_timestamped(self) -> None:
         if self._latest_ts is None:
             return
         cutoff = self._latest_ts.timestamp() - self.auth_window_seconds
-        for events in self._auth.values():
+        empty: list[str] = []
+        for key, events in self._auth.items():
             while events and events[0].timestamp and events[0].timestamp.timestamp() < cutoff:
                 events.popleft()
                 self.expired_auth_events += 1
+            if not events:
+                empty.append(key)
+        for key in empty:
+            self._auth.pop(key, None)
+
+    def _total_auth_events(self) -> int:
+        return sum(len(events) for events in self._auth.values()) + sum(
+            len(events) for events in self._missing_ts.values()
+        )
+
+    def _trim_global_auth_events(self) -> None:
+        while self._total_auth_events() > self.max_auth_events:
+            timestamped = [
+                (events[0].timestamp, key)
+                for key, events in self._auth.items()
+                if events and events[0].timestamp is not None
+            ]
+            if timestamped:
+                _, key = min(timestamped, key=lambda item: item[0])
+                bucket = self._auth[key]
+                bucket.popleft()
+                if not bucket:
+                    self._auth.pop(key, None)
+            elif self._missing_ts:
+                key = next(iter(self._missing_ts))
+                bucket = self._missing_ts[key]
+                bucket.popleft()
+                if not bucket:
+                    self._missing_ts.pop(key, None)
+            else:
+                break
+            self.dropped_auth_events += 1
 
     def _add_auth(self, event: AuthEvent) -> None:
         key = event.source_ip or "<unknown>"
+        if not self._ensure_source_capacity(key):
+            self.dropped_auth_events += 1
+            return
+
         if event.timestamp is None:
-            bucket = self._missing_ts[key]
+            bucket = self._missing_ts.setdefault(key, deque())
             bucket.append(event)
+            self._missing_ts.move_to_end(key)
             while len(bucket) > min(self.max_auth_events, 20):
                 bucket.popleft()
                 self.dropped_auth_events += 1
+            self._trim_global_auth_events()
             return
 
         if self._latest_ts is None or event.timestamp > self._latest_ts:
@@ -183,23 +270,15 @@ class AnalysisState:
             self.expired_auth_events += 1
             return
 
-        bucket = self._auth[key]
+        bucket = self._auth.setdefault(key, deque())
         bucket.append(event)
+        self._auth.move_to_end(key)
         if len(bucket) > 1 and bucket[-2].timestamp and bucket[-2].timestamp > event.timestamp:
             self._auth[key] = deque(
                 sorted(bucket, key=lambda item: item.timestamp or datetime.min.replace(tzinfo=timezone.utc))
             )
         self._expire_timestamped()
-
-        total = sum(len(events) for events in self._auth.values())
-        while total > self.max_auth_events:
-            oldest_key = min(
-                (name for name, events in self._auth.items() if events),
-                key=lambda name: self._auth[name][0].timestamp or datetime.max.replace(tzinfo=timezone.utc),
-            )
-            self._auth[oldest_key].popleft()
-            self.dropped_auth_events += 1
-            total -= 1
+        self._trim_global_auth_events()
 
     def process(self, raw: str) -> None:
         line = redact(raw.strip())
@@ -220,7 +299,7 @@ class AnalysisState:
                 )
                 return
             if signal is not None:
-                self._other_findings.append(
+                self._append_finding(
                     Finding(signal.severity, signal.category, signal.title, signal.evidence, signal.recommendation)
                 )
                 return
@@ -228,7 +307,7 @@ class AnalysisState:
         # Preserve the more specific privilege signal before generic authentication correlation.
         severity, category, pattern, title, recommendation = PRIVILEGE_RULE
         if pattern.search(line):
-            self._other_findings.append(Finding(severity, category, title, line[:500], recommendation))
+            self._append_finding(Finding(severity, category, title, line[:500], recommendation))
             return
 
         if AUTH_FAILURE_RE.search(line):
@@ -236,11 +315,10 @@ class AnalysisState:
             return
         for severity, category, pattern, title, recommendation in RULES[1:]:
             if pattern.search(line):
-                self._other_findings.append(Finding(severity, category, title, line[:500], recommendation))
+                self._append_finding(Finding(severity, category, title, line[:500], recommendation))
                 break
 
     def findings(self) -> list[Finding]:
-        findings = list(self._other_findings)
         correlated: list[Finding] = []
         for key, events in self._auth.items():
             if events:
@@ -263,7 +341,7 @@ class AnalysisState:
                     )
                 )
         correlated.sort(key=lambda item: item.title)
-        return correlated + findings
+        return correlated + list(self._other_findings)
 
 
 def analyze_lines(lines: list[str], auth_window_seconds: int = 300) -> list[Finding]:
