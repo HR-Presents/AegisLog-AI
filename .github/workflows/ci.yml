@@ -20,6 +20,9 @@ jobs:
       - run: ruff check .
       - run: pytest -q
       - run: python tools/evaluate_detections.py evaluation/labeled_events.jsonl
+      - name: Streaming benchmark
+        if: matrix.python-version == '3.12'
+        run: python benchmarks/stream_benchmark.py --lines 250000 --chunk-size 2000
       - run: bandit -q -r src
       - run: aegislog doctor
       - run: aegislog analyze examples/auth.log
