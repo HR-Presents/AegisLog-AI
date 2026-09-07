@@ -151,7 +151,7 @@ def start() -> None:
                 path = _choose_log_file()
                 if path is not None:
                     console.print()
-                    dashboard(path)
+                    dashboard(path, timestamp_year=None)
             elif choice == "2":
                 path = _choose_log_file()
                 if path is not None:
@@ -175,7 +175,7 @@ def start() -> None:
                 _explain_menu()
             elif choice == "7":
                 console.print()
-                dashboard(_resolve_demo())
+                dashboard(_resolve_demo(), timestamp_year=None)
             elif choice == "8":
                 _system_check()
             elif choice == "9":
