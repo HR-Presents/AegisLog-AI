@@ -8,7 +8,7 @@ Authentication failures are correlated by parsed **source** address. AegisLog va
 
 Timestamped events use an event-time window. The default is 300 seconds and can be overridden through the Python analysis API with `auth_window_seconds`. Events that arrive out of order but are still inside the active window are retained. Events older than the active window are expired immediately and do not contribute to escalation.
 
-ISO/RFC3339 timestamps remain authoritative absolute timestamps. RFC3164-style syslog timestamps such as `Sep  7 10:00:00` participate in event-time correlation only when a year is known safely: callers may supply `timestamp_year_hint`, or the analysis state may inherit a year after observing an absolute timestamp in the same analysis. AegisLog does **not** assume the current year for yearless archived logs. If no safe year context exists, the event uses the bounded missing-timestamp fallback.
+ISO/RFC3339 timestamps remain authoritative absolute timestamps. RFC3164-style syslog timestamps such as `Sep  7 10:00:00` participate in event-time correlation only when a year is known safely: callers may supply `timestamp_year_hint`, the `analyze` and `dashboard` CLI commands may receive `--timestamp-year YYYY`, or the analysis state may inherit a year after observing an absolute timestamp in the same analysis. AegisLog does **not** assume the current year for yearless archived logs. If no safe year context exists, the event uses the bounded missing-timestamp fallback.
 
 When a timestamp cannot be parsed safely, AegisLog does not invent one. Those failures are correlated separately by bounded event order. Findings state that the timestamp is unavailable so evidence does not imply precision absent from the source.
 
@@ -58,7 +58,9 @@ The artifact-producing build/release toolchain is also transitively hash-locked.
 
 Package construction uses `python -m build --no-isolation`, preventing an isolated build environment from silently re-downloading a different `setuptools`. Windows executable workflows install the locked build toolchain plus the locked runtime dependencies, then install AegisLog with `--no-deps --no-build-isolation` before PyInstaller runs.
 
-The v1.6.0 release-validation toolchain is likewise SHA-256 locked for Python 3.12 on `ubuntu-24.04`. Exact direct pins for pytest, Ruff, Bandit, and pip-audit are resolved in `packaging/validation-lock-py312-linux.txt`; CI and the release workflow install the reviewed lock instead of resolving the dev extra.
+Validation tooling is likewise SHA-256 locked on `ubuntu-24.04` for every supported CI interpreter. Exact direct pins for pytest, Ruff, Bandit, and pip-audit are resolved into `packaging/validation-lock-py310-linux.txt`, `validation-lock-py311-linux.txt`, `validation-lock-py312-linux.txt`, and `validation-lock-py313-linux.txt`. The validation-lock audit independently re-resolves and hash-compares each interpreter-specific dependency graph, then verifies downloads with `--require-hashes`.
+
+All CI lanes install their interpreter-specific validation lock, the reviewed runtime lock, and a minimal hash-locked editable setuptools backend before installing AegisLog with `--no-deps --no-build-isolation`. Python 3.12 additionally installs the artifact-build lock because it is the designated release-validation environment.
 
 ## Detection evaluation
 
