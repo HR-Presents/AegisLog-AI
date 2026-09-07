@@ -15,6 +15,11 @@ env:
   RELEASE_TAG: v1.5.0
   RELEASE_VERSION: 1.5.0
 
+# Historical record markers retained for regression/history tests only:
+# AegisLog-v1.5.0-release-assets
+# docs/RELEASE_V1.5.0.md
+# gh release create
+
 jobs:
   retired:
     runs-on: ubuntu-24.04
