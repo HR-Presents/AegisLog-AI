@@ -8,7 +8,9 @@ Authentication failures are correlated by parsed **source** address. AegisLog va
 
 Timestamped events use an event-time window. The default is 300 seconds and can be overridden through the Python analysis API with `auth_window_seconds`. Events that arrive out of order but are still inside the active window are retained. Events older than the active window are expired immediately and do not contribute to escalation.
 
-When a timestamp cannot be parsed, AegisLog does not invent one. Those failures are correlated separately by bounded event order. Findings state `timestamp unavailable; correlated by bounded event order` so the evidence does not imply time precision that was not present in the source data.
+ISO/RFC3339-style timestamps remain the authoritative absolute timestamps. RFC3164-style syslog timestamps such as `Sep  7 10:00:00` are also supported when a year is known safely: callers can supply `timestamp_year_hint`, or the analysis state can inherit a year after observing an absolute timestamp in the same analysis. AegisLog intentionally does **not** assume the current year for yearless archived logs. If no safe year context exists, the event uses the bounded missing-timestamp fallback.
+
+When a timestamp cannot be parsed safely, AegisLog does not invent one. Those failures are correlated separately by bounded event order. Findings state `timestamp unavailable; correlated by bounded event order` so the evidence does not imply time precision that was not present in the source data.
 
 A single generic authentication failure is LOW context, two to four failures from the same source are MEDIUM, five or more are HIGH, and twenty or more are CRITICAL within the retained correlation state. A sudo-specific authentication failure is evaluated by the privilege rule before generic authentication correlation so the more specific context is preserved.
 
@@ -52,11 +54,11 @@ Redaction is intentionally conservative but cannot guarantee discovery of every 
 
 Remote AI providers require HTTPS. Plain HTTP is only allowed for a local provider when every resolved address is loopback. Provider URLs with embedded credentials are rejected.
 
-For remote providers, DNS is resolved and validated before the request. The HTTP/TLS connection is then made to one of those validated IP addresses rather than resolving the hostname a second time. TLS verification and SNI still use the original hostname. This narrows DNS-rebinding/time-of-check-time-of-use exposure.
+For remote providers, DNS is resolved and validated once before the request. Connections are attempted only against IP addresses from that exact validated set, while TLS verification and SNI continue to use the original hostname. If one validated address fails at the connection/transport layer, AegisLog can try the next validated address without performing a second DNS lookup. This preserves the DNS-rebinding/time-of-check-time-of-use defense while improving ordinary multi-address endpoint resilience.
 
-Redirects are rejected, response bodies are limited to 2 MB, malformed JSON is rejected, and provider-specific response shapes are validated before use.
+HTTP responses, redirects, malformed response bodies, and provider/application errors are **not** retried across addresses. Once a provider responds, repeating the request could duplicate side effects or hide a real provider failure. Redirects are rejected, response bodies are limited to 2 MB, malformed JSON is rejected, and provider-specific response shapes are validated before use.
 
-Proxy environment variables are not used by this direct `http.client` transport path. This avoids a proxy silently changing the network destination, but it also means deployments that require an outbound HTTP proxy must currently use a supported network path outside AegisLog or extend the provider transport with an explicitly validated proxy design. A multi-address provider currently selects one validated address and does not implement connection failover across all validated addresses.
+Proxy environment variables are not used by this direct `http.client` transport path. This avoids a proxy silently changing the network destination, but deployments that require an outbound HTTP proxy still need an explicitly validated proxy design or an external supported network path.
 
 ## Detection evaluation
 
@@ -74,10 +76,10 @@ Existing CLI commands and the public `engine.redact()` helper are preserved. Exi
 
 The provider helper `_validate_url()` keeps its URL-string return behavior for compatibility even though the hardened transport uses a separate internal endpoint-validation result. `FileCursor` preserves its original first three positional fields and adds optional state fields with defaults.
 
-The public CLI entrypoint now registers commands through the stable `aegislog.commands` boundary. Historical release-numbered command modules remain in place for compatibility, but their imports are isolated behind that registry so future renames can be staged without continuing to spread version-specific coupling through entrypoints.
+The public CLI entrypoint registers commands through the stable `aegislog.commands` boundary. Historical release-numbered command modules remain in place for compatibility, but their imports are isolated behind that registry so future renames can be staged without continuing to spread version-specific coupling through entrypoints.
 
 ## Known remaining limitations
 
-Production-readiness gaps remain. Common non-ISO syslog timestamps are not yet normalized into event-time windows and therefore use the explicit missing-timestamp fallback. Provider address failover is not implemented. The direct provider transport intentionally does not inherit environment proxy settings. Release build inputs are not yet fully transitively hash-locked, GitHub-hosted runner images evolve, and Windows binaries are not code-signed. Release provenance is configured for tagged package artifacts and the v1.6.0 executable path, but it still requires validation in an actual authorized tag/release execution. The synthetic detection dataset is too small to establish real-world false-positive rates or security effectiveness.
+Production-readiness gaps remain. Pure RFC3164 logs without a safe year hint still use the explicit missing-timestamp fallback rather than inventing a year. The direct provider transport intentionally does not inherit environment proxy settings. Runtime/customer-bundle dependencies and transitive build dependencies are not yet fully hash-locked. GitHub-hosted runner labels are pinned to explicit OS versions, but GitHub can still refresh the underlying image for that OS label over time. Windows binaries are not code-signed. Release provenance is configured for tagged package artifacts and the v1.6.0 executable path, but it still requires validation in an actual authorized tag/release execution. The synthetic detection dataset is too small to establish real-world false-positive rates or security effectiveness.
 
 See `docs/RELEASE_SECURITY.md` for signing, reproducibility, provenance, and release-gate details.
