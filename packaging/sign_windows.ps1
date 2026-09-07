@@ -69,11 +69,13 @@ if ($existing) {
 $securePassword = ConvertTo-SecureString -String $PfxPassword -AsPlainText -Force
 $imported = $null
 try {
-    $imported = Import-PfxCertificate \
-        -FilePath $PfxPath \
-        -CertStoreLocation Cert:\CurrentUser\My \
-        -Password $securePassword \
-        -Exportable:$false
+    $importParameters = @{
+        FilePath          = $PfxPath
+        CertStoreLocation = 'Cert:\CurrentUser\My'
+        Password          = $securePassword
+        Exportable        = $false
+    }
+    $imported = Import-PfxCertificate @importParameters
 
     if ($null -eq $imported) {
         throw 'PFX import returned no certificate.'
