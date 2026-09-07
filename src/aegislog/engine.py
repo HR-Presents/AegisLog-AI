@@ -123,11 +123,12 @@ def _auth_finding(ip: str | None, count: int, event: AuthEvent, window_seconds: 
         qualifiers.append(f"window={window_seconds}s")
     else:
         qualifiers.append("timestamp unavailable; correlated by bounded event order")
+    failure_label = "authentication failure" if count == 1 else "authentication failures"
     return Finding(
         severity,
         "authentication",
         f"{label} from {subject}",
-        f"{count} failures; " + "; ".join(qualifiers) + f"; latest={event.evidence}",
+        f"{count} {failure_label}; " + "; ".join(qualifiers) + f"; latest={event.evidence}",
         "Correlate successful logons, target accounts, source ownership, MFA, and rate limiting before concluding malicious intent.",
     )
 
@@ -182,7 +183,9 @@ class AnalysisState:
         bucket = self._auth[key]
         bucket.append(event)
         if len(bucket) > 1 and bucket[-2].timestamp and bucket[-2].timestamp > event.timestamp:
-            self._auth[key] = deque(sorted(bucket, key=lambda item: item.timestamp or datetime.min.replace(tzinfo=timezone.utc)))
+            self._auth[key] = deque(
+                sorted(bucket, key=lambda item: item.timestamp or datetime.min.replace(tzinfo=timezone.utc))
+            )
         self._expire_timestamped()
 
         total = sum(len(events) for events in self._auth.values())
@@ -232,12 +235,22 @@ class AnalysisState:
         for key, events in self._auth.items():
             if events:
                 correlated.append(
-                    _auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds)
+                    _auth_finding(
+                        None if key == "<unknown>" else key,
+                        len(events),
+                        events[-1],
+                        self.auth_window_seconds,
+                    )
                 )
         for key, events in self._missing_ts.items():
             if events:
                 correlated.append(
-                    _auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds)
+                    _auth_finding(
+                        None if key == "<unknown>" else key,
+                        len(events),
+                        events[-1],
+                        self.auth_window_seconds,
+                    )
                 )
         correlated.sort(key=lambda item: item.title)
         return correlated + findings
