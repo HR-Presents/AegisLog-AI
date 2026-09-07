@@ -10,22 +10,28 @@ except ModuleNotFoundError:  # Python 3.10
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_v160_release_metadata_is_consistent():
+def test_v161_release_metadata_is_consistent():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     init_text = (ROOT / "src/aegislog/__init__.py").read_text(encoding="utf-8")
-    workflow = (ROOT / ".github/workflows/release-v1.6.0.yml").read_text(encoding="utf-8")
-    notes = (ROOT / "docs/RELEASE_V1.6.0.md").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github/workflows/release-v1.6.1.yml").read_text(encoding="utf-8")
+    historical_workflow = (ROOT / ".github/workflows/release-v1.6.0.yml").read_text(encoding="utf-8")
+    notes = (ROOT / "docs/RELEASE_V1.6.1.md").read_text(encoding="utf-8")
+    historical_notes = (ROOT / "docs/RELEASE_V1.6.0.md").read_text(encoding="utf-8")
     package_workflow = (ROOT / ".github/workflows/package.yml").read_text(encoding="utf-8")
 
     match = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
 
-    assert project["project"]["version"] == "1.6.0"
-    assert match and match.group(1) == "1.6.0"
-    assert "RELEASE_TAG: v1.6.0" in workflow
-    assert "RELEASE_VERSION: 1.6.0" in workflow
-    assert "RELEASE-v1.6.0" in workflow
-    assert "AegisLog-v1.6.0-release-assets" in workflow
-    assert "docs/RELEASE_V1.6.0.md" in workflow
-    assert "aegislog_ai-1.6.0-py3-none-any.whl" in package_workflow
-    assert "AegisLog-AI-v1.6.0-Customer-Bundle.zip" in package_workflow
-    assert notes.startswith("# AegisLog AI v1.6.0")
+    assert project["project"]["version"] == "1.6.1"
+    assert match and match.group(1) == "1.6.1"
+    assert "RELEASE_TAG: v1.6.1" in workflow
+    assert "RELEASE_VERSION: 1.6.1" in workflow
+    assert "RELEASE-v1.6.1" in workflow
+    assert "AegisLog-v1.6.1-release-assets" in workflow
+    assert "docs/RELEASE_V1.6.1.md" in workflow
+    assert "aegislog_ai-1.6.1-py3-none-any.whl" in package_workflow
+    assert "AegisLog-AI-v1.6.1-Customer-Bundle.zip" in package_workflow
+    assert notes.startswith("# AegisLog AI v1.6.1")
+    assert "Release v1.6.0 (retired)" in historical_workflow
+    assert "cannot publish" in historical_workflow
+    assert historical_notes.startswith("# AegisLog AI v1.6.0")
+    assert "currently unsigned" in historical_notes
