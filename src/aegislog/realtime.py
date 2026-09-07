@@ -24,6 +24,8 @@ from .trends import TrendSnapshot, TrendTracker, render_trends
 from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
 
 _PREFIX_BYTES = 128
+_MAX_READ_BYTES = 4_000_000
+_MAX_PENDING_LINE_BYTES = 1_000_000
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,11 @@ class FileCursor:
     offset: int
     identity: tuple[int, int]
     prefix_digest: str
+    pending: bytes = b""
+    pending_truncated: bool = False
+    dropped_bytes: int = 0
+    source_available: bool = True
+    reset_reason: str | None = None
 
 
 def _file_identity(path: Path) -> tuple[int, int]:
@@ -52,18 +59,61 @@ def initial_cursor(path: Path, from_start: bool = False) -> FileCursor:
     return FileCursor(offset, _file_identity(path), _prefix_digest(path, offset))
 
 
+def _bounded_complete_lines(
+    data: bytes,
+    pending: bytes,
+    pending_truncated: bool,
+    dropped_bytes: int,
+) -> tuple[list[str], bytes, bool, int]:
+    """Return only newline-complete lines while bounding a partial line by bytes."""
+    lines: list[str] = []
+
+    if pending_truncated:
+        newline = data.find(b"\n")
+        if newline < 0:
+            return lines, pending, True, dropped_bytes + len(data)
+        dropped_bytes += newline
+        lines.append((pending + b" [TRUNCATED]\n").decode("utf-8", errors="replace"))
+        data = data[newline + 1 :]
+        pending = b""
+        pending_truncated = False
+
+    buffer = pending + data
+    while True:
+        newline = buffer.find(b"\n")
+        if newline < 0:
+            break
+        raw_line = buffer[: newline + 1]
+        buffer = buffer[newline + 1 :]
+        if len(raw_line) > _MAX_PENDING_LINE_BYTES:
+            keep = raw_line[:_MAX_PENDING_LINE_BYTES].rstrip(b"\r\n")
+            dropped_bytes += max(0, len(raw_line) - len(keep) - 1)
+            raw_line = keep + b" [TRUNCATED]\n"
+        lines.append(raw_line.decode("utf-8", errors="replace"))
+
+    if len(buffer) > _MAX_PENDING_LINE_BYTES:
+        dropped_bytes += len(buffer) - _MAX_PENDING_LINE_BYTES
+        return lines, buffer[:_MAX_PENDING_LINE_BYTES], True, dropped_bytes
+    return lines, buffer, False, dropped_bytes
+
+
 @dataclass
 class RealtimeState:
     source: str
     window_size: int = 500
+    max_window_bytes: int = 5_000_000
+    max_line_bytes: int = 1_000_000
     alert_ttl_seconds: int = 300
     watch_profile: str = "all"
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
     last_activity_at: float | None = None
+    truncated_lines: int = 0
+    dropped_window_lines: int = 0
     trend_tracker: TrendTracker = field(default_factory=TrendTracker)
     _lines: deque[str] = field(default_factory=deque)
+    _window_bytes: int = 0
     _recent_findings: deque[Finding] = field(default_factory=lambda: deque(maxlen=12))
     _seen_fingerprints: dict[tuple[str, str, str], float] = field(default_factory=dict)
     _events_cache: list[Event] = field(default_factory=list)
@@ -72,23 +122,50 @@ class RealtimeState:
     def __post_init__(self) -> None:
         if self.window_size < 20:
             raise ValueError("window_size must be at least 20")
+        if self.max_window_bytes < 1 or self.max_line_bytes < 1:
+            raise ValueError("live byte limits must be positive")
         get_profile(self.watch_profile)
-        self._lines = deque(self._lines, maxlen=self.window_size)
+        original = list(self._lines)
+        self._lines = deque()
+        self._window_bytes = 0
+        for line in original:
+            self._append_bounded(line)
 
     @staticmethod
     def _finding_key(finding: Finding) -> tuple[str, str, str]:
         return (finding.severity, finding.category, finding.title)
+
+    def _normalize_line(self, line: str) -> tuple[str, int]:
+        encoded = line.encode("utf-8", errors="replace")
+        original_bytes = len(encoded)
+        if original_bytes <= self.max_line_bytes:
+            return line, original_bytes
+        self.truncated_lines += 1
+        clipped = encoded[: self.max_line_bytes].decode("utf-8", errors="replace")
+        return clipped + " [TRUNCATED]\n", original_bytes
+
+    def _append_bounded(self, line: str) -> str:
+        normalized, original_bytes = self._normalize_line(line)
+        retained_bytes = len(normalized.encode("utf-8", errors="replace"))
+        self._lines.append(normalized)
+        self._window_bytes += retained_bytes
+        self.total_bytes += original_bytes
+        while len(self._lines) > self.window_size or self._window_bytes > self.max_window_bytes:
+            dropped = self._lines.popleft()
+            self._window_bytes -= len(dropped.encode("utf-8", errors="replace"))
+            self.dropped_window_lines += 1
+        return normalized
 
     def ingest(self, lines: list[str], now: float | None = None) -> int:
         if not lines:
             return 0
         stamp = time.monotonic() if now is None else now
         self.last_activity_at = stamp
+        normalized: list[str] = []
         for line in lines:
-            self._lines.append(line)
+            normalized.append(self._append_bounded(line))
             self.total_lines += 1
-            self.total_bytes += len(line.encode("utf-8", errors="replace"))
-        self.trend_tracker.ingest(lines, stamp)
+        self.trend_tracker.ingest(normalized, stamp)
         self._refresh_snapshot()
         self._expire_seen(stamp)
         for finding in self._findings_cache:
@@ -123,6 +200,10 @@ class RealtimeState:
     @property
     def rolling_count(self) -> int:
         return len(self._lines)
+
+    @property
+    def rolling_bytes(self) -> int:
+        return self._window_bytes
 
     @property
     def recent_findings(self) -> tuple[Finding, ...]:
@@ -285,6 +366,8 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     status_text = Text(mode_note, style=status_style)
     status_text.append(
         f"Monitoring is read-only. {state.total_bytes:,} bytes ingested in {state.elapsed:.1f}s. "
+        f"Rolling analysis retains {state.rolling_bytes:,}/{state.max_window_bytes:,} bytes; "
+        f"{state.truncated_lines} oversized lines truncated and {state.dropped_window_lines} old lines evicted. "
         f"The {profile.label} profile changes terminal emphasis only; all input remains locally analyzed and no remediation is performed.",
         style="white",
     )
@@ -300,25 +383,72 @@ def render_realtime(state: RealtimeState) -> RenderableType:
 
 
 def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], FileCursor]:
-    """Read appended UTF-8 text using byte offsets and detect truncation or replacement."""
-    identity = _file_identity(path)
-    size = path.stat().st_size
-    current_prefix = _prefix_digest(path, cursor.offset)
+    """Read bounded appended bytes, retaining partial lines and detecting source resets/loss."""
+    try:
+        identity = _file_identity(path)
+        size = path.stat().st_size
+    except FileNotFoundError:
+        return [], FileCursor(
+            cursor.offset,
+            cursor.identity,
+            cursor.prefix_digest,
+            cursor.pending,
+            cursor.pending_truncated,
+            cursor.dropped_bytes,
+            False,
+            "source_missing",
+        )
+
     offset = cursor.offset
+    pending = cursor.pending
+    pending_truncated = cursor.pending_truncated
+    reset_reason: str | None = None
+    current_prefix = _prefix_digest(path, min(cursor.offset, size))
     replaced = identity != cursor.identity or (cursor.prefix_digest and current_prefix != cursor.prefix_digest)
-    if replaced or size < offset:
+    if not cursor.source_available:
         offset = 0
+        pending = b""
+        pending_truncated = False
+        reset_reason = "source_recovered"
+    elif replaced:
+        offset = 0
+        pending = b""
+        pending_truncated = False
+        reset_reason = "source_replaced"
+    elif size < offset:
+        offset = 0
+        pending = b""
+        pending_truncated = False
+        reset_reason = "source_truncated"
+
     with path.open("rb") as handle:
         handle.seek(offset, os.SEEK_SET)
-        data = handle.read()
+        data = handle.read(_MAX_READ_BYTES)
         new_offset = handle.tell()
-    text = data.decode("utf-8", errors="replace")
+
+    lines, pending, pending_truncated, dropped_bytes = _bounded_complete_lines(
+        data,
+        pending,
+        pending_truncated,
+        cursor.dropped_bytes,
+    )
     new_prefix = _prefix_digest(path, new_offset)
-    return text.splitlines(keepends=True), FileCursor(new_offset, identity, new_prefix)
+    return lines, FileCursor(
+        new_offset,
+        identity,
+        new_prefix,
+        pending,
+        pending_truncated,
+        dropped_bytes,
+        True,
+        reset_reason,
+    )
 
 
 def read_new_lines(path: Path, offset: int) -> tuple[list[str], int]:
-    """Backward-compatible byte-safe appended-line reader using a numeric offset."""
+    """Backward-compatible appended-line reader; incomplete trailing data is retried next call."""
     cursor = FileCursor(offset, _file_identity(path), _prefix_digest(path, offset))
     lines, cursor = read_new_lines_cursor(path, cursor)
+    if cursor.pending and not cursor.pending_truncated:
+        return lines, cursor.offset - len(cursor.pending)
     return lines, cursor.offset
