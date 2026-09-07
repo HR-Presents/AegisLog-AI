@@ -53,11 +53,17 @@ jobs:
       - name: Verify unsigned artifact is rejected by release guard
         shell: pwsh
         run: |
-          & pwsh -NoProfile -File packaging/verify_authenticode.ps1 -Path "dist\AegisLog.exe"
-          if ($LASTEXITCODE -eq 0) {
+          try {
+            & ./packaging/verify_authenticode.ps1 -Path "dist\AegisLog.exe"
             throw "Unsigned PR artifact unexpectedly passed the release Authenticode guard"
           }
-          Write-Host "Release guard correctly rejected the unsigned PR artifact."
+          catch {
+            $message = $_.Exception.Message
+            if ($message -notmatch "Authenticode signature is not valid" -or $message -notmatch "NotSigned") {
+              throw
+            }
+            Write-Host "Release guard correctly rejected the unsigned PR artifact: $message"
+          }
 
       - name: Verify distribution is exactly one executable
         shell: pwsh
