@@ -19,7 +19,7 @@ from .commands_v144 import start
 
 
 def register_commands(app: Typer) -> None:
-    """Register the supported CLI command surface on ``app`` exactly once."""
+    """Register the supported CLI command surface on ``app``."""
     replace_analyze_command(app)
     app.command("start")(start)
     app.command("dashboard")(dashboard)
@@ -44,4 +44,4 @@ def register_commands(app: Typer) -> None:
     app.command("entity-top")(entity_top)
 
 
-__all__ = ["register_commands"]
+__all__ = ["register_commands", "start"]
