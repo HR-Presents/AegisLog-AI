@@ -28,6 +28,7 @@ RULES = [
     ("MEDIUM", "service", re.compile(r"segfault|panic|fatal|crash|out of memory|oom-killer|service:\s+Failed|Failed with result", re.I), "Service or system failure", "Inspect surrounding events, resource pressure, and the affected service configuration."),
     ("MEDIUM", "error", re.compile(r"\berror\b|\bexception\b|\bdenied\b|\btimeout\b", re.I), "Operational error detected", "Inspect surrounding lines and the affected component for root cause."),
 ]
+PRIVILEGE_RULE = RULES[0]
 
 AUTH_FAILURE_RE = re.compile(r"failed password|authentication failure", re.I)
 SOURCE_IP_PATTERNS = (
@@ -112,8 +113,10 @@ def _auth_finding(ip: str | None, count: int, event: AuthEvent, window_seconds: 
         severity, label = "CRITICAL", "Sustained authentication failures"
     elif count >= 5:
         severity, label = "HIGH", "Possible brute-force activity"
-    else:
+    elif count >= 2:
         severity, label = "MEDIUM", "Repeated authentication failures"
+    else:
+        severity, label = "LOW", "Authentication failure observed"
     qualifiers = []
     if event.account:
         qualifiers.append(f"account={event.account}")
@@ -221,10 +224,17 @@ class AnalysisState:
                     Finding(signal.severity, signal.category, signal.title, signal.evidence, signal.recommendation)
                 )
                 return
+
+        # Preserve the more specific privilege signal before generic authentication correlation.
+        severity, category, pattern, title, recommendation = PRIVILEGE_RULE
+        if pattern.search(line):
+            self._other_findings.append(Finding(severity, category, title, line[:500], recommendation))
+            return
+
         if AUTH_FAILURE_RE.search(line):
             self._add_auth(_auth_event(line))
             return
-        for severity, category, pattern, title, recommendation in RULES:
+        for severity, category, pattern, title, recommendation in RULES[1:]:
             if pattern.search(line):
                 self._other_findings.append(Finding(severity, category, title, line[:500], recommendation))
                 break
