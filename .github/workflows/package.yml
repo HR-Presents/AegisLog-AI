@@ -38,7 +38,8 @@ jobs:
           cp dist/*.whl "$ROOT/package/"
           cp customer_bundle/* "$ROOT/"
           cp examples/auth.log "$ROOT/sample_logs/auth.log"
-          python -m pip download --dest "$ROOT/vendor" "rich>=13.7" "typer>=0.12" "colorama>=0.4.3"
+          python -m pip download --only-binary=:all: --require-hashes --dest "$ROOT/vendor" -r packaging/runtime-lock.txt
+          cp packaging/runtime-lock.txt "$ROOT/RUNTIME_LOCK.txt"
           chmod +x "$ROOT"/*.sh
           (
             cd "$ROOT"
@@ -62,8 +63,8 @@ jobs:
           set -eux
           test ! -e customer-dist/AegisLog-AI-Customer/.aegislog-venv
           test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.6.0-py3-none-any.whl
-          test -n "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name 'typer-*.whl' -print -quit)"
-          test -n "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name 'colorama-*.whl' -print -quit)"
+          test -f customer-dist/AegisLog-AI-Customer/RUNTIME_LOCK.txt
+          test "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 8
           test -f customer-dist/AegisLog-AI-Customer/START_AEGISLOG.bat
           test -f customer-dist/AegisLog-AI-Customer/START_AEGISLOG.sh
           test -f customer-dist/AegisLog-AI-Customer/INSTALL_WINDOWS.bat
@@ -117,7 +118,10 @@ jobs:
           Copy-Item "dist\*.whl" "$root\package\"
           Copy-Item "customer_bundle\*" "$root\"
           Copy-Item "examples\auth.log" "$root\sample_logs\auth.log"
-          python -m pip download --dest "$root\vendor" "rich>=13.7" "typer>=0.12" "colorama>=0.4.3"
+          Copy-Item "packaging\runtime-lock.txt" "$root\RUNTIME_LOCK.txt"
+          python -m pip download --only-binary=:all: --require-hashes --dest "$root\vendor" -r packaging/runtime-lock.txt
+          $wheelCount = (Get-ChildItem "$root\vendor\*.whl").Count
+          if ($wheelCount -ne 8) { throw "Expected exactly 8 locked runtime wheels, found $wheelCount" }
 
       - name: Verify actual Windows customer installer
         shell: cmd
