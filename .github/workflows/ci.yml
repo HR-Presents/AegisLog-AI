@@ -19,6 +19,7 @@ jobs:
       - run: pip install -e '.[dev]'
       - run: ruff check .
       - run: pytest -q
+      - run: python tools/evaluate_detections.py evaluation/labeled_events.jsonl
       - run: bandit -q -r src
       - run: aegislog doctor
       - run: aegislog analyze examples/auth.log
