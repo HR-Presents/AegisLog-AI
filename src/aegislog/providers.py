@@ -25,6 +25,21 @@ class ProviderError(RuntimeError):
 
 
 MAX_RESPONSE_BYTES = 2_000_000
+REMOTE_AI_OPT_IN_ENV = "AEGISLOG_ALLOW_REMOTE_AI"
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+
+
+def _remote_ai_enabled() -> bool:
+    return os.environ.get(REMOTE_AI_OPT_IN_ENV, "").strip().lower() in _TRUE_VALUES
+
+
+def _require_remote_ai_opt_in() -> None:
+    if not _remote_ai_enabled():
+        raise ProviderError(
+            "Remote AI is disabled by default to keep analysis local. "
+            f"Set {REMOTE_AI_OPT_IN_ENV}=1 only if you explicitly consent to sending redacted analysis context "
+            "to a remote provider."
+        )
 
 
 def _resolved_addresses(hostname: str, port: int) -> set[ipaddress.IPv4Address | ipaddress.IPv6Address]:
@@ -243,6 +258,7 @@ def _post_json(
 
 
 def openai_compatible(prompt: str, model: str, base_url: str | None = None) -> AIResponse:
+    _require_remote_ai_opt_in()
     api_key = os.environ.get("AEGISLOG_API_KEY") or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise ProviderError("No API key found. Set AEGISLOG_API_KEY or OPENAI_API_KEY.")
