@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from collections import OrderedDict, deque
+from collections import Counter, OrderedDict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -137,14 +137,7 @@ def _auth_finding(ip: str | None, count: int, event: AuthEvent, window_seconds: 
 
 
 class AnalysisState:
-    """Bounded cross-chunk correlation state used by file, stream, and live analysis.
-
-    Timestamped authentication failures are retained only inside a moving event-time window.
-    Out-of-order events inside that window are accepted and sorted; events older than the
-    current window are expired immediately. Events without timestamps use a separate bounded
-    event-order bucket and are explicitly described as such in evidence. Source cardinality,
-    retained authentication events, and non-auth findings are all globally bounded.
-    """
+    """Bounded cross-chunk correlation state used by file, stream, and live analysis."""
 
     def __init__(
         self,
@@ -163,12 +156,14 @@ class AnalysisState:
         self._missing_ts: OrderedDict[str, deque[AuthEvent]] = OrderedDict()
         self._latest_ts: datetime | None = None
         self._other_findings: list[Finding] = []
+        self._other_severities: Counter[str] = Counter()
         self.dropped_auth_events = 0
         self.expired_auth_events = 0
         self.dropped_findings = 0
         self.dropped_auth_sources = 0
 
     def _append_finding(self, finding: Finding) -> None:
+        self._other_severities[finding.severity] += 1
         if len(self._other_findings) < self.max_findings:
             self._other_findings.append(finding)
         else:
@@ -191,7 +186,6 @@ class AnalysisState:
             return True
         if self._total_auth_sources() < self.max_auth_sources:
             return True
-
         candidates: list[tuple[datetime, str]] = []
         for name, events in self._auth.items():
             if events and events[-1].timestamp is not None:
@@ -252,7 +246,6 @@ class AnalysisState:
         if not self._ensure_source_capacity(key):
             self.dropped_auth_events += 1
             return
-
         if event.timestamp is None:
             bucket = self._missing_ts.setdefault(key, deque())
             bucket.append(event)
@@ -262,14 +255,12 @@ class AnalysisState:
                 self.dropped_auth_events += 1
             self._trim_global_auth_events()
             return
-
         if self._latest_ts is None or event.timestamp > self._latest_ts:
             self._latest_ts = event.timestamp
         cutoff = self._latest_ts.timestamp() - self.auth_window_seconds
         if event.timestamp.timestamp() < cutoff:
             self.expired_auth_events += 1
             return
-
         bucket = self._auth.setdefault(key, deque())
         bucket.append(event)
         self._auth.move_to_end(key)
@@ -303,13 +294,10 @@ class AnalysisState:
                     Finding(signal.severity, signal.category, signal.title, signal.evidence, signal.recommendation)
                 )
                 return
-
-        # Preserve the more specific privilege signal before generic authentication correlation.
         severity, category, pattern, title, recommendation = PRIVILEGE_RULE
         if pattern.search(line):
             self._append_finding(Finding(severity, category, title, line[:500], recommendation))
             return
-
         if AUTH_FAILURE_RE.search(line):
             self._add_auth(_auth_event(line))
             return
@@ -318,30 +306,28 @@ class AnalysisState:
                 self._append_finding(Finding(severity, category, title, line[:500], recommendation))
                 break
 
-    def findings(self) -> list[Finding]:
+    def _correlated_findings(self) -> list[Finding]:
         correlated: list[Finding] = []
         for key, events in self._auth.items():
             if events:
                 correlated.append(
-                    _auth_finding(
-                        None if key == "<unknown>" else key,
-                        len(events),
-                        events[-1],
-                        self.auth_window_seconds,
-                    )
+                    _auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds)
                 )
         for key, events in self._missing_ts.items():
             if events:
                 correlated.append(
-                    _auth_finding(
-                        None if key == "<unknown>" else key,
-                        len(events),
-                        events[-1],
-                        self.auth_window_seconds,
-                    )
+                    _auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds)
                 )
         correlated.sort(key=lambda item: item.title)
-        return correlated + list(self._other_findings)
+        return correlated
+
+    def findings(self) -> list[Finding]:
+        return self._correlated_findings() + list(self._other_findings)
+
+    def severity_counts(self) -> dict[str, int]:
+        counts = Counter(self._other_severities)
+        counts.update(item.severity for item in self._correlated_findings())
+        return dict(counts)
 
 
 def analyze_lines(lines: list[str], auth_window_seconds: int = 300) -> list[Finding]:
