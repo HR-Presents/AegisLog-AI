@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,6 +32,7 @@ def analyze_stream(
     ``chunk_size`` controls progress batching only; detection state is shared so findings do
     not depend on chunk boundaries. Oversized lines are explicitly truncated before analysis.
     Correlation sources, retained auth events, and non-auth findings are bounded while ingesting.
+    Severity totals still include findings dropped after the retention cap.
     """
     if chunk_size < 1 or max_findings < 0 or max_line_bytes < 1 or max_auth_sources < 1:
         raise ValueError("stream limits must be valid positive values")
@@ -55,12 +55,11 @@ def analyze_stream(
             state.process(line)
     all_findings = state.findings()
     kept = all_findings[:max_findings]
-    counts = Counter(item.severity for item in all_findings)
     return StreamSummary(
         total,
         chunks,
         tuple(kept),
-        dict(counts),
+        state.severity_counts(),
         dropped_findings=state.dropped_findings + max(0, len(all_findings) - len(kept)),
         dropped_auth_events=state.dropped_auth_events,
         truncated_lines=truncated_lines,
