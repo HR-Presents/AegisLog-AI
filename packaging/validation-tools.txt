@@ -1,5 +1,6 @@
-# Release/CI validation tool inputs. This file will be converted to exact pins after cross-version resolution.
-pytest>=8.0
-ruff>=0.5
-bandit>=1.7
-pip-audit>=2.7
+# Direct release-validation tools for Python 3.12 / ubuntu-24.04.
+# Update only through reviewed PR plus validation-lock audit and full CI/release gates.
+pytest==9.1.1
+ruff==0.16.6
+bandit==1.9.4
+pip-audit==2.10.1
