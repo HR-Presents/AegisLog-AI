@@ -1,6 +1,6 @@
 # Release security and reproducibility
 
-AegisLog release workflows run tests, linting, Bandit, dependency audit, package validation, executable smoke tests, SHA-256 checksum generation, and artifact-provenance steps. These controls improve release quality, but checksums and provenance do not replace code signing or make a build bit-for-bit reproducible.
+AegisLog release workflows run tests, linting, Bandit, dependency audit, package validation, executable smoke tests, SHA-256 checksum generation, Authenticode verification, and artifact-provenance steps. These controls improve release quality, but checksums and provenance do not replace code signing or make a build bit-for-bit reproducible.
 
 ## Current reproducibility status
 
@@ -25,7 +25,7 @@ The actual v1.6.0 release-validation environment is Python 3.12 on `ubuntu-24.04
 
 Their complete resolved wheel set is SHA-256 locked in `packaging/validation-lock-py312-linux.txt`. `.github/workflows/validation-lock-audit.yml` independently re-resolves the direct validation pins, compares the exact name/version/artifact-hash set to the reviewed lock, and performs a `pip download --require-hashes` verification.
 
-The v1.6.0 release validation job now installs, in order, the reviewed Linux build lock, validation lock, and runtime lock, then installs AegisLog with `--no-deps --no-build-isolation`. It therefore runs Ruff, pytest, the labeled detection evaluation, Bandit, pip-audit, package construction, and Twine checks without resolving an unreviewed dev-extra dependency graph.
+The v1.6.0 release validation job installs, in order, the reviewed Linux build lock, validation lock, and runtime lock, then installs AegisLog with `--no-deps --no-build-isolation`. It therefore runs Ruff, pytest, the labeled detection evaluation, Bandit, pip-audit, package construction, and Twine checks without resolving an unreviewed dev-extra dependency graph.
 
 The Python 3.12 CI lane exercises this same exact locked release-validation stack on every pull request. Python 3.10, 3.11, and 3.13 CI lanes remain compatibility tests and still use the project dev-extra ranges; their tool versions may drift and should not be treated as the reproducible release environment.
 
@@ -37,18 +37,24 @@ Any dependency lock update should be a reviewed pull request that intentionally 
 
 ## Windows code signing
 
-The generated `AegisLog.exe` is currently unsigned. Production distribution should use an organization-controlled Windows code-signing identity and sign the final executable before checksum generation/publication. Verification should fail when the expected signature is absent or invalid.
+`packaging/verify_authenticode.ps1` is the release signature guard. It requires the executable to have a `Valid` Authenticode status, a signer certificate, and the Code Signing EKU (`1.3.6.1.5.5.7.3.3`). The v1.6.0 release workflow runs this check before staging, checksumming, provenance attestation, or publication. An unsigned, invalidly signed, or non-code-signing certificate therefore blocks the release.
 
-The signing private key must not be stored in this repository. External setup is required, such as an EV/OV code-signing certificate backed by a hardware/security service or a managed signing provider, with narrowly scoped CI credentials or workload identity. Those credentials are not available in this hardening work, so no signing step is fabricated or bypassed.
+The ordinary PR Windows executable remains unsigned because no signing identity is available in this hardening branch. Its workflow intentionally invokes the same guard and verifies that the unsigned PR artifact is rejected. This exercises the fail-closed behavior without inventing a certificate or publishing anything.
+
+Production signing still requires an organization-controlled Windows code-signing identity/service. The private key must not be stored in this repository. Appropriate external setup could use an EV/OV certificate backed by hardware/security service or a managed signing provider with narrowly scoped CI credentials or workload identity. Until that signer is configured, the current v1.6.0 release workflow is intentionally unable to pass the signature gate.
+
+## Historical release workflows
+
+The v1.4.6 and v1.5.0 manual release workflows are retired. They now have read-only repository permissions, no artifact build/upload/publication steps, and deliberately fail when manually dispatched. This removes superseded publication-capable entry points rather than preserving old workflows with floating action tags, `*-latest` runners, and loose dependency installation.
 
 ## Artifact provenance
 
-The package workflow requests GitHub build provenance for tagged Python/package-bundle artifacts. The Windows single-executable workflow requests provenance for non-PR builds, and the v1.6.0 release workflow requests provenance for the staged `AegisLog.exe` before upload. The provenance action is pinned by immutable commit SHA and receives scoped attestation permissions only where required.
+The package workflow requests GitHub build provenance for tagged Python/package-bundle artifacts. The Windows single-executable workflow requests provenance for non-PR builds, and the v1.6.0 release workflow requests provenance for the staged `AegisLog.exe` after successful Authenticode verification and before upload. The provenance action is pinned by immutable commit SHA and receives scoped attestation permissions only where required.
 
 Ordinary pull-request runs skip release attestation where appropriate. Because this hardening work does not publish a tag or release, the v1.6.0 release-path attestation has not been validated by an actual authorized release execution and must not be described as fully release-validated yet.
 
-Consumers should verify provenance in addition to checksums and, once configured, Windows code signatures.
+Consumers should verify provenance in addition to checksums and Windows code signatures.
 
 ## Release gate
 
-Before calling a build production-ready for external distribution, require green test/security/runtime-lock/build-lock/validation-lock/package/Windows smoke workflows, reviewed locked runtime/build/release-validation inputs, Windows code-signature verification, successful provenance verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented rather than silently waived.
+Before calling a build production-ready for external distribution, require green test/security/runtime-lock/build-lock/validation-lock/package/Windows smoke workflows, reviewed locked runtime/build/release-validation inputs, a valid Authenticode signature from an approved signing identity, successful provenance verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented rather than silently waived.
