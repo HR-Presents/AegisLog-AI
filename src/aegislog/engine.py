@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from collections import Counter, defaultdict, deque
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -115,19 +115,32 @@ def _auth_finding(ip: str | None, count: int, event: AuthEvent, window_seconds: 
     else:
         severity, label = "MEDIUM", "Repeated authentication failures"
     qualifiers = []
-    if event.account: qualifiers.append(f"account={event.account}")
-    if event.host: qualifiers.append(f"host={event.host}")
-    if event.timestamp: qualifiers.append(f"window={window_seconds}s")
-    else: qualifiers.append("timestamp unavailable; correlated by bounded event order")
+    if event.account:
+        qualifiers.append(f"account={event.account}")
+    if event.host:
+        qualifiers.append(f"host={event.host}")
+    if event.timestamp:
+        qualifiers.append(f"window={window_seconds}s")
+    else:
+        qualifiers.append("timestamp unavailable; correlated by bounded event order")
     return Finding(
-        severity, "authentication", f"{label} from {subject}",
+        severity,
+        "authentication",
+        f"{label} from {subject}",
         f"{count} failures; " + "; ".join(qualifiers) + f"; latest={event.evidence}",
         "Correlate successful logons, target accounts, source ownership, MFA, and rate limiting before concluding malicious intent.",
     )
 
 
 class AnalysisState:
-    """Bounded cross-chunk correlation state used by file, stream, and live analysis."""
+    """Bounded cross-chunk correlation state used by file, stream, and live analysis.
+
+    Timestamped authentication failures are retained only inside a moving event-time window.
+    Out-of-order events inside that window are accepted and sorted; events older than the
+    current window are expired immediately. Events without timestamps use a separate bounded
+    event-order bucket and are explicitly described as such in evidence.
+    """
+
     def __init__(self, auth_window_seconds: int = 300, max_auth_events: int = 10_000):
         if auth_window_seconds < 1 or max_auth_events < 1:
             raise ValueError("correlation limits must be positive")
@@ -138,6 +151,16 @@ class AnalysisState:
         self._latest_ts: datetime | None = None
         self._other_findings: list[Finding] = []
         self.dropped_auth_events = 0
+        self.expired_auth_events = 0
+
+    def _expire_timestamped(self) -> None:
+        if self._latest_ts is None:
+            return
+        cutoff = self._latest_ts.timestamp() - self.auth_window_seconds
+        for events in self._auth.values():
+            while events and events[0].timestamp and events[0].timestamp.timestamp() < cutoff:
+                events.popleft()
+                self.expired_auth_events += 1
 
     def _add_auth(self, event: AuthEvent) -> None:
         key = event.source_ip or "<unknown>"
@@ -145,52 +168,85 @@ class AnalysisState:
             bucket = self._missing_ts[key]
             bucket.append(event)
             while len(bucket) > min(self.max_auth_events, 20):
-                bucket.popleft(); self.dropped_auth_events += 1
+                bucket.popleft()
+                self.dropped_auth_events += 1
             return
+
         if self._latest_ts is None or event.timestamp > self._latest_ts:
             self._latest_ts = event.timestamp
+        cutoff = self._latest_ts.timestamp() - self.auth_window_seconds
+        if event.timestamp.timestamp() < cutoff:
+            self.expired_auth_events += 1
+            return
+
         bucket = self._auth[key]
         bucket.append(event)
-        cutoff = self._latest_ts.timestamp() - self.auth_window_seconds
-        for events in self._auth.values():
-            while events and events[0].timestamp and events[0].timestamp.timestamp() < cutoff:
-                events.popleft()
+        if len(bucket) > 1 and bucket[-2].timestamp and bucket[-2].timestamp > event.timestamp:
+            self._auth[key] = deque(sorted(bucket, key=lambda item: item.timestamp or datetime.min.replace(tzinfo=timezone.utc)))
+        self._expire_timestamped()
+
         total = sum(len(events) for events in self._auth.values())
         while total > self.max_auth_events:
-            oldest_key = min((k for k, v in self._auth.items() if v), key=lambda k: self._auth[k][0].timestamp)
-            self._auth[oldest_key].popleft(); self.dropped_auth_events += 1; total -= 1
+            oldest_key = min(
+                (name for name, events in self._auth.items() if events),
+                key=lambda name: self._auth[name][0].timestamp or datetime.max.replace(tzinfo=timezone.utc),
+            )
+            self._auth[oldest_key].popleft()
+            self.dropped_auth_events += 1
+            total -= 1
 
     def process(self, raw: str) -> None:
         line = redact(raw.strip())
-        if not line: return
+        if not line:
+            return
         windows_event = parse_windows_security_line(line)
         if windows_event is not None:
             signal = signal_for_event(windows_event)
             if windows_event.event_id == 4625:
-                self._add_auth(AuthEvent(_parse_timestamp(windows_event.timestamp), _valid_ip(windows_event.source_ip), windows_event.account, windows_event.workstation, line[:500]))
+                self._add_auth(
+                    AuthEvent(
+                        _parse_timestamp(windows_event.timestamp),
+                        _valid_ip(windows_event.source_ip),
+                        windows_event.account,
+                        windows_event.workstation,
+                        line[:500],
+                    )
+                )
                 return
             if signal is not None:
-                self._other_findings.append(Finding(signal.severity, signal.category, signal.title, signal.evidence, signal.recommendation)); return
+                self._other_findings.append(
+                    Finding(signal.severity, signal.category, signal.title, signal.evidence, signal.recommendation)
+                )
+                return
         if AUTH_FAILURE_RE.search(line):
-            self._add_auth(_auth_event(line)); return
+            self._add_auth(_auth_event(line))
+            return
         for severity, category, pattern, title, recommendation in RULES:
             if pattern.search(line):
-                self._other_findings.append(Finding(severity, category, title, line[:500], recommendation)); break
+                self._other_findings.append(Finding(severity, category, title, line[:500], recommendation))
+                break
 
     def findings(self) -> list[Finding]:
         findings = list(self._other_findings)
         correlated: list[Finding] = []
         for key, events in self._auth.items():
-            if events: correlated.append(_auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds))
+            if events:
+                correlated.append(
+                    _auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds)
+                )
         for key, events in self._missing_ts.items():
-            if events: correlated.append(_auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds))
+            if events:
+                correlated.append(
+                    _auth_finding(None if key == "<unknown>" else key, len(events), events[-1], self.auth_window_seconds)
+                )
         correlated.sort(key=lambda item: item.title)
         return correlated + findings
 
 
 def analyze_lines(lines: list[str], auth_window_seconds: int = 300) -> list[Finding]:
     state = AnalysisState(auth_window_seconds=auth_window_seconds)
-    for line in lines: state.process(line)
+    for line in lines:
+        state.process(line)
     return state.findings()
 
 
@@ -198,5 +254,6 @@ def analyze_file(path: Path, auth_window_seconds: int = 300) -> tuple[int, list[
     state = AnalysisState(auth_window_seconds=auth_window_seconds)
     count = 0
     with path.open("r", encoding="utf-8", errors="replace") as handle:
-        for count, line in enumerate(handle, 1): state.process(line)
+        for count, line in enumerate(handle, 1):
+            state.process(line)
     return count, state.findings()
