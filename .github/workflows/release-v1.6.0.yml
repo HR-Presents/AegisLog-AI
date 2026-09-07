@@ -67,7 +67,7 @@ jobs:
           python -m pip install -e . --no-deps --no-build-isolation
           ruff check .
           pytest -q
-          python tools/evaluate_detections.py evaluation/labeled_events.jsonl
+          python tools/evaluate_detections.py evaluation/labeled_events.jsonl --dataset-kind synthetic --min-precision 1.0 --min-recall 1.0 --min-case-accuracy 1.0 --max-fp 0 --max-fn 0
           bandit -q -r src
           pip-audit
           python -m build --no-isolation
@@ -114,9 +114,45 @@ jobs:
           .\dist\AegisLog.exe explain --help
           .\dist\AegisLog.exe mitre --help
           .\dist\AegisLog.exe intel-entities --help
-      - name: Require valid Authenticode signature
+      - name: Sign executable with approved release identity
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+          SIGNING_CERT_THUMBPRINT: ${{ secrets.WINDOWS_SIGNING_CERT_THUMBPRINT }}
+          SIGNING_TIMESTAMP_URL: ${{ vars.WINDOWS_SIGNING_TIMESTAMP_URL }}
         shell: pwsh
-        run: ./packaging/verify_authenticode.ps1 -Path "dist\AegisLog.exe"
+        run: |
+          $required = @{
+            WINDOWS_SIGNING_PFX_BASE64 = $env:SIGNING_PFX_BASE64
+            WINDOWS_SIGNING_PFX_PASSWORD = $env:SIGNING_PFX_PASSWORD
+            WINDOWS_SIGNING_CERT_THUMBPRINT = $env:SIGNING_CERT_THUMBPRINT
+            WINDOWS_SIGNING_TIMESTAMP_URL = $env:SIGNING_TIMESTAMP_URL
+          }
+          foreach ($item in $required.GetEnumerator()) {
+            if ([string]::IsNullOrWhiteSpace($item.Value)) {
+              throw "Required release signing configuration is missing: $($item.Key)"
+            }
+          }
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP "aegislog-release-signing.pfx"
+          try {
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
+            ./packaging/sign_windows.ps1 `
+              -Path "dist\AegisLog.exe" `
+              -PfxPath $pfxPath `
+              -PfxPassword $env:SIGNING_PFX_PASSWORD `
+              -ExpectedThumbprint $env:SIGNING_CERT_THUMBPRINT `
+              -TimestampUrl $env:SIGNING_TIMESTAMP_URL
+            ./packaging/verify_authenticode.ps1 `
+              -Path "dist\AegisLog.exe" `
+              -ExpectedThumbprint $env:SIGNING_CERT_THUMBPRINT `
+              -RequireTimestamp
+          }
+          finally {
+            if (Test-Path -LiteralPath $pfxPath) {
+              Remove-Item -LiteralPath $pfxPath -Force
+            }
+          }
       - name: Stage release assets
         shell: pwsh
         run: |
