@@ -60,6 +60,14 @@ HTTP responses, redirects, malformed response bodies, and provider/application e
 
 Proxy environment variables are not used by this direct `http.client` transport path. This avoids a proxy silently changing the network destination, but deployments that require an outbound HTTP proxy still need an explicitly validated proxy design or an external supported network path.
 
+## Runtime dependency integrity
+
+The customer bundle now uses `packaging/runtime-lock.txt`, which transitively pins the runtime wheel set and records an exact SHA-256 hash for every required wheel. The eight-wheel set was independently resolved on `ubuntu-24.04` and `windows-2025` with Python 3.12 and produced identical artifacts and hashes on both platforms.
+
+The dedicated runtime-lock workflow and both customer-bundle build paths use `pip download --require-hashes`, so an unexpected wheel, changed hash, or changed dependency version fails the build rather than silently entering the offline vendor directory. The bundle includes a copy of the reviewed lock as `RUNTIME_LOCK.txt`, and its normal bundle checksum manifest covers the copied lock and downloaded wheels.
+
+This closes the previously identified runtime/customer-bundle transitive dependency gap. It does **not** yet fully hash-lock transitive dependencies of the build/release toolchain itself.
+
 ## Detection evaluation
 
 `tools/evaluate_detections.py evaluation/labeled_events.jsonl` runs a small labeled synthetic regression set and reports overall and per-category precision/recall. The default reporting threshold is MEDIUM, so LOW contextual findings such as a single `/wp-login.php` request or a single generic authentication failure are not counted as positive detections.
@@ -80,6 +88,6 @@ The public CLI entrypoint registers commands through the stable `aegislog.comman
 
 ## Known remaining limitations
 
-Production-readiness gaps remain. Pure RFC3164 logs without a safe year hint still use the explicit missing-timestamp fallback rather than inventing a year. The direct provider transport intentionally does not inherit environment proxy settings. Runtime/customer-bundle dependencies and transitive build dependencies are not yet fully hash-locked. GitHub-hosted runner labels are pinned to explicit OS versions, but GitHub can still refresh the underlying image for that OS label over time. Windows binaries are not code-signed. Release provenance is configured for tagged package artifacts and the v1.6.0 executable path, but it still requires validation in an actual authorized tag/release execution. The synthetic detection dataset is too small to establish real-world false-positive rates or security effectiveness.
+Production-readiness gaps remain. Pure RFC3164 logs without a safe year hint still use the explicit missing-timestamp fallback rather than inventing a year. The direct provider transport intentionally does not inherit environment proxy settings. Runtime/customer-bundle dependencies are hash-locked, but transitive **build/release toolchain** dependencies are not yet fully hash-locked. GitHub-hosted runner labels are pinned to explicit OS versions, but GitHub can still refresh the underlying image for that OS label over time. Windows binaries are not code-signed. Release provenance is configured for tagged package artifacts and the v1.6.0 executable path, but it still requires validation in an actual authorized tag/release execution. The synthetic detection dataset is too small to establish real-world false-positive rates or security effectiveness.
 
 See `docs/RELEASE_SECURITY.md` for signing, reproducibility, provenance, and release-gate details.
