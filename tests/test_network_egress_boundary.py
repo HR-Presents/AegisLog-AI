@@ -53,6 +53,14 @@ def _network_shell_calls(tree: ast.AST) -> list[str]:
     return findings
 
 
+def _statement_calls(statement: ast.stmt) -> set[str]:
+    return {
+        node.func.id
+        for node in ast.walk(statement)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+
+
 def test_only_provider_module_owns_outbound_network_clients() -> None:
     violations: list[str] = []
     for path in sorted(APP_ROOT.glob("*.py")):
@@ -82,12 +90,16 @@ def test_provider_transport_keeps_consent_guard_before_network_setup() -> None:
     post_json = next(
         node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_post_json"
     )
-    calls = [
-        node.func.id
-        for node in ast.walk(post_json)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-    ]
 
-    assert "_require_remote_ai_opt_in" in calls
-    assert "_validated_endpoint" in calls
-    assert calls.index("_require_remote_ai_opt_in") < calls.index("_validated_endpoint")
+    guard_index = next(
+        (index for index, statement in enumerate(post_json.body) if "_require_remote_ai_opt_in" in _statement_calls(statement)),
+        None,
+    )
+    endpoint_index = next(
+        (index for index, statement in enumerate(post_json.body) if "_validated_endpoint" in _statement_calls(statement)),
+        None,
+    )
+
+    assert guard_index is not None
+    assert endpoint_index is not None
+    assert guard_index < endpoint_index
