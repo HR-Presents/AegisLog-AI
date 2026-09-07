@@ -47,6 +47,29 @@ python tools/evaluate_detections.py sanitized_external.jsonl \
 
 External results remain subject to sampling uncertainty, labeling error, class imbalance, prevalence differences, and dataset shift. Wilson intervals quantify binomial sampling uncertainty only; they do not correct those other limitations.
 
+## Building release evidence
+
+The v1.6 release preflight requires `evaluation/external-release-evidence.json`, but that file must not be fabricated or created from the synthetic fixture. Generate it only after a real, authorized, sanitized, independently labeled external evaluation has been completed for the exact release commit.
+
+Use the fail-closed generator instead of manually typing hashes or metrics:
+
+```text
+python tools/build_external_evidence.py sanitized_external.jsonl \
+  --evaluated-commit <40-character-release-commit> \
+  --provenance "Describe source population, sampling period, sanitization, and exclusions" \
+  --labeling-procedure "Describe independent labeling, adjudication, and review procedure" \
+  --reviewer "Reviewer name or approved review identifier" \
+  --reviewer-role "Security Analyst" \
+  --independent-labeling \
+  --sanitized
+```
+
+The generator evaluates the supplied dataset as `external`, derives the sample count and detection metrics from the evaluator, computes the dataset SHA-256 itself, records uncertainty and limitations, and writes the release-preflight schema. It refuses to generate evidence unless independent labeling and sanitization are explicitly confirmed, rejects malformed commit identifiers or weak narrative metadata, and refuses to overwrite an existing evidence file.
+
+Do not use `evaluation/labeled_events.jsonl` with this command for release evidence. Do not commit the underlying external telemetry unless the organization has explicitly approved that data for publication. The release evidence manifest should contain metadata, hashes, and aggregate results rather than raw sensitive telemetry.
+
+After generation, review the manifest and run the release preflight against the same exact commit. If the dataset, labels, code, or reviewed metadata change, regenerate the evidence rather than editing metrics or hashes by hand.
+
 ## Regression thresholds
 
 Optional gates are available for controlled datasets:
