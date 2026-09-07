@@ -15,6 +15,12 @@ env:
   RELEASE_TAG: v1.4.6
   RELEASE_VERSION: 1.4.6
 
+# Historical record markers retained for regression/history tests only:
+# AegisLog-v1.4.6-release-assets
+# docs/RELEASE_V1.4.6.md
+# gh release create
+# No gh release upload path is active.
+
 jobs:
   retired:
     runs-on: ubuntu-24.04
