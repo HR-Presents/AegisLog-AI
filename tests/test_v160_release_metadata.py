@@ -32,6 +32,7 @@ def test_v161_release_metadata_is_consistent():
     assert "AegisLog-AI-v1.6.1-Customer-Bundle.zip" in package_workflow
     assert notes.startswith("# AegisLog AI v1.6.1")
     assert "Release v1.6.0 (retired)" in historical_workflow
-    assert "cannot publish" in historical_workflow
+    assert "v1.6.0 was already published on 2026-09-02" in historical_workflow
+    assert "exit 1" in historical_workflow
     assert historical_notes.startswith("# AegisLog AI v1.6.0")
     assert "currently unsigned" in historical_notes
