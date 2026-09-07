@@ -1,0 +1,5 @@
+# Release/CI validation tool inputs. This file will be converted to exact pins after cross-version resolution.
+pytest>=8.0
+ruff>=0.5
+bandit>=1.7
+pip-audit>=2.7
