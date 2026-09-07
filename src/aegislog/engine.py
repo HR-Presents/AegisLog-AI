@@ -49,6 +49,11 @@ TIMESTAMP_PATTERNS = (
     re.compile(r"^(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)"),
     re.compile(r"^(?P<ts>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})"),
 )
+RFC3164_TIMESTAMP_RE = re.compile(
+    r"^(?P<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+"
+    r"(?P<day>\d{1,2})\s+(?P<clock>\d{2}:\d{2}:\d{2})\b",
+    re.I,
+)
 
 
 def redact(text: str) -> str:
@@ -56,7 +61,7 @@ def redact(text: str) -> str:
     return redact_sensitive(text)
 
 
-def _parse_timestamp(line: str) -> datetime | None:
+def _parse_absolute_timestamp(line: str) -> datetime | None:
     for pattern in TIMESTAMP_PATTERNS:
         match = pattern.search(line)
         if not match:
@@ -68,6 +73,25 @@ def _parse_timestamp(line: str) -> datetime | None:
             continue
         return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
     return None
+
+
+def _parse_timestamp(line: str, year_hint: int | None = None) -> datetime | None:
+    absolute = _parse_absolute_timestamp(line)
+    if absolute is not None:
+        return absolute
+    if year_hint is None:
+        return None
+    match = RFC3164_TIMESTAMP_RE.search(line)
+    if not match:
+        return None
+    try:
+        parsed = datetime.strptime(
+            f"{year_hint} {match.group('month')} {match.group('day')} {match.group('clock')}",
+            "%Y %b %d %H:%M:%S",
+        )
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc)
 
 
 def _valid_ip(value: str | None) -> str | None:
@@ -97,9 +121,9 @@ class AuthEvent:
     evidence: str
 
 
-def _auth_event(line: str) -> AuthEvent:
+def _auth_event(line: str, year_hint: int | None = None) -> AuthEvent:
     return AuthEvent(
-        _parse_timestamp(line),
+        _parse_timestamp(line, year_hint),
         _valid_ip(_first_match(SOURCE_IP_PATTERNS, line, "ip")),
         _first_match(ACCOUNT_PATTERNS, line, "account"),
         _first_match(HOST_PATTERNS, line, "host"),
@@ -145,13 +169,17 @@ class AnalysisState:
         max_auth_events: int = 10_000,
         max_auth_sources: int = 2_048,
         max_findings: int = 5_000,
+        timestamp_year_hint: int | None = None,
     ):
         if auth_window_seconds < 1 or max_auth_events < 1 or max_auth_sources < 1 or max_findings < 0:
             raise ValueError("correlation limits must be valid")
+        if timestamp_year_hint is not None and not 1970 <= timestamp_year_hint <= 9999:
+            raise ValueError("timestamp_year_hint must be a four-digit year")
         self.auth_window_seconds = auth_window_seconds
         self.max_auth_events = max_auth_events
         self.max_auth_sources = max_auth_sources
         self.max_findings = max_findings
+        self.timestamp_year_hint = timestamp_year_hint
         self._auth: OrderedDict[str, deque[AuthEvent]] = OrderedDict()
         self._missing_ts: OrderedDict[str, deque[AuthEvent]] = OrderedDict()
         self._latest_ts: datetime | None = None
@@ -275,13 +303,19 @@ class AnalysisState:
         line = redact(raw.strip())
         if not line:
             return
+        absolute_timestamp = _parse_absolute_timestamp(line)
+        if absolute_timestamp is not None:
+            self.timestamp_year_hint = absolute_timestamp.year
         windows_event = parse_windows_security_line(line)
         if windows_event is not None:
             signal = signal_for_event(windows_event)
             if windows_event.event_id == 4625:
+                windows_timestamp = _parse_absolute_timestamp(windows_event.timestamp)
+                if windows_timestamp is not None:
+                    self.timestamp_year_hint = windows_timestamp.year
                 self._add_auth(
                     AuthEvent(
-                        _parse_timestamp(windows_event.timestamp),
+                        windows_timestamp,
                         _valid_ip(windows_event.source_ip),
                         windows_event.account,
                         windows_event.workstation,
@@ -299,7 +333,7 @@ class AnalysisState:
             self._append_finding(Finding(severity, category, title, line[:500], recommendation))
             return
         if AUTH_FAILURE_RE.search(line):
-            self._add_auth(_auth_event(line))
+            self._add_auth(_auth_event(line, self.timestamp_year_hint))
             return
         for severity, category, pattern, title, recommendation in RULES[1:]:
             if pattern.search(line):
@@ -330,15 +364,19 @@ class AnalysisState:
         return dict(counts)
 
 
-def analyze_lines(lines: list[str], auth_window_seconds: int = 300) -> list[Finding]:
-    state = AnalysisState(auth_window_seconds=auth_window_seconds)
+def analyze_lines(
+    lines: list[str], auth_window_seconds: int = 300, *, timestamp_year_hint: int | None = None
+) -> list[Finding]:
+    state = AnalysisState(auth_window_seconds=auth_window_seconds, timestamp_year_hint=timestamp_year_hint)
     for line in lines:
         state.process(line)
     return state.findings()
 
 
-def analyze_file(path: Path, auth_window_seconds: int = 300) -> tuple[int, list[Finding]]:
-    state = AnalysisState(auth_window_seconds=auth_window_seconds)
+def analyze_file(
+    path: Path, auth_window_seconds: int = 300, *, timestamp_year_hint: int | None = None
+) -> tuple[int, list[Finding]]:
+    state = AnalysisState(auth_window_seconds=auth_window_seconds, timestamp_year_hint=timestamp_year_hint)
     count = 0
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         for count, line in enumerate(handle, 1):
