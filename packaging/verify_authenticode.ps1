@@ -1,9 +1,18 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Path
+    [string]$Path,
+
+    [string]$ExpectedThumbprint = '',
+
+    [switch]$RequireTimestamp
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+function Normalize-Thumbprint([string]$Value) {
+    return (($Value -replace '[^0-9A-Fa-f]', '').ToUpperInvariant())
+}
 
 if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     throw "Executable not found: $Path"
@@ -36,6 +45,24 @@ if (-not $hasCodeSigningEku) {
     throw "Signer certificate for '$Path' does not include the Code Signing EKU."
 }
 
+if (-not [string]::IsNullOrWhiteSpace($ExpectedThumbprint)) {
+    $expected = Normalize-Thumbprint $ExpectedThumbprint
+    $actual = Normalize-Thumbprint $signature.SignerCertificate.Thumbprint
+    if ($expected.Length -lt 40) {
+        throw 'Expected signing certificate thumbprint is malformed.'
+    }
+    if ($actual -ne $expected) {
+        throw "Signer certificate thumbprint mismatch. Expected $expected but found $actual."
+    }
+}
+
+if ($RequireTimestamp -and $null -eq $signature.TimeStamperCertificate) {
+    throw "Authenticode signature for '$Path' is not RFC3161 timestamped."
+}
+
 Write-Host "Valid Authenticode signature detected."
 Write-Host "Signer: $($signature.SignerCertificate.Subject)"
 Write-Host "Thumbprint: $($signature.SignerCertificate.Thumbprint)"
+if ($null -ne $signature.TimeStamperCertificate) {
+    Write-Host "Timestamp signer: $($signature.TimeStamperCertificate.Subject)"
+}
