@@ -200,6 +200,13 @@ def _post_json(
     allow_local: bool = False,
     proxy_url: str | None = None,
 ) -> dict:
+    # Enforce local-first behavior at the shared transport boundary so alternate or future
+    # remote provider adapters cannot bypass consent by calling the transport directly.
+    # This check occurs before DNS resolution or socket creation, so disabled remote AI has
+    # no provider-network side effect at all.
+    if not allow_local:
+        _require_remote_ai_opt_in()
+
     parsed, addresses = _validated_endpoint(url, allow_local)
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     path = urllib.parse.urlunparse(("", "", parsed.path or "/", parsed.params, parsed.query, ""))
@@ -258,6 +265,8 @@ def _post_json(
 
 
 def openai_compatible(prompt: str, model: str, base_url: str | None = None) -> AIResponse:
+    # Keep the adapter-level guard as defense in depth; the shared transport independently
+    # enforces the same consent requirement for every remote caller.
     _require_remote_ai_opt_in()
     api_key = os.environ.get("AEGISLOG_API_KEY") or os.environ.get("OPENAI_API_KEY")
     if not api_key:
