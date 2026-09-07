@@ -174,6 +174,34 @@ def test_post_json_connects_to_validated_address_without_second_dns_lookup():
         connection_cls.assert_called_once_with("provider.example", 443, "93.184.216.34", 45)
 
 
+def test_post_json_fails_over_only_across_prevalidated_addresses():
+    ipaddress = __import__("ipaddress")
+    parsed = __import__("urllib.parse").parse.urlparse("https://provider.example/v1")
+    first = MagicMock()
+    first.request.side_effect = OSError("synthetic connect failure")
+    response = MagicMock()
+    response.status = 200
+    response.getheader.return_value = None
+    response.read.return_value = b'{"ok": true}'
+    second = MagicMock()
+    second.getresponse.return_value = response
+
+    with patch(
+        "aegislog.providers._validated_endpoint",
+        return_value=(
+            parsed,
+            {
+                ipaddress.ip_address("93.184.216.34"),
+                ipaddress.ip_address("93.184.216.35"),
+            },
+        ),
+    ), patch("aegislog.providers._PinnedHTTPSConnection", side_effect=[first, second]) as connection_cls:
+        assert _post_json("https://provider.example/v1", {}, {}) == {"ok": True}
+        assert connection_cls.call_count == 2
+        attempted = [call.args[2] for call in connection_cls.call_args_list]
+        assert attempted == ["93.184.216.34", "93.184.216.35"]
+
+
 def test_provider_rejects_malformed_response_shape(monkeypatch):
     monkeypatch.setenv("AEGISLOG_API_KEY", "synthetic-api-key")
     monkeypatch.setattr("aegislog.providers._post_json", lambda *args, **kwargs: {"choices": []})
