@@ -12,10 +12,6 @@ from .plugins import apply_rules, load_rules
 console = Console()
 
 
-def _timestamp_year_option() -> int | None:
-    return None
-
-
 def dashboard(
     path: Path = typer.Argument(..., exists=True, dir_okay=False),
     timestamp_year: int | None = typer.Option(
