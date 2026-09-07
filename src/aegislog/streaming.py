@@ -25,21 +25,29 @@ def analyze_stream(
     *,
     auth_window_seconds: int = 300,
     max_auth_events: int = 10_000,
+    max_auth_sources: int = 2_048,
     max_line_bytes: int = 1_000_000,
 ) -> StreamSummary:
     """Analyze incrementally with shared bounded correlation state.
 
     ``chunk_size`` controls progress batching only; detection state is shared so findings do
     not depend on chunk boundaries. Oversized lines are explicitly truncated before analysis.
+    Correlation sources, retained auth events, and non-auth findings are bounded while ingesting.
     """
-    if chunk_size < 1 or max_findings < 0 or max_line_bytes < 1:
+    if chunk_size < 1 or max_findings < 0 or max_line_bytes < 1 or max_auth_sources < 1:
         raise ValueError("stream limits must be valid positive values")
     total = chunks = truncated_lines = 0
-    state = AnalysisState(auth_window_seconds=auth_window_seconds, max_auth_events=max_auth_events)
+    state = AnalysisState(
+        auth_window_seconds=auth_window_seconds,
+        max_auth_events=max_auth_events,
+        max_auth_sources=max_auth_sources,
+        max_findings=max_findings,
+    )
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
             total += 1
-            if (total - 1) % chunk_size == 0: chunks += 1
+            if (total - 1) % chunk_size == 0:
+                chunks += 1
             encoded = line.encode("utf-8", errors="replace")
             if len(encoded) > max_line_bytes:
                 line = encoded[:max_line_bytes].decode("utf-8", errors="ignore") + " [TRUNCATED]"
@@ -49,8 +57,11 @@ def analyze_stream(
     kept = all_findings[:max_findings]
     counts = Counter(item.severity for item in all_findings)
     return StreamSummary(
-        total, chunks, tuple(kept), dict(counts),
-        dropped_findings=max(0, len(all_findings) - len(kept)),
+        total,
+        chunks,
+        tuple(kept),
+        dict(counts),
+        dropped_findings=state.dropped_findings + max(0, len(all_findings) - len(kept)),
         dropped_auth_events=state.dropped_auth_events,
         truncated_lines=truncated_lines,
     )
