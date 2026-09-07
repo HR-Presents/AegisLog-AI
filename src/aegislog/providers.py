@@ -47,6 +47,8 @@ def _validated_endpoint(
         raise ProviderError("remote AI providers require HTTPS")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     addresses = _resolved_addresses(parsed.hostname, port)
+    if not addresses:
+        raise ProviderError("provider hostname resolved without usable addresses")
     unsafe = any(
         ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved
         for ip in addresses
@@ -92,6 +94,31 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
 
 
+def _read_json_response(response: http.client.HTTPResponse) -> dict:
+    if 300 <= response.status < 400:
+        raise ProviderError("provider redirects are disabled")
+    if not 200 <= response.status < 300:
+        raise ProviderError(f"provider returned HTTP {response.status}")
+    declared = response.getheader("Content-Length")
+    if declared:
+        try:
+            declared_size = int(declared)
+        except ValueError as exc:
+            raise ProviderError("provider returned an invalid Content-Length") from exc
+        if declared_size > MAX_RESPONSE_BYTES:
+            raise ProviderError("provider response exceeds the 2 MB safety limit")
+    body = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(body) > MAX_RESPONSE_BYTES:
+        raise ProviderError("provider response exceeds the 2 MB safety limit")
+    try:
+        data = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProviderError("provider returned malformed JSON") from exc
+    if not isinstance(data, dict):
+        raise ProviderError("provider returned a non-object JSON response")
+    return data
+
+
 def _post_json(
     url: str,
     payload: dict,
@@ -100,50 +127,33 @@ def _post_json(
     allow_local: bool = False,
 ) -> dict:
     parsed, addresses = _validated_endpoint(url, allow_local)
-    # Connect to an address from the validated DNS result instead of resolving the hostname again.
-    # TLS still authenticates the original hostname through SNI/certificate verification.
-    address = str(sorted(addresses, key=str)[0])
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     connection_cls = _PinnedHTTPSConnection if parsed.scheme == "https" else _PinnedHTTPConnection
-    connection = connection_cls(parsed.hostname, port, address, timeout)
     path = urllib.parse.urlunparse(("", "", parsed.path or "/", parsed.params, parsed.query, ""))
     request_headers = {"Content-Type": "application/json", "Host": parsed.netloc, **headers}
-    try:
-        connection.request(
-            "POST",
-            path,
-            body=json.dumps(payload).encode("utf-8"),
-            headers=request_headers,
-        )
-        response = connection.getresponse()
-        if 300 <= response.status < 400:
-            raise ProviderError("provider redirects are disabled")
-        if not 200 <= response.status < 300:
-            raise ProviderError(f"provider returned HTTP {response.status}")
-        declared = response.getheader("Content-Length")
-        if declared:
-            try:
-                declared_size = int(declared)
-            except ValueError as exc:
-                raise ProviderError("provider returned an invalid Content-Length") from exc
-            if declared_size > MAX_RESPONSE_BYTES:
-                raise ProviderError("provider response exceeds the 2 MB safety limit")
-        body = response.read(MAX_RESPONSE_BYTES + 1)
-        if len(body) > MAX_RESPONSE_BYTES:
-            raise ProviderError("provider response exceeds the 2 MB safety limit")
+    body = json.dumps(payload).encode("utf-8")
+
+    # Resolve and validate once, then attempt only the addresses from that exact validated set.
+    # This preserves the DNS rebinding/TOCTOU protection while allowing ordinary multi-address
+    # provider endpoints to survive one unreachable address. HTTP/application failures are not
+    # retried across addresses because the provider did respond and repeating the request could
+    # duplicate side effects or hide a real provider error.
+    connection_errors: list[str] = []
+    for address in sorted((str(item) for item in addresses), key=str):
+        connection = connection_cls(parsed.hostname, port, address, timeout)
         try:
-            data = json.loads(body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ProviderError("provider returned malformed JSON") from exc
-        if not isinstance(data, dict):
-            raise ProviderError("provider returned a non-object JSON response")
-        return data
-    except ProviderError:
-        raise
-    except (OSError, http.client.HTTPException, TimeoutError) as exc:
-        raise ProviderError(str(exc)) from exc
-    finally:
-        connection.close()
+            connection.request("POST", path, body=body, headers=request_headers)
+            response = connection.getresponse()
+            return _read_json_response(response)
+        except ProviderError:
+            raise
+        except (OSError, http.client.HTTPException, TimeoutError) as exc:
+            connection_errors.append(f"{address}: {exc}")
+        finally:
+            connection.close()
+
+    details = "; ".join(connection_errors) if connection_errors else "no validated address was attempted"
+    raise ProviderError(f"provider connection failed for all validated addresses: {details}")
 
 
 def openai_compatible(prompt: str, model: str, base_url: str | None = None) -> AIResponse:
