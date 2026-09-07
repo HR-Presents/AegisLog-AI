@@ -11,6 +11,11 @@ from aegislog.providers import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _explicit_remote_ai_consent(monkeypatch):
+    monkeypatch.setenv("AEGISLOG_ALLOW_REMOTE_AI", "1")
+
+
 def test_proxy_requires_credential_free_https_origin():
     with pytest.raises(ProviderError, match="credential-free HTTPS origin"):
         _validated_proxy_endpoint("http://proxy.example:8080")
