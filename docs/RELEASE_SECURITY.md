@@ -4,38 +4,41 @@ AegisLog release workflows run tests, linting, Bandit, dependency audit, package
 
 ## Current reproducibility status
 
-This hardening branch pins the Python package build backend (`setuptools==84.0.0`) and direct release/build tools in `packaging/build-tools.txt` (`build==1.6.0`, `twine==7.0.0`, and `pyinstaller==6.22.2`). Package, Windows-executable, and v1.6.0 release workflows consume those direct pins.
+The reviewed direct artifact-build inputs are pinned in `packaging/build-tools.txt`: `pip==26.2.1`, `setuptools==84.0.0`, `build==1.6.0`, `twine==7.0.0`, and `pyinstaller==6.22.2`.
 
-Runtime/customer-bundle dependencies are now transitively pinned and SHA-256 locked in `packaging/runtime-lock.txt`. The lock contains the eight universal wheels required by the customer bundle (`rich`, `typer`, `colorama`, and their resolved runtime dependencies). The exact wheel set and hashes were independently resolved on the supported GitHub-hosted `ubuntu-24.04` and `windows-2025` runners with Python 3.12 and matched across both platforms. `pip download --require-hashes` now enforces that lock in both the dedicated runtime-lock audit and the Linux/Windows customer-bundle builds. The lock file is also copied into the customer bundle as `RUNTIME_LOCK.txt` for traceability.
+Their resolved transitive dependencies are now SHA-256 locked separately for Python 3.12 on the two supported build environments:
 
-The active CI, security, package, Windows single-executable, runtime-lock-audit, and v1.6.0 release workflows reference GitHub Actions by immutable commit SHA rather than moving major-version tags. Those workflows also use explicit hosted OS labels (`ubuntu-24.04` and `windows-2025`) instead of `*-latest` aliases.
+- `packaging/build-lock-linux.txt` for `ubuntu-24.04`;
+- `packaging/build-lock-windows.txt` for `windows-2025`.
 
-These are material reproducibility and supply-chain improvements, not a bit-for-bit reproducibility guarantee. Transitive dependencies of the **build/release toolchain** are not yet fully hash-locked, and GitHub can refresh the underlying VM image associated with a fixed OS label. Two builds can therefore still execute with different preinstalled tool revisions even when the source, direct tool pins, runtime lock, action SHAs, and OS label text are unchanged.
+The platform split is deliberate. Universal artifacts share hashes where appropriate, while platform-specific artifacts such as PyInstaller, `charset-normalizer`, `nh3`, `cffi`/`cryptography`, `pefile`, and `pywin32-ctypes` are locked to the wheel actually used by that build environment.
 
-Any lock update should be a normal reviewed pull request that:
+`.github/workflows/build-lock-audit.yml` independently resolves `packaging/build-tools.txt` on Linux and Windows, compares the exact name/version/artifact-hash set against the corresponding reviewed lock, and then performs a `pip download --require-hashes` verification. A changed direct version, dependency resolution, selected wheel, or artifact hash therefore fails the audit instead of silently changing the build environment.
 
-1. changes dependency versions and hashes intentionally;
-2. verifies the locked wheel set on both supported hosted OS targets;
-3. runs unit, security, package, installer, executable, and CLI smoke checks;
-4. records material compatibility or security changes in the changelog; and
-5. is merged before a release tag is created.
+Package and Windows executable workflows install these lockfiles with `--require-hashes`. Python package construction uses `python -m build --no-isolation`, so the build does not create a fresh isolated environment that re-downloads an unreviewed `setuptools`. The Windows executable path also installs the reviewed runtime lock and then installs AegisLog itself with `--no-deps`, preventing the editable install from resolving a second unpinned runtime dependency set.
 
-The runtime lock, direct tool pins, action SHAs, and explicit OS labels in this branch should be updated only through that review process. Do not silently replace exact pins or hashes during a release run.
+Runtime/customer-bundle dependencies are independently transitively pinned and SHA-256 locked in `packaging/runtime-lock.txt`. The eight universal runtime wheels were resolved on both `ubuntu-24.04` and `windows-2025` with Python 3.12 and produced the same hashes. Runtime-lock audit and customer-bundle workflows enforce that lock with `--require-hashes`, and the bundle includes `RUNTIME_LOCK.txt` for traceability.
+
+The active CI, security, package, Windows single-executable, runtime-lock-audit, build-lock-audit, and v1.6.0 release workflows reference GitHub Actions by immutable commit SHA and use explicit hosted OS labels rather than `*-latest` aliases.
+
+These controls materially reduce dependency and workflow drift, but they are not a bit-for-bit reproducibility guarantee. GitHub can refresh the underlying VM image behind a fixed OS label. Also, release **validation/test tooling** installed through the project dev extra (`pytest`, `ruff`, `bandit`, `pip-audit`, and their transitives) is not yet fully hash-locked. That validation-tool gap is separate from the now-hash-locked artifact-producing build toolchain.
+
+Any dependency lock update should be a reviewed pull request that intentionally changes versions/hashes, verifies the lock on the supported OS target, runs security/package/installer/executable/CLI gates, and is merged before a release tag is created. Do not regenerate or relax hashes during a release run.
 
 ## Windows code signing
 
 The generated `AegisLog.exe` is currently unsigned. Production distribution should use an organization-controlled Windows code-signing identity and sign the final executable before checksum generation/publication. Verification should fail when the expected signature is absent or invalid.
 
-This repository cannot safely include the signing private key. External setup is required, such as an EV/OV code-signing certificate backed by a hardware/security service or a managed signing provider. CI then needs narrowly scoped credentials or workload identity for that service. Those credentials are not available in this hardening work, so no signing step is fabricated or bypassed here.
+The signing private key must not be stored in this repository. External setup is required, such as an EV/OV code-signing certificate backed by a hardware/security service or a managed signing provider, with narrowly scoped CI credentials or workload identity. Those credentials are not available in this hardening work, so no signing step is fabricated or bypassed.
 
 ## Artifact provenance
 
-The package workflow requests GitHub build provenance for tagged Python/package-bundle artifacts. The Windows single-executable workflow requests provenance for non-PR builds, and the v1.6.0 release workflow requests provenance for the staged `AegisLog.exe` before upload. The provenance action itself is pinned by immutable commit SHA and receives only the permissions required for attestations in jobs that need it.
+The package workflow requests GitHub build provenance for tagged Python/package-bundle artifacts. The Windows single-executable workflow requests provenance for non-PR builds, and the v1.6.0 release workflow requests provenance for the staged `AegisLog.exe` before upload. The provenance action is pinned by immutable commit SHA and receives scoped attestation permissions only where required.
 
-These workflow definitions bind eligible artifacts to repository/workflow/source identity when the attestation service is available. Ordinary pull-request runs skip release attestation where appropriate. Because this hardening work does not publish a tag or release, the release-path attestation has not been validated by an actual authorized release execution yet; it should not be described as fully release-validated until that occurs.
+Ordinary pull-request runs skip release attestation where appropriate. Because this hardening work does not publish a tag or release, the v1.6.0 release-path attestation has not been validated by an actual authorized release execution and must not be described as fully release-validated yet.
 
 Consumers should verify provenance in addition to checksums and, once configured, Windows code signatures.
 
 ## Release gate
 
-Before calling a build production-ready for external distribution, require all of the following: green test/security/runtime-lock/package/Windows smoke workflows, reviewed hash-locked runtime inputs, reviewed fully locked build-tool inputs, code-signature verification on Windows artifacts, successful provenance/attestation verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented in the release notes instead of silently waived.
+Before calling a build production-ready for external distribution, require green test/security/runtime-lock/build-lock/package/Windows smoke workflows, reviewed locked artifact-build and runtime inputs, locked release-validation tooling or an explicitly documented exception, Windows code-signature verification, successful provenance verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented rather than silently waived.
