@@ -10,6 +10,11 @@ from aegislog.sanitize import redact_sensitive
 from aegislog.streaming import analyze_stream
 
 
+@pytest.fixture(autouse=True)
+def _explicit_remote_ai_consent(monkeypatch):
+    monkeypatch.setenv("AEGISLOG_ALLOW_REMOTE_AI", "1")
+
+
 def _shape(findings):
     return [(item.severity, item.category, item.title, item.evidence) for item in findings]
 
@@ -148,6 +153,17 @@ def test_remote_ai_is_disabled_by_default_even_when_api_key_exists(monkeypatch):
         with pytest.raises(ProviderError, match="disabled by default"):
             openai_compatible("safe prompt", "model")
     outbound.assert_not_called()
+
+
+def test_remote_transport_consent_blocks_dns_and_socket_side_effects(monkeypatch):
+    monkeypatch.delenv("AEGISLOG_ALLOW_REMOTE_AI", raising=False)
+    with patch("aegislog.providers.socket.getaddrinfo") as dns, patch(
+        "aegislog.providers.socket.create_connection"
+    ) as connect:
+        with pytest.raises(ProviderError, match="disabled by default"):
+            _post_json("https://provider.example/v1", {"log": "synthetic"}, {})
+    dns.assert_not_called()
+    connect.assert_not_called()
 
 
 def test_outgoing_openai_prompt_is_redacted_before_transport(monkeypatch):
