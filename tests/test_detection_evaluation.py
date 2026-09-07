@@ -1,11 +1,22 @@
+import importlib.util
 from pathlib import Path
 
 import pytest
 
-from tools.evaluate_detections import _wilson_interval, evaluate, regression_failures
+
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = ROOT / "evaluation" / "labeled_events.jsonl"
+MODULE_PATH = ROOT / "tools" / "evaluate_detections.py"
+SPEC = importlib.util.spec_from_file_location("aegislog_detection_evaluator", MODULE_PATH)
+if SPEC is None or SPEC.loader is None:  # pragma: no cover - importlib platform guard
+    raise RuntimeError("could not load detection evaluator module")
+EVALUATOR = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(EVALUATOR)
 
 
-FIXTURE = Path("evaluation/labeled_events.jsonl")
+evaluate = EVALUATOR.evaluate
+regression_failures = EVALUATOR.regression_failures
+_wilson_interval = EVALUATOR._wilson_interval
 
 
 def test_synthetic_report_includes_confidence_intervals_and_exact_accuracy():
