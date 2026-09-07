@@ -1,0 +1,4 @@
+# Direct release/build tools. Keep exact pins; update via reviewed PR and full package/Windows CI.
+build==1.6.0
+twine==7.0.0
+pyinstaller==6.22.2
