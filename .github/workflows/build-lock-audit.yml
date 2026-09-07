@@ -1,0 +1,44 @@
+name: Build toolchain lock audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-build-lock:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            lock_name: linux
+          - os: windows-2025
+            lock_name: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Resolve exact build toolchain and print lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --dry-run --ignore-installed --only-binary=:all: \
+            -r packaging/build-tools.txt --report build-lock-report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("build-lock-report.json").read_text(encoding="utf-8"))
+          rows = []
+          for item in report["install"]:
+              name = item["metadata"]["name"]
+              version = item["metadata"]["version"]
+              digest = item["download_info"]["archive_info"]["hash"]
+              rows.append((name.lower(), f"{name}=={version} --hash={digest}"))
+          for _, line in sorted(rows):
+              print("LOCK", line)
+          PY
