@@ -1,0 +1,75 @@
+# Release security and reproducibility
+
+AegisLog release workflows run tests, linting, Bandit, dependency audit, package validation, executable smoke tests, SHA-256 checksum generation, Authenticode verification, and artifact-provenance steps. These controls improve release quality, but checksums and provenance do not replace code signing or make a build bit-for-bit reproducible.
+
+## Current reproducibility status
+
+The reviewed direct artifact-build inputs are pinned in `packaging/build-tools.txt`: `pip==26.2.1`, `setuptools==84.0.0`, `build==1.6.0`, `twine==7.0.0`, and `pyinstaller==6.22.2`.
+
+Their resolved transitive dependencies are SHA-256 locked separately for Python 3.12 on the two supported build environments:
+
+- `packaging/build-lock-linux.txt` for `ubuntu-24.04`;
+- `packaging/build-lock-windows.txt` for `windows-2025`.
+
+The platform split is deliberate. Universal artifacts share hashes where appropriate, while platform-specific artifacts such as PyInstaller, `charset-normalizer`, `nh3`, `cffi`/`cryptography`, `pefile`, and `pywin32-ctypes` are locked to the wheel actually used by that build environment.
+
+`.github/workflows/build-lock-audit.yml` independently resolves `packaging/build-tools.txt` on Linux and Windows, compares the exact name/version/artifact-hash set against the corresponding reviewed lock, and then performs a `pip download --require-hashes` verification. A changed direct version, dependency resolution, selected wheel, or artifact hash therefore fails the audit instead of silently changing the build environment.
+
+Package and Windows executable workflows install these lockfiles with `--require-hashes`. Python package construction uses `python -m build --no-isolation`, so the build does not create a fresh isolated environment that re-downloads an unreviewed `setuptools`. The Windows executable path also installs the reviewed runtime lock and then installs AegisLog itself with `--no-deps --no-build-isolation`, preventing editable installation from resolving a second dependency set or creating a temporary build environment.
+
+Runtime/customer-bundle dependencies are independently transitively pinned and SHA-256 locked in `packaging/runtime-lock.txt`. The eight universal runtime wheels were resolved on both `ubuntu-24.04` and `windows-2025` with Python 3.12 and produced the same hashes. Runtime-lock audit and customer-bundle workflows enforce that lock with `--require-hashes`, and the bundle includes `RUNTIME_LOCK.txt` for traceability.
+
+## Release validation toolchain
+
+The actual v1.6.0 release-validation environment is Python 3.12 on `ubuntu-24.04`. Its direct validation tools are exact pins in `packaging/validation-tools.txt`: `pytest==9.1.1`, `ruff==0.16.6`, `bandit==1.9.4`, and `pip-audit==2.10.1`.
+
+The resolved validation wheel sets are SHA-256 locked separately for every supported CI interpreter: `packaging/validation-lock-py310-linux.txt`, `packaging/validation-lock-py311-linux.txt`, `packaging/validation-lock-py312-linux.txt`, and `packaging/validation-lock-py313-linux.txt`. Separate files are required because dependency membership and compiled-wheel hashes genuinely differ by Python version; for example Python 3.10 requires `exceptiongroup`, resolves a different compatible `stevedore`, and multiple compiled wheels have interpreter-specific hashes.
+
+`.github/workflows/validation-lock-audit.yml` independently re-resolves `packaging/validation-tools.txt` on Python 3.10, 3.11, 3.12, and 3.13, compares each exact name/version/artifact-hash set to the corresponding reviewed lock, and performs a `pip download --require-hashes` verification for each interpreter.
+
+The v1.6.0 release validation job installs, in order, the reviewed Linux build lock, Python 3.12 validation lock, and runtime lock, then installs AegisLog with `--no-deps --no-build-isolation`. It therefore runs Ruff, pytest, the labeled detection evaluation, Bandit, pip-audit, package construction, and Twine checks without resolving an unreviewed dev-extra dependency graph.
+
+All four CI lanes now use deterministic validation inputs rather than the floating project dev extra. Each lane installs the minimal hash-locked editable backend in `packaging/editable-build-backend.txt`, its interpreter-specific validation lock, the reviewed runtime lock, and then AegisLog with `--no-deps --no-build-isolation`. Python 3.12 additionally installs the reviewed artifact-build lock because it is the actual release-validation environment.
+
+The active CI, security, package, Windows single-executable, runtime-lock-audit, build-lock-audit, validation-lock-audit, and v1.6.0 release workflows reference GitHub Actions by immutable commit SHA and use explicit hosted OS labels rather than `*-latest` aliases.
+
+These controls materially reduce dependency and workflow drift, but they are not a bit-for-bit reproducibility guarantee. GitHub can refresh the underlying VM image behind a fixed OS label, and only Python 3.12 is the designated release-validation interpreter even though all compatibility lanes now have deterministic dependency inputs.
+
+Any dependency lock update should be a reviewed pull request that intentionally changes versions/hashes, verifies the lock on the supported OS/interpreter target, runs security/package/installer/executable/CLI gates, and is merged before a release tag is created. Do not regenerate or relax hashes during a release run.
+
+## Windows code signing
+
+`packaging/sign_windows.ps1` is the concrete release signing adapter for a PFX-backed organization-controlled certificate. It imports the PFX into the ephemeral runner's `CurrentUser\My` certificate store with the private key marked non-exportable, verifies that the imported certificate thumbprint exactly matches the approved configured thumbprint, requires the Code Signing EKU, signs `AegisLog.exe` with SHA-256 through Windows `signtool.exe`, requires an HTTPS RFC3161 timestamp endpoint, and removes the imported certificate from the runner store afterward.
+
+The v1.6.0 workflow expects the following external configuration and does not store any of it in the repository:
+
+- GitHub Actions secret `WINDOWS_SIGNING_PFX_BASE64`: base64-encoded PFX bytes;
+- GitHub Actions secret `WINDOWS_SIGNING_PFX_PASSWORD`: PFX password;
+- GitHub Actions secret `WINDOWS_SIGNING_CERT_THUMBPRINT`: the approved certificate thumbprint;
+- GitHub Actions variable `WINDOWS_SIGNING_TIMESTAMP_URL`: an HTTPS RFC3161 timestamp URL approved by the organization.
+
+The release writes the decoded PFX only to `RUNNER_TEMP`, signs the executable, and removes the temporary PFX in a `finally` block. Missing configuration, malformed certificate material, a thumbprint mismatch, lack of a private key, lack of the Code Signing EKU, missing `signtool.exe`, timestamping failure, or signing failure aborts the job.
+
+`packaging/verify_authenticode.ps1` is the post-signing release guard. It requires a `Valid` Authenticode status, a signer certificate, and the Code Signing EKU. In the release workflow it additionally requires the signer thumbprint to match `WINDOWS_SIGNING_CERT_THUMBPRINT` and requires a timestamp signer certificate before staging, checksumming, provenance attestation, or publication. Therefore a valid signature from an unexpected certificate is not sufficient.
+
+The ordinary PR Windows executable remains unsigned because release signing secrets are intentionally unavailable to pull-request builds. Its workflow exercises both fail-closed paths: the signing adapter must reject missing certificate material, and the Authenticode guard must reject the unsigned PR artifact. This validates signing integration behavior without exposing a private key or publishing anything.
+
+The PFX adapter is appropriate only when organizational policy permits a PFX-backed certificate in GitHub Actions secrets. If the production identity is hardware-backed, EV-token-backed, Azure Trusted Signing, DigiCert KeyLocker, or another managed signing service, add a narrowly scoped provider-specific adapter rather than exporting or weakening that key to fit the PFX path. The post-signing thumbprint and timestamp verification should remain mandatory regardless of signing provider.
+
+Until a real organization-controlled signing identity and the required external configuration are provisioned, the v1.6.0 release workflow remains intentionally unable to publish the Windows executable.
+
+## Historical release workflows
+
+The v1.4.6 and v1.5.0 manual release workflows are retired. They now have read-only repository permissions, no artifact build/upload/publication steps, and deliberately fail when manually dispatched. This removes superseded publication-capable entry points rather than preserving old workflows with floating action tags, `*-latest` runners, and loose dependency installation.
+
+## Artifact provenance
+
+The package workflow requests GitHub build provenance for tagged Python/package-bundle artifacts. The Windows single-executable workflow requests provenance for non-PR builds, and the v1.6.0 release workflow requests provenance for the staged `AegisLog.exe` after successful Authenticode verification and before upload. The provenance action is pinned by immutable commit SHA and receives scoped attestation permissions only where required.
+
+Ordinary pull-request runs skip release attestation where appropriate. Because this hardening work does not publish a tag or release, the v1.6.0 release-path attestation has not been validated by an actual authorized release execution and must not be described as fully release-validated yet.
+
+Consumers should verify provenance in addition to checksums and Windows code signatures.
+
+## Release gate
+
+Before calling a build production-ready for external distribution, require green test/security/runtime-lock/build-lock/validation-lock/package/Windows smoke workflows, reviewed locked runtime/build/release-validation inputs, successful signing with the approved organization-controlled identity, post-signing thumbprint/timestamp verification, successful provenance verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented rather than silently waived.

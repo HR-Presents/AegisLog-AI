@@ -33,13 +33,18 @@ class DashboardData:
     severities: dict[str, int]
 
 
-def analyze_dashboard(path: Path) -> DashboardData:
-    """Build one complete, local-only analysis snapshot for terminal rendering."""
+def analyze_dashboard(path: Path, *, timestamp_year_hint: int | None = None) -> DashboardData:
+    """Build one complete, local-only analysis snapshot for terminal rendering.
+
+    ``timestamp_year_hint`` is explicit operator context for RFC3164-style timestamps
+    that omit a year. It is forwarded to the detection engine and is never inferred
+    from the current clock.
+    """
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         lines = handle.readlines()
 
     events: list[Event] = [parse_line(line) for line in lines]
-    findings = analyze_lines(lines)
+    findings = analyze_lines(lines, timestamp_year_hint=timestamp_year_hint)
     anomalies = score_events(events)
     incidents = correlate(findings)
 

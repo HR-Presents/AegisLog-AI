@@ -23,6 +23,8 @@ Use this page as the map for AegisLog AI documentation. For a guided, end-to-end
 - [Privacy](PRIVACY.md), [why local-first](WHY_LOCAL_FIRST.md), and [no automatic remediation](NO_AUTOREMEDIATION.md)
 - [AI safety](AI_SAFETY.md), [AI providers](AI_PROVIDERS.md), and [remote AI boundaries](REMOTE_AI.md)
 
+Remote AI is disabled by default in the hardened candidate. Supplying an API key alone does not grant network consent; a remote provider requires explicit `AEGISLOG_ALLOW_REMOTE_AI` opt-in. Local core analysis and local Ollama workflows remain available without remote-AI consent.
+
 ## Project and engineering
 
 - [Architecture](ARCHITECTURE.md), [design principles](DESIGN_PRINCIPLES.md), and [configuration](CONFIGURATION.md)
@@ -30,8 +32,9 @@ Use this page as the map for AegisLog AI documentation. For a guided, end-to-end
 - [Project status](PROJECT_STATUS.md), [roadmap](ROADMAP.md), and [versioning](VERSIONING.md)
 - [Maintainer guide](MAINTAINERS.md) and [release checklist](RELEASE_CHECKLIST.md)
 
-## Latest release
+## Release status
 
-- [v1.6.0 release notes](RELEASE_V1.6.0.md)
+- **Published stable release:** [v1.6.0 release notes](RELEASE_V1.6.0.md). The published Windows executable is historically documented as unsigned.
+- **Hardened candidate:** [v1.6.1 release notes](RELEASE_V1.6.1.md). This candidate is not yet published and remains blocked on real signing setup, independently labeled external evaluation evidence, and an authorized release run.
 - [Upgrading](UPGRADING.md)
 - [Latest GitHub release](https://github.com/HR-Presents/AegisLog-AI/releases/latest)

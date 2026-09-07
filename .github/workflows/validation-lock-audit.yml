@@ -1,0 +1,73 @@
+name: Validation toolchain lock audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-validation-lock:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.10"
+            lock-file: packaging/validation-lock-py310-linux.txt
+          - python-version: "3.11"
+            lock-file: packaging/validation-lock-py311-linux.txt
+          - python-version: "3.12"
+            lock-file: packaging/validation-lock-py312-linux.txt
+          - python-version: "3.13"
+            lock-file: packaging/validation-lock-py313-linux.txt
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify exact validation lock
+        shell: bash
+        env:
+          VALIDATION_LOCK: ${{ matrix.lock-file }}
+        run: |
+          set -euo pipefail
+          python -m pip install --dry-run --ignore-installed --only-binary=:all: \
+            -r packaging/validation-tools.txt --report validation-lock-report.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          def canonical(name: str) -> str:
+              return name.lower().replace("_", "-").replace(".", "-")
+
+          report = json.loads(Path("validation-lock-report.json").read_text(encoding="utf-8"))
+          resolved = set()
+          for item in report["install"]:
+              name = canonical(item["metadata"]["name"])
+              version = item["metadata"]["version"]
+              algorithm, digest = item["download_info"]["archive_info"]["hash"].split("=", 1)
+              resolved.add((name, version, algorithm, digest))
+
+          lock_path = Path(os.environ["VALIDATION_LOCK"])
+          locked = set()
+          for raw in lock_path.read_text(encoding="utf-8").splitlines():
+              line = raw.strip()
+              if not line or line.startswith("#"):
+                  continue
+              requirement, hash_part = line.split(" --hash=", 1)
+              name, version = requirement.split("==", 1)
+              algorithm, digest = hash_part.split(":", 1)
+              locked.add((canonical(name), version, algorithm, digest))
+
+          if locked != resolved:
+              print("Missing from lock:", sorted(resolved - locked))
+              print("Unexpected in lock:", sorted(locked - resolved))
+              raise SystemExit(f"Validation lock {lock_path} does not match resolver output")
+          print(f"Verified {len(locked)} exact locked validation dependencies in {lock_path}")
+          PY
+          rm -rf verified-validation
+          python -m pip download --only-binary=:all: --require-hashes \
+            --dest verified-validation -r "$VALIDATION_LOCK"

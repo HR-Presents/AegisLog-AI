@@ -1,0 +1,39 @@
+name: Runtime lock audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-runtime-lock:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Verify hashed runtime wheel set
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip download \
+            --only-binary=:all: \
+            --require-hashes \
+            --dest resolved-runtime \
+            -r packaging/runtime-lock.txt
+          python - <<'PY'
+          from pathlib import Path
+          wheels = sorted(path.name for path in Path('resolved-runtime').glob('*.whl'))
+          expected = 8
+          if len(wheels) != expected:
+              raise SystemExit(f"expected {expected} locked runtime wheels, found {len(wheels)}: {wheels}")
+          print("verified locked runtime wheels:")
+          for wheel in wheels:
+              print(f"  {wheel}")
+          PY

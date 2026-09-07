@@ -12,7 +12,16 @@ from .plugins import apply_rules, load_rules
 console = Console()
 
 
-def dashboard(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
+def dashboard(
+    path: Path = typer.Argument(..., exists=True, dir_okay=False),
+    timestamp_year: int | None = typer.Option(
+        None,
+        "--timestamp-year",
+        min=1970,
+        max=9999,
+        help="Year to apply to RFC3164/syslog timestamps that omit a year. Never inferred automatically.",
+    ),
+) -> None:
     """Open the full terminal investigation dashboard for one log file."""
     with Progress(
         SpinnerColumn(),
@@ -21,7 +30,7 @@ def dashboard(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> 
         console=console,
     ) as progress:
         task = progress.add_task(f"Analyzing {path.name}...", total=None)
-        data = analyze_dashboard(path)
+        data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
         progress.update(task, description="Building terminal dashboard...")
     console.print(render_dashboard(data))
 
@@ -29,9 +38,16 @@ def dashboard(path: Path = typer.Argument(..., exists=True, dir_okay=False)) -> 
 def analyze_dashboard_command(
     path: Path = typer.Argument(..., exists=True, dir_okay=False),
     plugins: bool = typer.Option(True, "--plugins/--no-plugins", help="Include local declarative detection packs."),
+    timestamp_year: int | None = typer.Option(
+        None,
+        "--timestamp-year",
+        min=1970,
+        max=9999,
+        help="Year to apply to RFC3164/syslog timestamps that omit a year. Never inferred automatically.",
+    ),
 ) -> None:
     """Analyze a log and open the complete AegisLog terminal dashboard."""
-    dashboard(path)
+    dashboard(path, timestamp_year=timestamp_year)
     if plugins:
         rules, errors = load_rules()
         if not rules and not errors:
