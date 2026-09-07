@@ -39,7 +39,7 @@ def test_auth_source_parsing_uses_one_validated_ipv6_source_not_destination_or_d
     auth = [item for item in findings if item.category == "authentication"]
     assert len(auth) == 1
     assert "2001:db8::7" in auth[0].title
-    assert "2 failures" in auth[0].evidence
+    assert "2 authentication failures" in auth[0].evidence
     assert "192.0.2.10" not in auth[0].title
 
 
@@ -59,7 +59,7 @@ def test_auth_window_expires_old_events_and_does_not_escalate_whole_input():
     ]
     auth = next(item for item in analyze_lines(lines, auth_window_seconds=60) if item.category == "authentication")
     assert auth.severity == "MEDIUM"
-    assert "1 failures" in auth.evidence
+    assert "1 authentication failure" in auth.evidence
 
 
 def test_out_of_order_events_inside_window_are_kept_but_expired_events_are_ignored():
@@ -69,7 +69,7 @@ def test_out_of_order_events_inside_window_are_kept_but_expired_events_are_ignor
         "2026-09-07T10:00:00Z sshd: Failed password for root from 203.0.113.11 port 22",
     ]
     auth = next(item for item in analyze_lines(lines, auth_window_seconds=60) if item.category == "authentication")
-    assert "2 failures" in auth.evidence
+    assert "2 authentication failures" in auth.evidence
 
 
 def test_missing_timestamps_use_explicit_bounded_event_order_behavior():
@@ -141,13 +141,14 @@ def test_post_json_connects_to_validated_address_without_second_dns_lookup():
     response = MagicMock()
     response.status = 200
     response.getheader.return_value = None
-    response.read.return_value = io.BytesIO(b'{}').getvalue()
+    response.read.return_value = io.BytesIO(b"{}").getvalue()
     connection = MagicMock()
     connection.getresponse.return_value = response
 
-    with patch("aegislog.providers._validated_endpoint", return_value=(parsed, {__import__("ipaddress").ip_address("93.184.216.34")})), patch(
-        "aegislog.providers._PinnedHTTPSConnection", return_value=connection
-    ) as connection_cls:
+    with patch(
+        "aegislog.providers._validated_endpoint",
+        return_value=(parsed, {__import__("ipaddress").ip_address("93.184.216.34")}),
+    ), patch("aegislog.providers._PinnedHTTPSConnection", return_value=connection) as connection_cls:
         assert _post_json("https://provider.example/v1", {}, {}) == {}
         connection_cls.assert_called_once_with("provider.example", 443, "93.184.216.34", 45)
 
