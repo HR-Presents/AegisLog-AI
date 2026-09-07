@@ -6,18 +6,21 @@ AegisLog release workflows run tests, linting, Bandit, dependency audit, package
 
 This hardening branch pins the Python package build backend (`setuptools==84.0.0`) and direct release/build tools in `packaging/build-tools.txt` (`build==1.6.0`, `twine==7.0.0`, and `pyinstaller==6.22.2`). Package, Windows-executable, and v1.6.0 release workflows consume those direct pins.
 
-The active CI, security, package, Windows single-executable, and v1.6.0 release workflows reference `actions/checkout`, `actions/setup-python`, artifact upload/download actions, and the provenance action by immutable commit SHA rather than moving major-version tags. Those workflows also use explicit hosted OS labels (`ubuntu-24.04` and `windows-2025`) instead of `*-latest` aliases. GitHub currently documents both labels as supported standard hosted-runner targets.
+Runtime/customer-bundle dependencies are now transitively pinned and SHA-256 locked in `packaging/runtime-lock.txt`. The lock contains the eight universal wheels required by the customer bundle (`rich`, `typer`, `colorama`, and their resolved runtime dependencies). The exact wheel set and hashes were independently resolved on the supported GitHub-hosted `ubuntu-24.04` and `windows-2025` runners with Python 3.12 and matched across both platforms. `pip download --require-hashes` now enforces that lock in both the dedicated runtime-lock audit and the Linux/Windows customer-bundle builds. The lock file is also copied into the customer bundle as `RUNTIME_LOCK.txt` for traceability.
 
-That is a material reproducibility and supply-chain improvement, not a bit-for-bit reproducibility guarantee. Runtime/customer-bundle dependencies are still not fully transitively locked with reviewed hashes. GitHub can also refresh the underlying VM image associated with a fixed OS label, so two builds can still execute with different preinstalled tool revisions even when the label text is unchanged.
+The active CI, security, package, Windows single-executable, runtime-lock-audit, and v1.6.0 release workflows reference GitHub Actions by immutable commit SHA rather than moving major-version tags. Those workflows also use explicit hosted OS labels (`ubuntu-24.04` and `windows-2025`) instead of `*-latest` aliases.
 
-A production release process should add a reviewed lock or constraints mechanism containing transitive dependencies and hashes for each supported build platform and record the actual runner image/toolchain identity in release metadata. Any lock update should be a normal reviewed pull request that:
+These are material reproducibility and supply-chain improvements, not a bit-for-bit reproducibility guarantee. Transitive dependencies of the **build/release toolchain** are not yet fully hash-locked, and GitHub can refresh the underlying VM image associated with a fixed OS label. Two builds can therefore still execute with different preinstalled tool revisions even when the source, direct tool pins, runtime lock, action SHAs, and OS label text are unchanged.
 
-1. updates dependency versions and hashes intentionally;
-2. runs unit, security, package, installer, executable, and CLI smoke checks;
-3. records material compatibility or security changes in the changelog; and
-4. is merged before a release tag is created.
+Any lock update should be a normal reviewed pull request that:
 
-The direct tool pins, action SHAs, and explicit OS labels in this branch should be updated only through that review process. Do not silently replace exact pins during a release run.
+1. changes dependency versions and hashes intentionally;
+2. verifies the locked wheel set on both supported hosted OS targets;
+3. runs unit, security, package, installer, executable, and CLI smoke checks;
+4. records material compatibility or security changes in the changelog; and
+5. is merged before a release tag is created.
+
+The runtime lock, direct tool pins, action SHAs, and explicit OS labels in this branch should be updated only through that review process. Do not silently replace exact pins or hashes during a release run.
 
 ## Windows code signing
 
@@ -35,4 +38,4 @@ Consumers should verify provenance in addition to checksums and, once configured
 
 ## Release gate
 
-Before calling a build production-ready for external distribution, require all of the following: green test/security/package/Windows smoke workflows, reviewed fully locked build inputs, code-signature verification on Windows artifacts, successful provenance/attestation verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented in the release notes instead of silently waived.
+Before calling a build production-ready for external distribution, require all of the following: green test/security/runtime-lock/package/Windows smoke workflows, reviewed hash-locked runtime inputs, reviewed fully locked build-tool inputs, code-signature verification on Windows artifacts, successful provenance/attestation verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented in the release notes instead of silently waived.
