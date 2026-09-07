@@ -49,6 +49,18 @@ def test_invalid_source_address_is_not_counted_as_an_ip():
     assert "unparsed source" in auth.title
 
 
+def test_single_auth_failure_is_low_context_not_medium_alert():
+    auth = next(
+        item
+        for item in analyze_lines(
+            ["2026-09-07T10:00:00Z sshd: Failed password for alice from 203.0.113.20 port 2210"]
+        )
+        if item.category == "authentication"
+    )
+    assert auth.severity == "LOW"
+    assert "Authentication failure observed" in auth.title
+
+
 def test_auth_window_expires_old_events_and_does_not_escalate_whole_input():
     lines = [
         "2026-09-07T10:00:00Z sshd: Failed password for root from 203.0.113.9 port 22",
@@ -58,7 +70,7 @@ def test_auth_window_expires_old_events_and_does_not_escalate_whole_input():
         "2026-09-07T10:10:00Z sshd: Failed password for root from 203.0.113.9 port 22",
     ]
     auth = next(item for item in analyze_lines(lines, auth_window_seconds=60) if item.category == "authentication")
-    assert auth.severity == "MEDIUM"
+    assert auth.severity == "LOW"
     assert "1 authentication failure" in auth.evidence
 
 
@@ -69,6 +81,7 @@ def test_out_of_order_events_inside_window_are_kept_but_expired_events_are_ignor
         "2026-09-07T10:00:00Z sshd: Failed password for root from 203.0.113.11 port 22",
     ]
     auth = next(item for item in analyze_lines(lines, auth_window_seconds=60) if item.category == "authentication")
+    assert auth.severity == "MEDIUM"
     assert "2 authentication failures" in auth.evidence
 
 
@@ -77,6 +90,14 @@ def test_missing_timestamps_use_explicit_bounded_event_order_behavior():
     auth = next(item for item in analyze_lines(lines) if item.category == "authentication")
     assert auth.severity == "HIGH"
     assert "timestamp unavailable; correlated by bounded event order" in auth.evidence
+
+
+def test_sudo_auth_failure_keeps_specific_privilege_classification():
+    finding = analyze_lines(
+        ["2026-09-07T11:00:00Z sudo: pam_unix(sudo:auth): authentication failure; user=alice"]
+    )[0]
+    assert finding.category == "privilege"
+    assert finding.severity == "HIGH"
 
 
 def test_single_wp_login_request_is_low_severity_not_high():
