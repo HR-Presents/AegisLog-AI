@@ -12,23 +12,25 @@ When a timestamp cannot be parsed, AegisLog does not invent one. Those failures 
 
 A single generic authentication failure is LOW context, two to four failures from the same source are MEDIUM, five or more are HIGH, and twenty or more are CRITICAL within the retained correlation state. A sudo-specific authentication failure is evaluated by the privilege rule before generic authentication correlation so the more specific context is preserved.
 
-The timestamped correlation state is bounded by event count. Streaming analysis defaults to 10,000 retained timestamped authentication events and reports dropped correlation events when the limit is exceeded. Missing-timestamp data is also bounded per source. High-cardinality missing-timestamp sources remain a memory-hardening area for further work.
+Correlation state is globally bounded. Defaults retain at most 10,000 authentication events across timestamped and missing-timestamp buckets and at most 2,048 distinct retained authentication sources. Per-source missing-timestamp buckets retain at most 20 events. When source or event limits require eviction, `dropped_auth_events` and `dropped_auth_sources` record the loss. Empty timestamped source buckets are removed as their events expire so old source keys do not accumulate indefinitely.
 
 ## Streaming and large files
 
-`analyze_file()` now iterates over the file instead of calling `readlines()`. `analyze_stream()` shares one correlation state across the entire stream, so authentication results are independent of progress chunk boundaries.
+`analyze_file()` iterates over the file instead of calling `readlines()`. `analyze_stream()` shares one correlation state across the entire stream, so authentication results are independent of progress chunk boundaries.
 
 Streaming also applies a per-line byte limit. The default is 1,000,000 bytes. Oversized lines are truncated before analysis and `StreamSummary.truncated_lines` reports how many were truncated. `StreamSummary.dropped_findings` and `StreamSummary.dropped_auth_events` expose losses visible at the streaming API boundary.
 
-Callers should not silently treat a run with dropped or truncated data as complete evidence. Non-authentication findings are still accumulated by the shared analysis state before the final `max_findings` slice, so peak memory is improved for file contents and lines but is not yet strictly bounded by the final finding limit under an adversarial all-findings input.
+Non-authentication findings are bounded during ingest rather than accumulated without limit and sliced only after analysis. The default state limit is 5,000 retained non-auth findings. `AnalysisState.dropped_findings` tracks findings discarded after that limit, and streaming includes those drops in `StreamSummary.dropped_findings`.
+
+Callers should not silently treat a run with dropped or truncated data as complete evidence. The configured bounds make memory use deterministic with respect to retained findings, source cardinality, authentication-event count, and per-line size, but Python/container overhead and other application state still contribute to total process memory.
 
 ## Live ingestion reliability
 
-The live file cursor now retains an incomplete final line instead of emitting it as a complete event. A line is released only after a newline arrives. Each poll reads at most 4,000,000 bytes, so a large append is consumed over multiple polls rather than one unbounded `read()`.
+The live file cursor retains an incomplete final line instead of emitting it as a complete event. A line is released only after a newline arrives. Each poll reads at most 4,000,000 bytes, so a large append is consumed over multiple polls rather than one unbounded `read()`.
 
 Partial lines are capped at 1,000,000 bytes. Excess bytes are discarded until the terminating newline, the emitted line includes `[TRUNCATED]`, and the cursor records cumulative `dropped_bytes`. The cursor also records `source_missing`, `source_recovered`, `source_replaced`, or `source_truncated` reset metadata while preserving the existing `(lines, cursor)` interface.
 
-The real-time rolling analysis window is now bounded both by event count and bytes. Defaults are 500 lines and 5,000,000 retained bytes, with a 1,000,000-byte per-line limit. `RealtimeState` exposes `truncated_lines`, `dropped_window_lines`, and `rolling_bytes`, and the terminal status displays those losses.
+The real-time rolling analysis window is bounded both by event count and bytes. Defaults are 500 lines and 5,000,000 retained bytes, with a 1,000,000-byte per-line limit. `RealtimeState` exposes `truncated_lines`, `dropped_window_lines`, and `rolling_bytes`, and the terminal status displays those losses.
 
 The legacy numeric-offset `read_new_lines()` API remains available. It retries ordinary incomplete trailing data by returning an offset before the pending bytes. The richer `FileCursor` API should be preferred for robust live monitoring because it can preserve truncation and source-availability state across polls.
 
@@ -72,8 +74,10 @@ Existing CLI commands and the public `engine.redact()` helper are preserved. Exi
 
 The provider helper `_validate_url()` keeps its URL-string return behavior for compatibility even though the hardened transport uses a separate internal endpoint-validation result. `FileCursor` preserves its original first three positional fields and adds optional state fields with defaults.
 
+The public CLI entrypoint now registers commands through the stable `aegislog.commands` boundary. Historical release-numbered command modules remain in place for compatibility, but their imports are isolated behind that registry so future renames can be staged without continuing to spread version-specific coupling through entrypoints.
+
 ## Known remaining limitations
 
-Production-readiness gaps remain. High-cardinality missing-timestamp authentication sources and accumulated non-authentication findings can still create memory pressure beyond the configured return limit. Common non-ISO syslog timestamps are not yet normalized into event-time windows and therefore use the explicit missing-timestamp fallback. Provider address failover is not implemented. Release build inputs are not fully transitively locked, Windows binaries are not code-signed, and release provenance/attestation is not enforced. The synthetic detection dataset is too small to establish real-world false-positive rates or security effectiveness.
+Production-readiness gaps remain. Common non-ISO syslog timestamps are not yet normalized into event-time windows and therefore use the explicit missing-timestamp fallback. Provider address failover is not implemented. The direct provider transport intentionally does not inherit environment proxy settings. Release build inputs are not yet fully transitively hash-locked, GitHub-hosted runner images evolve, and Windows binaries are not code-signed. Release provenance is configured for tagged package artifacts and the v1.6.0 executable path, but it still requires validation in an actual authorized tag/release execution. The synthetic detection dataset is too small to establish real-world false-positive rates or security effectiveness.
 
-See `docs/RELEASE_SECURITY.md` for the release-signing, reproducibility, and provenance requirements that remain external or incomplete.
+See `docs/RELEASE_SECURITY.md` for signing, reproducibility, provenance, and release-gate details.
