@@ -62,7 +62,9 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --require-hashes -r packaging/build-lock-linux.txt
-          python -m pip install -e '.[dev]' --no-build-isolation
+          python -m pip install --require-hashes -r packaging/validation-lock-py312-linux.txt
+          python -m pip install --require-hashes -r packaging/runtime-lock.txt
+          python -m pip install -e . --no-deps --no-build-isolation
           ruff check .
           pytest -q
           python tools/evaluate_detections.py evaluation/labeled_events.jsonl
