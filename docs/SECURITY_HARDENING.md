@@ -56,15 +56,23 @@ The customer runtime is transitively SHA-256 locked in `packaging/runtime-lock.t
 
 The artifact-producing build/release toolchain is also transitively hash-locked. Direct inputs are pinned in `packaging/build-tools.txt` (`pip`, `setuptools`, `build`, `twine`, and `pyinstaller`), with resolved platform-specific lockfiles in `packaging/build-lock-linux.txt` and `packaging/build-lock-windows.txt`. The build-lock audit independently re-resolves the direct inputs on each supported OS, compares the exact name/version/artifact-hash set against the reviewed lock, and verifies download under `--require-hashes`.
 
-Package construction uses `python -m build --no-isolation`, preventing an isolated build environment from silently re-downloading a different `setuptools`. Windows executable workflows install the locked build toolchain plus the locked runtime dependencies, then install AegisLog with `--no-deps` before PyInstaller runs.
+Package construction uses `python -m build --no-isolation`, preventing an isolated build environment from silently re-downloading a different `setuptools`. Windows executable workflows install the locked build toolchain plus the locked runtime dependencies, then install AegisLog with `--no-deps --no-build-isolation` before PyInstaller runs.
 
-Release validation/test tooling installed through the project dev extra (`pytest`, `ruff`, `bandit`, `pip-audit`, and their transitives) is still not fully hash-locked. This is a remaining validation-tool supply-chain gap, distinct from the artifact-producing build toolchain.
+The Python 3.12 release-validation toolchain (`pytest`, `ruff`, `bandit`, `pip-audit`, and its complete resolved dependency set) is transitively SHA-256 locked in `packaging/validation-lock-py312-linux.txt`. CI's Python 3.12 lane installs that exact validation lock alongside the build/runtime locks. Python 3.10, 3.11, and 3.13 remain compatibility lanes and intentionally use dev-extra ranges rather than the reproducible release-validation environment.
 
 ## Detection evaluation
 
-`tools/evaluate_detections.py evaluation/labeled_events.jsonl` runs a small labeled synthetic regression set and reports overall and per-category precision/recall at a default MEDIUM threshold. The dataset is intentionally small and synthetic; it measures regression consistency, not real-world effectiveness, deployment-specific false-positive rates, or adversarial robustness.
+`tools/evaluate_detections.py evaluation/labeled_events.jsonl` runs the checked-in labeled synthetic regression fixture. The evaluator validates JSONL structure, non-empty string IDs, unique case IDs, line collections, and expected-category labels; malformed or duplicate cases fail instead of being silently ignored.
 
-Representative legally obtained, sanitized telemetry with independent labeling is still required before effectiveness claims.
+Reports include overall and per-category precision/recall, case-level exact-match accuracy, false-positive and false-negative details, and two-sided 95% Wilson score intervals. The Wilson interval is calculated without an external statistics dependency. A perfect small sample therefore does not imply certainty: the current 12-case synthetic fixture reports precision `1.0000`, recall `1.0000`, and exact-match accuracy `1.0000`, while aggregate precision and recall have a 95% Wilson interval of approximately `[0.6756, 1.0000]`.
+
+CI now treats the checked-in fixture as a deterministic regression gate and requires precision `1.0`, recall `1.0`, exact-match accuracy `1.0`, zero false positives, and zero false negatives. Those strict thresholds are for the synthetic fixture only and must not be presented as production-effectiveness requirements.
+
+The evaluator distinguishes `synthetic` and `external` datasets. `--dataset-kind external` requires a non-empty provenance description so externally supplied results cannot accidentally be reported without source/sampling/labeling context. Authorized external evaluation should document source population, sampling method and period, annotation process, sanitization, class balance, exclusions, and deployment differences.
+
+Production/customer logs, credentials, personal data, or confidential telemetry should not be committed merely to increase benchmark size. Statistical confidence intervals quantify sampling uncertainty only; they do not correct labeling bias, class imbalance, prevalence differences, adversarial adaptation, or dataset shift. Representative independently labeled real-world telemetry remains required before effectiveness claims.
+
+See `evaluation/README.md` for the dataset contract, external-corpus workflow, provenance requirements, and available regression thresholds.
 
 ## Performance measurement
 
@@ -80,6 +88,6 @@ CLI registration is isolated behind the stable `aegislog.commands` boundary. His
 
 ## Known remaining limitations
 
-Production-readiness gaps remain: pure RFC3164 logs without a safe year hint use the bounded missing-timestamp fallback; proxy-only deployments need explicit provider proxy support; release validation/test dependencies are not yet fully hash-locked; GitHub may refresh the VM image behind a fixed runner label; Windows binaries are unsigned; release provenance is configured but has not been exercised in an authorized tag/release run; historical command modules remain compatibility debt; and the synthetic detection dataset is too small to establish real-world security effectiveness.
+Production-readiness gaps remain: representative independently labeled real-world telemetry is still required for detection-effectiveness claims; pure RFC3164 logs without a safe year hint use the bounded missing-timestamp fallback; proxy-only deployments need explicit provider proxy support; GitHub may refresh the VM image behind a fixed runner label; the Windows binary still needs an organization-controlled production signing identity; release provenance is configured but has not been exercised in an authorized tag/release run; and historical command modules remain compatibility debt behind the stable registry.
 
 See `docs/RELEASE_SECURITY.md` for signing, reproducibility, provenance, and release-gate details.
