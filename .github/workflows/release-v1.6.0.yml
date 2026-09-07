@@ -21,7 +21,7 @@ env:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -74,7 +74,7 @@ jobs:
 
   build-windows-exe:
     needs: validate
-    runs-on: windows-latest
+    runs-on: windows-2025
     permissions:
       contents: read
       id-token: write
@@ -135,7 +135,7 @@ jobs:
 
   publish:
     needs: build-windows-exe
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
