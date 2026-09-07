@@ -1,0 +1,40 @@
+name: Validation toolchain lock audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-validation-lock:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Resolve validation toolchain and print exact wheel set
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --dry-run --ignore-installed --only-binary=:all: \
+            -r packaging/validation-tools.txt --report validation-lock-report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("validation-lock-report.json").read_text(encoding="utf-8"))
+          rows = []
+          for item in report["install"]:
+              name = item["metadata"]["name"]
+              version = item["metadata"]["version"]
+              algorithm, digest = item["download_info"]["archive_info"]["hash"].split("=", 1)
+              rows.append((name.lower().replace("_", "-"), f"{name}=={version} --hash={algorithm}:{digest}"))
+          for _, line in sorted(rows):
+              print("LOCK", line)
+          PY
