@@ -1,14 +1,34 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
-from tools.build_external_evidence import EvidenceError, build_evidence, main
-from tools.release_preflight import validate_external_evidence
+ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ROOT / "tools"
 
+EVAL_SPEC = importlib.util.spec_from_file_location("evaluate_detections", TOOLS / "evaluate_detections.py")
+assert EVAL_SPEC and EVAL_SPEC.loader
+evaluate_detections = importlib.util.module_from_spec(EVAL_SPEC)
+EVAL_SPEC.loader.exec_module(evaluate_detections)
+
+GEN_SPEC = importlib.util.spec_from_file_location("build_external_evidence", TOOLS / "build_external_evidence.py")
+assert GEN_SPEC and GEN_SPEC.loader
+build_external_evidence = importlib.util.module_from_spec(GEN_SPEC)
+GEN_SPEC.loader.exec_module(build_external_evidence)
+
+PREFLIGHT_SPEC = importlib.util.spec_from_file_location("release_preflight", TOOLS / "release_preflight.py")
+assert PREFLIGHT_SPEC and PREFLIGHT_SPEC.loader
+release_preflight = importlib.util.module_from_spec(PREFLIGHT_SPEC)
+PREFLIGHT_SPEC.loader.exec_module(release_preflight)
+
+EvidenceError = build_external_evidence.EvidenceError
+build_evidence = build_external_evidence.build_evidence
+main = build_external_evidence.main
+validate_external_evidence = release_preflight.validate_external_evidence
 
 COMMIT = "a" * 40
 PROVENANCE = "Sanitized representative sample from an authorized staging environment."
