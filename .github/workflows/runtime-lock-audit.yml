@@ -1,0 +1,33 @@
+name: Runtime lock audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-runtime:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Resolve runtime wheel set and print hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip download --only-binary=:all: --dest resolved-runtime \
+            "rich==15.0.0" "typer==0.27.2" "colorama==0.4.6"
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          for path in sorted(Path('resolved-runtime').iterdir(), key=lambda p: p.name.lower()):
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              print(f"LOCK {path.name} sha256:{digest}")
+          PY
