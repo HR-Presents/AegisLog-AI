@@ -3,7 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.prompt import Prompt
+from rich.table import Table
 from rich.text import Text
 
 from .commands_v11 import dashboard
@@ -13,8 +15,6 @@ from .commands_v12 import (
     _command_prompt,
     _commands,
     _explain_menu,
-    _header,
-    _menu,
     _menu_action_error,
     _native_choice,
     _native_menu,
@@ -25,9 +25,58 @@ from .commands_v12 import (
 )
 from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
-from .theme import ACCENT, MUTED, SUCCESS, WARNING
+from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
+
+
+def _header() -> Panel:
+    """Render the packaged interactive console as a compact SOC control center."""
+    body = Text(justify="center")
+    body.append("AEGISLOG AI", style=f"bold {ACCENT}")
+    body.append("  v1.6.1", style=MUTED)
+    body.append("\nDEFENSIVE SECURITY CONSOLE", style="bold white")
+    body.append("\n\n● ENGINE READY", style=f"bold {SUCCESS}")
+    body.append("    LOCAL ANALYSIS", style=ACCENT_SOFT)
+    body.append("    REMOTE AI: OPT-IN", style=MUTED)
+    return Panel(
+        body,
+        title=f"[bold {ACCENT}] SECURITY CONTROL CENTER [/bold {ACCENT}]",
+        subtitle=f"[{MUTED}]Defensive log intelligence • local-first[/{MUTED}]",
+        border_style=ACCENT,
+        padding=(1, 2),
+    )
+
+
+def _menu() -> Table:
+    """Group interactive actions by analyst workflow instead of one flat list."""
+    table = Table(show_header=False, box=None, padding=(0, 1), expand=False)
+    table.add_column(width=16, no_wrap=True)
+    table.add_column(style=f"bold {ACCENT}", width=5, justify="center")
+    table.add_column()
+
+    def section(label: str) -> None:
+        table.add_row(Text(label, style=f"bold {ACCENT_SOFT}"), "", "")
+
+    section("ANALYSIS")
+    table.add_row("", "[1]", "Analyze log file")
+    table.add_row("", "[2]", "Real-time file dashboard")
+    table.add_row("", "[3]", "Multi-source live SOC")
+    table.add_row("", "", "")
+    section("MONITORING")
+    table.add_row("", "[4]", "Native system / container logs")
+    table.add_row("", "[5]", "Native real-time monitor")
+    table.add_row("", "", "")
+    section("INVESTIGATION")
+    table.add_row("", "[6]", "Explain an incident")
+    table.add_row("", "[7]", "Run built-in demo analysis")
+    table.add_row("", "", "")
+    section("SYSTEM")
+    table.add_row("", "[8]", "System check")
+    table.add_row("", "[9]", "Useful commands")
+    table.add_row("", Text("[C]", style=f"bold {ACCENT}"), "Command mode")
+    table.add_row("", Text("[Q]", style=f"bold {HIGH}"), Text("Exit AegisLog", style=MUTED))
+    return table
 
 
 def _pause_for_menu() -> None:
@@ -135,7 +184,7 @@ def start() -> None:
             )
         )
         try:
-            choice = Prompt.ask(f"[bold {ACCENT}]Select or command[/bold {ACCENT}]", default="1").strip()
+            choice = Prompt.ask(f"[bold {ACCENT}]Select operation[/bold {ACCENT}]", default="1").strip()
         except (KeyboardInterrupt, EOFError):
             console.print()
             console.print(Text("AegisLog closed safely.", style=SUCCESS))
