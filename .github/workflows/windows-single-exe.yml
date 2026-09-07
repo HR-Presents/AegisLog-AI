@@ -7,12 +7,17 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
 jobs:
   build-windows-exe:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
@@ -58,7 +63,13 @@ jobs:
           $hash = (Get-FileHash "dist\AegisLog.exe" -Algorithm SHA256).Hash.ToLower()
           "$hash  AegisLog.exe" | Set-Content -Encoding ascii "AegisLog.exe.sha256"
 
-      - uses: actions/upload-artifact@v4
+      - name: Attest executable provenance
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: dist/AegisLog.exe
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: AegisLog-Windows-Single-EXE
           if-no-files-found: error
