@@ -2,9 +2,18 @@ name: Release v1.5.0 (retired)
 
 on:
   workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Historical marker only: RELEASE-v1.5.0"
+        required: false
+        type: string
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: v1.5.0
+  RELEASE_VERSION: 1.5.0
 
 jobs:
   retired:
@@ -14,5 +23,6 @@ jobs:
         shell: bash
         run: |
           echo "v1.5.0 release workflow is retired and cannot publish artifacts."
+          echo "Historical confirmation marker: RELEASE-v1.5.0"
           echo "Use the current reviewed release workflow instead."
           exit 1
