@@ -32,8 +32,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python -m pip install --require-hashes -r packaging/editable-build-backend.txt
           python -m pip install --require-hashes -r packaging/validation-lock-py312-linux.txt
           python -m pip install --require-hashes -r packaging/runtime-lock.txt
+          python -m pip install --require-hashes -r packaging/build-lock-linux.txt
           python -m pip install -e . --no-deps --no-build-isolation
       - name: Run candidate quality gates
         shell: bash
