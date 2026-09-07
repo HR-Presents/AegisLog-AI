@@ -114,6 +114,9 @@ jobs:
           .\dist\AegisLog.exe explain --help
           .\dist\AegisLog.exe mitre --help
           .\dist\AegisLog.exe intel-entities --help
+      - name: Require valid Authenticode signature
+        shell: pwsh
+        run: ./packaging/verify_authenticode.ps1 -Path "dist\AegisLog.exe"
       - name: Stage release assets
         shell: pwsh
         run: |
