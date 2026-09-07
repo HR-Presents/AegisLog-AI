@@ -29,7 +29,15 @@ jobs:
           python -m pip install -e '.[dev]'
       - run: ruff check .
       - run: pytest -q
-      - run: python tools/evaluate_detections.py evaluation/labeled_events.jsonl
+      - name: Detection regression gate
+        run: >-
+          python tools/evaluate_detections.py evaluation/labeled_events.jsonl
+          --dataset-kind synthetic
+          --min-precision 1.0
+          --min-recall 1.0
+          --min-case-accuracy 1.0
+          --max-fp 0
+          --max-fn 0
       - name: Streaming benchmark
         if: matrix.python-version == '3.12'
         run: python benchmarks/stream_benchmark.py --lines 250000 --chunk-size 2000
