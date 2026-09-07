@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ TOOLS = ROOT / "tools"
 EVAL_SPEC = importlib.util.spec_from_file_location("evaluate_detections", TOOLS / "evaluate_detections.py")
 assert EVAL_SPEC and EVAL_SPEC.loader
 evaluate_detections = importlib.util.module_from_spec(EVAL_SPEC)
+sys.modules["evaluate_detections"] = evaluate_detections
 EVAL_SPEC.loader.exec_module(evaluate_detections)
 
 GEN_SPEC = importlib.util.spec_from_file_location("build_external_evidence", TOOLS / "build_external_evidence.py")
