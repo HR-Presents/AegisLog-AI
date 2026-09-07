@@ -62,6 +62,30 @@ def _validated_endpoint(
     return parsed, addresses
 
 
+def _validated_proxy_endpoint(
+    url: str,
+) -> tuple[urllib.parse.ParseResult, set[ipaddress.IPv4Address | ipaddress.IPv6Address]]:
+    parsed = urllib.parse.urlparse(url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.path not in {"", "/"}
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ProviderError(
+            "explicit AI proxy must be a credential-free HTTPS origin without path, query, or fragment"
+        )
+    port = parsed.port or 443
+    addresses = _resolved_addresses(parsed.hostname, port)
+    if not addresses:
+        raise ProviderError("proxy hostname resolved without usable addresses")
+    return parsed, addresses
+
+
 def _validate_url(url: str, allow_local: bool) -> str:
     """Backward-compatible validator used by existing callers and tests."""
     _validated_endpoint(url, allow_local)
@@ -92,6 +116,40 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     def connect(self) -> None:
         raw = socket.create_connection((self._address, self.port), self.timeout)
         self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
+
+
+class _PinnedHTTPSProxyConnection(http.client.HTTPSConnection):
+    def __init__(
+        self,
+        provider_host: str,
+        provider_port: int,
+        provider_address: str,
+        proxy_host: str,
+        proxy_port: int,
+        proxy_address: str,
+        timeout: int,
+    ):
+        super().__init__(provider_host, provider_port, timeout=timeout, context=ssl.create_default_context())
+        self._provider_address = provider_address
+        self._proxy_host = proxy_host
+        self._proxy_port = proxy_port
+        self._proxy_address = proxy_address
+
+    def connect(self) -> None:
+        raw = socket.create_connection((self._proxy_address, self._proxy_port), self.timeout)
+        proxy_tls = self._context.wrap_socket(raw, server_hostname=self._proxy_host)
+        target = f"{self._provider_address}:{self.port}"
+        host_header = f"{self.host}:{self.port}"
+        request = f"CONNECT {target} HTTP/1.1\r\nHost: {host_header}\r\nConnection: keep-alive\r\n\r\n"
+        proxy_tls.sendall(request.encode("ascii"))
+        response = http.client.HTTPResponse(proxy_tls)
+        response.begin()
+        if response.status != 200:
+            response.close()
+            proxy_tls.close()
+            raise ProviderError(f"HTTPS proxy CONNECT returned HTTP {response.status}")
+        response.close()
+        self.sock = self._context.wrap_socket(proxy_tls, server_hostname=self.host)
 
 
 def _read_json_response(response: http.client.HTTPResponse) -> dict:
@@ -125,32 +183,60 @@ def _post_json(
     headers: dict[str, str],
     timeout: int = 45,
     allow_local: bool = False,
+    proxy_url: str | None = None,
 ) -> dict:
     parsed, addresses = _validated_endpoint(url, allow_local)
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    connection_cls = _PinnedHTTPSConnection if parsed.scheme == "https" else _PinnedHTTPConnection
     path = urllib.parse.urlunparse(("", "", parsed.path or "/", parsed.params, parsed.query, ""))
     request_headers = {"Content-Type": "application/json", "Host": parsed.netloc, **headers}
     body = json.dumps(payload).encode("utf-8")
 
-    # Resolve and validate once, then attempt only the addresses from that exact validated set.
-    # This preserves the DNS rebinding/TOCTOU protection while allowing ordinary multi-address
-    # provider endpoints to survive one unreachable address. HTTP/application failures are not
-    # retried across addresses because the provider did respond and repeating the request could
-    # duplicate side effects or hide a real provider error.
+    configured_proxy = proxy_url or os.environ.get("AEGISLOG_HTTPS_PROXY")
+    proxy: tuple[
+        urllib.parse.ParseResult,
+        set[ipaddress.IPv4Address | ipaddress.IPv6Address],
+    ] | None = None
+    if configured_proxy:
+        if parsed.scheme != "https" or allow_local:
+            raise ProviderError("explicit AI proxy is supported only for remote HTTPS providers")
+        proxy = _validated_proxy_endpoint(configured_proxy)
+
+    # Resolve and validate once, then attempt only the addresses from those exact validated sets.
+    # Destination CONNECT targets are provider IPs, not hostnames, so an explicit proxy cannot
+    # perform a second destination DNS resolution that bypasses the provider-address validation.
     connection_errors: list[str] = []
     for address in sorted((str(item) for item in addresses), key=str):
-        connection = connection_cls(parsed.hostname, port, address, timeout)
-        try:
-            connection.request("POST", path, body=body, headers=request_headers)
-            response = connection.getresponse()
-            return _read_json_response(response)
-        except ProviderError:
-            raise
-        except (OSError, http.client.HTTPException, TimeoutError) as exc:
-            connection_errors.append(f"{address}: {exc}")
-        finally:
-            connection.close()
+        proxy_addresses = [None]
+        if proxy is not None:
+            proxy_addresses = sorted((str(item) for item in proxy[1]), key=str)
+        for proxy_address in proxy_addresses:
+            if proxy is None:
+                connection_cls = _PinnedHTTPSConnection if parsed.scheme == "https" else _PinnedHTTPConnection
+                connection = connection_cls(parsed.hostname, port, address, timeout)
+                attempt = address
+            else:
+                proxy_parsed = proxy[0]
+                proxy_port = proxy_parsed.port or 443
+                connection = _PinnedHTTPSProxyConnection(
+                    parsed.hostname,
+                    port,
+                    address,
+                    proxy_parsed.hostname,
+                    proxy_port,
+                    proxy_address,
+                    timeout,
+                )
+                attempt = f"proxy {proxy_address} -> provider {address}"
+            try:
+                connection.request("POST", path, body=body, headers=request_headers)
+                response = connection.getresponse()
+                return _read_json_response(response)
+            except ProviderError:
+                raise
+            except (OSError, http.client.HTTPException, TimeoutError, ssl.SSLError) as exc:
+                connection_errors.append(f"{attempt}: {exc}")
+            finally:
+                connection.close()
 
     details = "; ".join(connection_errors) if connection_errors else "no validated address was attempted"
     raise ProviderError(f"provider connection failed for all validated addresses: {details}")
