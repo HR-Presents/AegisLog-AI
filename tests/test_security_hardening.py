@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from aegislog.engine import analyze_file, analyze_lines
+from aegislog.engine import AnalysisState, analyze_file, analyze_lines
 from aegislog.providers import ProviderError, _post_json, openai_compatible
 from aegislog.sanitize import redact_sensitive
 from aegislog.streaming import analyze_stream
@@ -179,3 +179,34 @@ def test_provider_rejects_malformed_response_shape(monkeypatch):
     monkeypatch.setattr("aegislog.providers._post_json", lambda *args, **kwargs: {"choices": []})
     with pytest.raises(ProviderError, match="unexpected response shape"):
         openai_compatible("safe prompt", "model")
+
+
+def test_auth_state_is_globally_bounded_across_many_timestamp_less_sources():
+    state = AnalysisState(max_auth_events=10, max_auth_sources=4)
+    for i in range(25):
+        state.process(f"sshd: Failed password for root from 198.51.100.{(i % 20) + 1} port {2200 + i}")
+
+    assert len(set(state._auth) | set(state._missing_ts)) <= 4
+    assert sum(len(events) for events in state._auth.values()) + sum(
+        len(events) for events in state._missing_ts.values()
+    ) <= 10
+    assert state.dropped_auth_sources > 0
+    assert state.dropped_auth_events > 0
+
+
+def test_non_auth_findings_are_bounded_during_ingest_not_only_on_output():
+    state = AnalysisState(max_findings=3)
+    for i in range(20):
+        state.process(f"2026-09-07T12:00:{i:02d}Z app: ERROR synthetic failure {i}")
+
+    findings = state.findings()
+    assert len([item for item in findings if item.category == "error"]) == 3
+    assert state.dropped_findings == 17
+
+
+def test_stream_reports_findings_dropped_during_ingest(tmp_path):
+    path = tmp_path / "errors.log"
+    path.write_text("".join(f"app: ERROR synthetic failure {i}\n" for i in range(10)), encoding="utf-8")
+    result = analyze_stream(path, max_findings=3)
+    assert len(result.findings) == 3
+    assert result.dropped_findings == 7
