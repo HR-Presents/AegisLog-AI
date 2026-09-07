@@ -141,8 +141,18 @@ def test_remote_provider_rejects_plain_http():
             _post_json("http://provider.example/v1", {}, {}, allow_local=False)
 
 
+def test_remote_ai_is_disabled_by_default_even_when_api_key_exists(monkeypatch):
+    monkeypatch.setenv("AEGISLOG_API_KEY", "synthetic-api-key")
+    monkeypatch.delenv("AEGISLOG_ALLOW_REMOTE_AI", raising=False)
+    with patch("aegislog.providers._post_json") as outbound:
+        with pytest.raises(ProviderError, match="disabled by default"):
+            openai_compatible("safe prompt", "model")
+    outbound.assert_not_called()
+
+
 def test_outgoing_openai_prompt_is_redacted_before_transport(monkeypatch):
     monkeypatch.setenv("AEGISLOG_API_KEY", "synthetic-api-key")
+    monkeypatch.setenv("AEGISLOG_ALLOW_REMOTE_AI", "1")
     captured = {}
 
     def fake_post(url, payload, headers, timeout=45, allow_local=False):
@@ -204,6 +214,7 @@ def test_post_json_fails_over_only_across_prevalidated_addresses():
 
 def test_provider_rejects_malformed_response_shape(monkeypatch):
     monkeypatch.setenv("AEGISLOG_API_KEY", "synthetic-api-key")
+    monkeypatch.setenv("AEGISLOG_ALLOW_REMOTE_AI", "true")
     monkeypatch.setattr("aegislog.providers._post_json", lambda *args, **kwargs: {"choices": []})
     with pytest.raises(ProviderError, match="unexpected response shape"):
         openai_compatible("safe prompt", "model")
