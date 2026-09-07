@@ -58,21 +58,25 @@ The artifact-producing build/release toolchain is also transitively hash-locked.
 
 Package construction uses `python -m build --no-isolation`, preventing an isolated build environment from silently re-downloading a different `setuptools`. Windows executable workflows install the locked build toolchain plus the locked runtime dependencies, then install AegisLog with `--no-deps --no-build-isolation` before PyInstaller runs.
 
-The Python 3.12 release-validation toolchain (`pytest`, `ruff`, `bandit`, `pip-audit`, and its complete resolved dependency set) is transitively SHA-256 locked in `packaging/validation-lock-py312-linux.txt`. CI's Python 3.12 lane installs that exact validation lock alongside the build/runtime locks. Python 3.10, 3.11, and 3.13 remain compatibility lanes and intentionally use dev-extra ranges rather than the reproducible release-validation environment.
+The v1.6.0 release-validation toolchain is likewise SHA-256 locked for Python 3.12 on `ubuntu-24.04`. Exact direct pins for pytest, Ruff, Bandit, and pip-audit are resolved in `packaging/validation-lock-py312-linux.txt`; CI and the release workflow install the reviewed lock instead of resolving the dev extra.
 
 ## Detection evaluation
 
-`tools/evaluate_detections.py evaluation/labeled_events.jsonl` runs the checked-in labeled synthetic regression fixture. The evaluator validates JSONL structure, non-empty string IDs, unique case IDs, line collections, and expected-category labels; malformed or duplicate cases fail instead of being silently ignored.
+`tools/evaluate_detections.py` evaluates labeled JSONL corpora at a configurable minimum severity. The evaluator validates dataset structure and unique case IDs, records exact per-case expected/detected categories, reports aggregate and per-category precision/recall plus FP/FN counts, reports exact-case accuracy, and computes 95% Wilson confidence intervals for aggregate precision and recall.
 
-Reports include overall and per-category precision/recall, case-level exact-match accuracy, false-positive and false-negative details, and two-sided 95% Wilson score intervals. The Wilson interval is calculated without an external statistics dependency. A perfect small sample therefore does not imply certainty: the current 12-case synthetic fixture reports precision `1.0000`, recall `1.0000`, and exact-match accuracy `1.0000`, while aggregate precision and recall have a 95% Wilson interval of approximately `[0.6756, 1.0000]`.
+Dataset provenance is explicit. `--dataset-kind synthetic` marks regression fixtures. `--dataset-kind external` requires a non-empty provenance description so external results cannot be presented without a source/labeling note. This metadata is descriptive and does not independently prove that a corpus is representative or correctly labeled.
 
-CI now treats the checked-in fixture as a deterministic regression gate and requires precision `1.0`, recall `1.0`, exact-match accuracy `1.0`, zero false positives, and zero false negatives. Those strict thresholds are for the synthetic fixture only and must not be presented as production-effectiveness requirements.
+CI treats `evaluation/labeled_events.jsonl` strictly as a deterministic synthetic regression fixture. The gate requires precision 1.0, recall 1.0, exact-case accuracy 1.0, 0 false positives, and 0 false negatives for that checked-in fixture. Those thresholds protect known behavior; they are not production-effectiveness targets. With only eight expected positive category instances, a perfect fixture result still has an aggregate 95% Wilson lower bound of about 0.676 for both precision and recall.
 
-The evaluator distinguishes `synthetic` and `external` datasets. `--dataset-kind external` requires a non-empty provenance description so externally supplied results cannot accidentally be reported without source/sampling/labeling context. Authorized external evaluation should document source population, sampling method and period, annotation process, sanitization, class balance, exclusions, and deployment differences.
+Representative legally obtained, sanitized telemetry with independent labeling is still required before effectiveness claims. External corpora should document source population, sampling window/method, sanitization, labeling procedure, reviewer independence/agreement, class distribution, and known exclusions. Sensitive production telemetry should not be committed merely to satisfy an evaluation gate.
 
-Production/customer logs, credentials, personal data, or confidential telemetry should not be committed merely to increase benchmark size. Statistical confidence intervals quantify sampling uncertainty only; they do not correct labeling bias, class imbalance, prevalence differences, adversarial adaptation, or dataset shift. Representative independently labeled real-world telemetry remains required before effectiveness claims.
+## Windows release signing
 
-See `evaluation/README.md` for the dataset contract, external-corpus workflow, provenance requirements, and available regression thresholds.
+The release now includes a concrete fail-closed PFX signing adapter in `packaging/sign_windows.ps1`. It requires an organization-controlled PFX, expected signer thumbprint, PFX password, and HTTPS RFC3161 timestamp URL from external GitHub Actions configuration. The certificate is imported into the ephemeral Windows runner with its private key non-exportable, checked for the Code Signing EKU and expected thumbprint, used by `signtool.exe` with SHA-256 and RFC3161 timestamping, and removed from the runner certificate store afterward.
+
+`packaging/verify_authenticode.ps1` validates Authenticode status, signer certificate, Code Signing EKU, optional expected thumbprint, and optional timestamp requirement. The v1.6.0 release requires both the approved thumbprint and a timestamp before staging, checksumming, provenance attestation, upload, or publication. A valid signature from the wrong certificate therefore still fails the release.
+
+Pull-request Windows builds intentionally do not receive signing secrets. They exercise the signing adapter's missing-certificate failure path and then verify that the unsigned executable is rejected by the Authenticode guard. A real signed release remains blocked until the organization provisions the required external signing identity/configuration.
 
 ## Performance measurement
 
@@ -88,6 +92,6 @@ CLI registration is isolated behind the stable `aegislog.commands` boundary. His
 
 ## Known remaining limitations
 
-Production-readiness gaps remain: representative independently labeled real-world telemetry is still required for detection-effectiveness claims; pure RFC3164 logs without a safe year hint use the bounded missing-timestamp fallback; proxy-only deployments need explicit provider proxy support; GitHub may refresh the VM image behind a fixed runner label; the Windows binary still needs an organization-controlled production signing identity; release provenance is configured but has not been exercised in an authorized tag/release run; and historical command modules remain compatibility debt behind the stable registry.
+Production-readiness gaps remain: a real organization-controlled signing identity/configuration still has to be provisioned; representative independently labeled real-world telemetry is still needed; the actual authorized release/provenance path has not been exercised; pure RFC3164 logs without a safe year hint use the bounded missing-timestamp fallback; proxy-only deployments need explicit provider proxy support; GitHub may refresh the VM image behind a fixed runner label; historical command modules remain compatibility debt; and the synthetic detection dataset is too small to establish real-world security effectiveness.
 
 See `docs/RELEASE_SECURITY.md` for signing, reproducibility, provenance, and release-gate details.
