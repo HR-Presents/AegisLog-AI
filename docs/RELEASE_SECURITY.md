@@ -37,11 +37,24 @@ Any dependency lock update should be a reviewed pull request that intentionally 
 
 ## Windows code signing
 
-`packaging/verify_authenticode.ps1` is the release signature guard. It requires the executable to have a `Valid` Authenticode status, a signer certificate, and the Code Signing EKU (`1.3.6.1.5.5.7.3.3`). The v1.6.0 release workflow runs this check before staging, checksumming, provenance attestation, or publication. An unsigned, invalidly signed, or non-code-signing certificate therefore blocks the release.
+`packaging/sign_windows.ps1` is the concrete release signing adapter for a PFX-backed organization-controlled certificate. It imports the PFX into the ephemeral runner's `CurrentUser\My` certificate store with the private key marked non-exportable, verifies that the imported certificate thumbprint exactly matches the approved configured thumbprint, requires the Code Signing EKU, signs `AegisLog.exe` with SHA-256 through Windows `signtool.exe`, requires an HTTPS RFC3161 timestamp endpoint, and removes the imported certificate from the runner store afterward.
 
-The ordinary PR Windows executable remains unsigned because no signing identity is available in this hardening branch. Its workflow intentionally invokes the same guard and verifies that the unsigned PR artifact is rejected. This exercises the fail-closed behavior without inventing a certificate or publishing anything.
+The v1.6.0 workflow expects the following external configuration and does not store any of it in the repository:
 
-Production signing still requires an organization-controlled Windows code-signing identity/service. The private key must not be stored in this repository. Appropriate external setup could use an EV/OV certificate backed by hardware/security service or a managed signing provider with narrowly scoped CI credentials or workload identity. Until that signer is configured, the current v1.6.0 release workflow is intentionally unable to pass the signature gate.
+- GitHub Actions secret `WINDOWS_SIGNING_PFX_BASE64`: base64-encoded PFX bytes;
+- GitHub Actions secret `WINDOWS_SIGNING_PFX_PASSWORD`: PFX password;
+- GitHub Actions secret `WINDOWS_SIGNING_CERT_THUMBPRINT`: the approved certificate thumbprint;
+- GitHub Actions variable `WINDOWS_SIGNING_TIMESTAMP_URL`: an HTTPS RFC3161 timestamp URL approved by the organization.
+
+The release writes the decoded PFX only to `RUNNER_TEMP`, signs the executable, and removes the temporary PFX in a `finally` block. Missing configuration, malformed certificate material, a thumbprint mismatch, lack of a private key, lack of the Code Signing EKU, missing `signtool.exe`, timestamping failure, or signing failure aborts the job.
+
+`packaging/verify_authenticode.ps1` is the post-signing release guard. It requires a `Valid` Authenticode status, a signer certificate, and the Code Signing EKU. In the release workflow it additionally requires the signer thumbprint to match `WINDOWS_SIGNING_CERT_THUMBPRINT` and requires a timestamp signer certificate before staging, checksumming, provenance attestation, or publication. Therefore a valid signature from an unexpected certificate is not sufficient.
+
+The ordinary PR Windows executable remains unsigned because release signing secrets are intentionally unavailable to pull-request builds. Its workflow exercises both fail-closed paths: the signing adapter must reject missing certificate material, and the Authenticode guard must reject the unsigned PR artifact. This validates signing integration behavior without exposing a private key or publishing anything.
+
+The PFX adapter is appropriate only when organizational policy permits a PFX-backed certificate in GitHub Actions secrets. If the production identity is hardware-backed, EV-token-backed, Azure Trusted Signing, DigiCert KeyLocker, or another managed signing service, add a narrowly scoped provider-specific adapter rather than exporting or weakening that key to fit the PFX path. The post-signing thumbprint and timestamp verification should remain mandatory regardless of signing provider.
+
+Until a real organization-controlled signing identity and the required external configuration are provisioned, the v1.6.0 release workflow remains intentionally unable to publish the Windows executable.
 
 ## Historical release workflows
 
@@ -57,4 +70,4 @@ Consumers should verify provenance in addition to checksums and Windows code sig
 
 ## Release gate
 
-Before calling a build production-ready for external distribution, require green test/security/runtime-lock/build-lock/validation-lock/package/Windows smoke workflows, reviewed locked runtime/build/release-validation inputs, a valid Authenticode signature from an approved signing identity, successful provenance verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented rather than silently waived.
+Before calling a build production-ready for external distribution, require green test/security/runtime-lock/build-lock/validation-lock/package/Windows smoke workflows, reviewed locked runtime/build/release-validation inputs, successful signing with the approved organization-controlled identity, post-signing thumbprint/timestamp verification, successful provenance verification, checksum verification, and a release built from the exact reviewed commit/tag. Any missing gate should be documented rather than silently waived.
