@@ -7,7 +7,10 @@ import re
 import sys
 from pathlib import Path
 
-from evaluate_detections import evaluate
+try:
+    from tools.evaluate_detections import evaluate
+except ModuleNotFoundError:  # Direct script execution from tools/.
+    from evaluate_detections import evaluate
 
 GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -122,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    except (OSError, ValueError, EvidenceError) as exc:
+    except (OSError, ValueError) as exc:
         print(f"external evidence generation failed: {exc}", file=sys.stderr)
         return 2
 
