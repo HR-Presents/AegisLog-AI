@@ -23,17 +23,19 @@ Runtime/customer-bundle dependencies are independently transitively pinned and S
 
 The actual v1.6.0 release-validation environment is Python 3.12 on `ubuntu-24.04`. Its direct validation tools are exact pins in `packaging/validation-tools.txt`: `pytest==9.1.1`, `ruff==0.16.6`, `bandit==1.9.4`, and `pip-audit==2.10.1`.
 
-Their complete resolved wheel set is SHA-256 locked in `packaging/validation-lock-py312-linux.txt`. `.github/workflows/validation-lock-audit.yml` independently re-resolves the direct validation pins, compares the exact name/version/artifact-hash set to the reviewed lock, and performs a `pip download --require-hashes` verification.
+The resolved validation wheel sets are SHA-256 locked separately for every supported CI interpreter: `packaging/validation-lock-py310-linux.txt`, `packaging/validation-lock-py311-linux.txt`, `packaging/validation-lock-py312-linux.txt`, and `packaging/validation-lock-py313-linux.txt`. Separate files are required because dependency membership and compiled-wheel hashes genuinely differ by Python version; for example Python 3.10 requires `exceptiongroup`, resolves a different compatible `stevedore`, and multiple compiled wheels have interpreter-specific hashes.
 
-The v1.6.0 release validation job installs, in order, the reviewed Linux build lock, validation lock, and runtime lock, then installs AegisLog with `--no-deps --no-build-isolation`. It therefore runs Ruff, pytest, the labeled detection evaluation, Bandit, pip-audit, package construction, and Twine checks without resolving an unreviewed dev-extra dependency graph.
+`.github/workflows/validation-lock-audit.yml` independently re-resolves `packaging/validation-tools.txt` on Python 3.10, 3.11, 3.12, and 3.13, compares each exact name/version/artifact-hash set to the corresponding reviewed lock, and performs a `pip download --require-hashes` verification for each interpreter.
 
-The Python 3.12 CI lane exercises this same exact locked release-validation stack on every pull request. Python 3.10, 3.11, and 3.13 CI lanes remain compatibility tests and still use the project dev-extra ranges; their tool versions may drift and should not be treated as the reproducible release environment.
+The v1.6.0 release validation job installs, in order, the reviewed Linux build lock, Python 3.12 validation lock, and runtime lock, then installs AegisLog with `--no-deps --no-build-isolation`. It therefore runs Ruff, pytest, the labeled detection evaluation, Bandit, pip-audit, package construction, and Twine checks without resolving an unreviewed dev-extra dependency graph.
+
+All four CI lanes now use deterministic validation inputs rather than the floating project dev extra. Each lane installs the minimal hash-locked editable backend in `packaging/editable-build-backend.txt`, its interpreter-specific validation lock, the reviewed runtime lock, and then AegisLog with `--no-deps --no-build-isolation`. Python 3.12 additionally installs the reviewed artifact-build lock because it is the actual release-validation environment.
 
 The active CI, security, package, Windows single-executable, runtime-lock-audit, build-lock-audit, validation-lock-audit, and v1.6.0 release workflows reference GitHub Actions by immutable commit SHA and use explicit hosted OS labels rather than `*-latest` aliases.
 
-These controls materially reduce dependency and workflow drift, but they are not a bit-for-bit reproducibility guarantee. GitHub can refresh the underlying VM image behind a fixed OS label. Compatibility CI lanes outside Python 3.12 also remain intentionally less reproducible than the release-validation lane.
+These controls materially reduce dependency and workflow drift, but they are not a bit-for-bit reproducibility guarantee. GitHub can refresh the underlying VM image behind a fixed OS label, and only Python 3.12 is the designated release-validation interpreter even though all compatibility lanes now have deterministic dependency inputs.
 
-Any dependency lock update should be a reviewed pull request that intentionally changes versions/hashes, verifies the lock on the supported OS target, runs security/package/installer/executable/CLI gates, and is merged before a release tag is created. Do not regenerate or relax hashes during a release run.
+Any dependency lock update should be a reviewed pull request that intentionally changes versions/hashes, verifies the lock on the supported OS/interpreter target, runs security/package/installer/executable/CLI gates, and is merged before a release tag is created. Do not regenerate or relax hashes during a release run.
 
 ## Windows code signing
 
