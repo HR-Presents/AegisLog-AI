@@ -101,10 +101,10 @@ def _bounded_complete_lines(
 class RealtimeState:
     source: str
     window_size: int = 500
-    max_window_bytes: int = 5_000_000
-    max_line_bytes: int = 1_000_000
     alert_ttl_seconds: int = 300
     watch_profile: str = "all"
+    max_window_bytes: int = 5_000_000
+    max_line_bytes: int = 1_000_000
     started_at: float = field(default_factory=time.monotonic)
     total_lines: int = 0
     total_bytes: int = 0
