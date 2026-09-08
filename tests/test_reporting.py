@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from pathlib import Path
 
 from aegislog.anomaly import Anomaly
@@ -55,8 +56,10 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
         "Security Investigation Report",
         "Investigation record",
         "Case reference",
+        "Executive brief / page 1",
         "Executive Summary",
         "Assessment",
+        "Primary analyst decision",
         "Recommended Triage",
         "Incident Queue",
         "Findings and Recommendations",
@@ -82,6 +85,7 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
 
     assert 'id="triage"' in html
     assert "@media print" in html
+    assert "#executive { break-after: page; }" in html
     assert "window.print()" in html
     assert 'src="http://' not in html
     assert 'src="https://' not in html
@@ -99,6 +103,17 @@ def test_html_report_has_stable_case_reference_for_same_snapshot() -> None:
     second_ids = pattern.findall(second)
     assert first_ids
     assert first_ids[0] == second_ids[0]
+
+
+def test_case_reference_changes_when_retained_evidence_changes() -> None:
+    original = _data()
+    changed_finding = replace(original.findings[0], evidence="different retained evidence")
+    changed = replace(original, findings=(changed_finding, *original.findings[1:]))
+    pattern = re.compile(r"AL-[A-F0-9]{10}")
+
+    original_id = pattern.findall(build_html_report(original))[0]
+    changed_id = pattern.findall(build_html_report(changed))[0]
+    assert original_id != changed_id
 
 
 def test_html_report_escapes_retained_evidence() -> None:
@@ -140,6 +155,7 @@ def test_empty_report_has_clear_empty_states() -> None:
     assert "No rule-backed findings were recorded." in html
     assert "No rare concerning event classes were recorded." in html
     assert "No critical, high, or medium rule-backed findings were retained" in html
+    assert "No elevated rule-backed finding requires immediate action" in html
 
 
 def test_write_html_report_uses_safe_predictable_filename(tmp_path: Path) -> None:
