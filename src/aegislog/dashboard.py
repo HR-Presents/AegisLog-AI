@@ -77,16 +77,16 @@ def _risk_state(data: DashboardData) -> str:
 def _header(data: DashboardData) -> Panel:
     risk = _risk_state(data)
     title = Text()
-    title.append("AEGISLOG AI", style=f"bold {ACCENT}")
-    title.append(" // ANALYSIS", style="bold white")
+    title.append("AEGISLOG", style=f"bold {ACCENT}")
+    title.append(" // INVESTIGATION", style="bold white")
     title.append(f"  v{__version__}", style=MUTED)
 
     metadata = Text()
-    metadata.append("TARGET  ", style=MUTED)
+    metadata.append("SOURCE  ", style=MUTED)
     metadata.append(data.source, style="bold white")
     metadata.append("\nEVENTS  ", style=MUTED)
     metadata.append(f"{data.lines:,}", style=ACCENT)
-    metadata.append("    STATE  ", style=MUTED)
+    metadata.append("    POSTURE  ", style=MUTED)
     metadata.append(f"[{risk}]", style=f"bold {risk_style(risk)}")
     return Panel(Text.assemble(title, "\n", metadata), border_style=ACCENT_SOFT, padding=(0, 1))
 
