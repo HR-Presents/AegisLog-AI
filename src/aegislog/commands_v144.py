@@ -27,50 +27,49 @@ from .console_pages import commands_reference, system_check
 from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
-_MAX_HOME_WIDTH = 88
 _NARROW_MENU_BREAKPOINT = 64
 
 
 def _frame_width(screen_width: int | None = None) -> int:
-    """Return a compact content width that never grows wider than the terminal."""
+    """Use the full available terminal viewport with a one-cell safety margin."""
     width = console.size.width if screen_width is None else screen_width
-    return max(1, min(max(width - 2, 1), _MAX_HOME_WIDTH))
+    return max(1, width - 2)
 
 
 def _header(screen_width: int | None = None) -> Panel:
-    """Render a compact command-center identity and runtime posture."""
+    """Render the full-width command-center identity and runtime posture."""
     frame_width = _frame_width(screen_width)
     title = Text()
     title.append("AEGISLOG", style=f"bold {ACCENT}")
-    title.append(" // SECURITY OPERATIONS", style="bold white")
+    title.append(" // SECURITY OPERATIONS CONSOLE", style="bold white")
     title.append("  v1.6.1", style=MUTED)
 
     status = Text()
-    separator = "   " if frame_width >= 76 else "\n"
-    status.append("READY", style=f"bold {SUCCESS}")
+    separator = "    " if frame_width >= 76 else "\n"
+    status.append("ENGINE READY", style=f"bold {SUCCESS}")
     status.append(separator)
-    status.append("LOCAL", style=f"bold {ACCENT_SOFT}")
+    status.append("LOCAL ANALYSIS", style=f"bold {ACCENT_SOFT}")
     status.append(separator)
-    status.append("REMOTE AI: OPT-IN", style=MUTED)
+    status.append("REMOTE AI: EXPLICIT OPT-IN", style=MUTED)
 
     return Panel(
         Text.assemble(title, "\n", status),
-        border_style=ACCENT_SOFT,
-        padding=(0, 1),
+        border_style=ACCENT,
+        padding=(1, 2),
         width=frame_width,
     )
 
 
 def _menu(screen_width: int | None = None) -> Table:
-    """Render the command matrix with a deliberate narrow-screen fallback."""
+    """Render a full-width operator command deck with responsive density."""
     frame_width = _frame_width(screen_width)
     narrow = frame_width < _NARROW_MENU_BREAKPOINT
     table = Table(
         show_header=not narrow,
-        header_style=MUTED,
+        header_style=f"bold {ACCENT_SOFT}",
         box=None,
-        padding=(0, 1),
-        expand=False,
+        padding=(0, 2),
+        expand=True,
         width=frame_width,
     )
     table.add_column("KEY" if not narrow else "", max_width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
@@ -78,17 +77,18 @@ def _menu(screen_width: int | None = None) -> Table:
     if narrow:
         table.add_column(ratio=1, overflow="fold")
     else:
-        table.add_column("ACTION", min_width=16, max_width=20, style="bold white", overflow="fold")
-        table.add_column("PURPOSE", min_width=20, ratio=1, style=MUTED, overflow="fold")
+        table.add_column("ACTION", min_width=18, max_width=24, style="bold white", overflow="fold")
+        table.add_column("MISSION", min_width=28, ratio=2, style=MUTED, overflow="fold")
+        table.add_column("MODE", min_width=10, max_width=16, justify="right", style=ACCENT_SOFT, no_wrap=True)
 
     def section(label: str) -> None:
-        heading = Text(f"-- {label}", style=f"bold {ACCENT_SOFT}")
+        heading = Text(f"{label}", style=f"bold {ACCENT_SOFT}")
         if narrow:
             table.add_row("", heading)
         else:
-            table.add_row("", heading, "")
+            table.add_row("", heading, "", "")
 
-    def action(key: str, command: str | Text, description: str) -> None:
+    def action(key: str, command: str | Text, description: str, mode: str) -> None:
         if narrow:
             body = Text()
             if isinstance(command, Text):
@@ -97,43 +97,47 @@ def _menu(screen_width: int | None = None) -> Table:
                 body.append(command, style="bold white")
             body.append("\n")
             body.append(description, style=MUTED)
+            body.append(f"  [{mode}]", style=ACCENT_SOFT)
             table.add_row(key, body)
         else:
-            table.add_row(key, command, description)
+            table.add_row(key, command, description, mode)
 
     section("OPERATIONS")
-    action("01", "ANALYZE LOG", "Static log investigation")
-    action("02", "LIVE MONITOR", "Real-time event monitoring")
-    action("03", "MULTI-SOURCE SOC", "Correlate multiple log sources")
+    action("01", "ANALYZE LOG", "Investigate one log with the full defensive dashboard", "STATIC")
+    action("02", "LIVE MONITOR", "Follow a log in real time with profile-focused detections", "LIVE")
+    action("03", "MULTI-SOURCE SOC", "Correlate multiple sources in one live security view", "LIVE SOC")
     section("INVESTIGATION")
-    action("04", "NATIVE LOGS", "System and container telemetry")
-    action("05", "NATIVE MONITOR", "Live native telemetry")
-    action("06", "INCIDENT INTEL", "Explain a correlated incident")
+    action("04", "NATIVE LOGS", "Analyze operating-system or container telemetry", "LOCAL")
+    action("05", "NATIVE MONITOR", "Continuously watch native telemetry read-only", "LIVE")
+    action("06", "INCIDENT INTEL", "Explain a correlated incident and supporting evidence", "LOCAL")
     section("TOOLS")
-    action("07", "DEMO", "Run demonstration dataset")
-    action("08", "HEALTH", "Engine diagnostics")
-    action("09", "COMMANDS", "CLI reference")
-    action("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Run a direct AegisLog command")
-    action("Q", Text("EXIT", style=f"bold {HIGH}"), "Close the console")
+    action("07", "DEMO", "Open the built-in demonstration investigation", "DEMO")
+    action("08", "HEALTH", "Inspect runtime, collectors, profiles, and engine readiness", "STATUS")
+    action("09", "COMMANDS", "Open the complete command reference", "REFERENCE")
+    action("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Run a direct AegisLog CLI command", "ADVANCED")
+    action("Q", Text("EXIT", style=f"bold {HIGH}"), "Close the console safely", "EXIT")
     return table
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
-    """Render one left-anchored SOC shell at every terminal width."""
+    """Render a full-width SOC shell at every terminal size."""
     frame_width = _frame_width(screen_width)
     menu_panel = Panel(
         _menu(screen_width),
-        title=Text("OPERATOR MENU", style=f"bold {ACCENT_SOFT}"),
+        title=Text("OPERATOR COMMAND DECK", style=f"bold {ACCENT}"),
         title_align="left",
         border_style=ACCENT_SOFT,
-        padding=(0, 0),
+        padding=(1, 1),
         width=frame_width,
     )
-    if frame_width < 48:
-        footer = Text("Ctrl+C: stop live | AI: opt-in", style=MUTED)
-    else:
-        footer = Text("Ctrl+C stops live views safely | Remote AI requires explicit opt-in", style=MUTED)
-    return Group(_header(screen_width), menu_panel, footer)
+    footer = Text()
+    footer.append("CTRL+C", style=f"bold {ACCENT_SOFT}")
+    footer.append(" stop live view   ", style=MUTED)
+    footer.append("LOCAL-FIRST", style=f"bold {SUCCESS}")
+    footer.append(" analysis   ", style=MUTED)
+    footer.append("REMOTE AI", style=f"bold {ACCENT_SOFT}")
+    footer.append(" explicit opt-in", style=MUTED)
+    return Group(_header(screen_width), Text(""), menu_panel, Text(""), footer)
 
 
 def _pause_for_menu() -> None:
