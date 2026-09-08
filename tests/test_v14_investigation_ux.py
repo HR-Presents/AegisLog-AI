@@ -31,7 +31,12 @@ def test_dashboard_surfaces_incident_id_and_real_commands() -> None:
     console.print(render_dashboard(data))
     output = console.export_text()
 
-    assert "INC-ABCDEF12" in output
+    focus = output[output.index("ANALYST FOCUS") : output.index("ACTIVE INCIDENTS")]
+    assert "INC-ABCDEF12" in focus
+    assert "PRIMARY" in focus
+    assert "Review the correlated evidence chain" in focus
+    assert "No elevated rule-backed findings" not in focus
+
     assert "incidents sample.log" in output
     assert "investigate sample.log INC-ABCDEF12" in output
     assert "explain sample.log INC-ABCDEF12" in output
