@@ -2,70 +2,86 @@
 
 Status: **NO-GO for production publication**
 
-This document records the release-readiness state observed on the PR branch. It is not authorization to merge, tag, or publish.
+This document records release-readiness state on the PR branch. It is not authorization to merge, tag, or publish.
 
 ## Candidate validation
 
-Current PR branch head reviewed for this status:
+Current validated PR head:
 
 ```text
-1856a53c7d632cadce0049f0fb191e5e9e833bab
+dcde3f5d147715a952e743fe3216eca6efd8344c
 ```
 
 All seven pull-request workflows completed successfully for that exact head:
 
-- Validation toolchain lock audit #181
-- Security checks #1320
-- Build toolchain lock audit #197
-- Runtime lock audit #205
-- CI #1338
-- Package build #458
-- Windows single executable #418
+- Security checks #1334
+- Runtime lock audit #212
+- Build toolchain lock audit #204
+- Validation toolchain lock audit #188
+- CI #1352
+- Package build #465
+- Windows single executable #425
 
 Matching temporary Windows CI artifact:
 
 ```text
 Name: AegisLog-Windows-Single-EXE
-Artifact ID: 10072121093
-Artifact digest: sha256:5702bd24642278fb3046ac4afa173860a38b97c9c513c32eac8b92d661d2b1d2
-Head SHA: 1856a53c7d632cadce0049f0fb191e5e9e833bab
+Artifact ID: 10073054699
+Artifact digest: sha256:b87c7ff06eecdb37e6c8765f57cad58c107d04caca88efeffcbd820513866db7
+Head SHA: dcde3f5d147715a952e743fe3216eca6efd8344c
 ```
 
 This artifact is temporary pull-request validation evidence. It is not the signed v1.6.1 customer release asset.
 
 ## GO items
 
-- [x] v1.6.1 version metadata is aligned in `pyproject.toml` and `src/aegislog/__init__.py`.
+- [x] v1.6.1 version metadata is aligned.
 - [x] Dedicated guarded v1.6.1 release workflow exists.
 - [x] Release workflow requires dispatch from `main` with exact confirmation `RELEASE-v1.6.1`.
 - [x] Release workflow runs quality, security, packaging, checksum, signing, provenance, and smoke-test gates.
-- [x] Release workflow publishes only `AegisLog.exe` and `AegisLog.exe.sha256` as GitHub Release assets after successful gates.
+- [x] Release workflow publishes only `AegisLog.exe` and `AegisLog.exe.sha256` after successful gates.
 - [x] Exact current PR head has seven successful PR validation workflows.
 - [x] Exact current PR head produced a matching Windows validation artifact.
-- [x] No existing GitHub Release named `v1.6.1` was found during this review.
-- [x] No existing Git tag `v1.6.1` was found during this review.
 - [x] External-evidence generation and reviewer submission procedures are documented.
+- [x] Release preflight no longer requires an impossible self-referential evidence SHA.
+- [x] Release preflight now accepts only a direct single-parent evidence-only child of the evaluated code commit and rejects unrelated changes.
 - [x] Windows signing requirements and fail-closed verification are documented.
 
 ## NO-GO blockers
 
 ### 1. Pull request lifecycle
 
-PR #77 is still Draft, open, mergeable, and unmerged. The release workflow requires execution from `main`, so this branch is not a valid production release source yet.
+PR #77 remains Draft/open/unmerged. The production workflow must run from `main`. Normal human review and project authorization still apply.
 
-Do not merge or mark ready solely because this checklist exists. Normal review and project authorization still apply.
+### 2. External release evidence is not yet available
 
-### 2. External release evidence
+`evaluation/external-release-evidence.json` is intentionally absent on the PR branch. It must not be fabricated from repository synthetic fixtures.
 
-`evaluation/external-release-evidence.json` is absent on the current PR branch.
+After approved merge, the exact merged `main` code SHA becomes the **evaluated commit**. A real sanitized external dataset with independently assigned labels, genuine provenance, labeling procedure, reviewer identity/role, metrics, uncertainty, and limitations must be evaluated against that SHA.
 
-The release preflight requires this file. It must be generated from a real sanitized external JSONL dataset with independently assigned labels, real provenance, a documented labeling procedure, real reviewer identity/role, and the exact release candidate commit.
+The generated evidence file must record that exact code SHA in `evaluated_commit`.
 
-Synthetic repository fixtures must not be relabeled as external evidence.
+### 3. Final release commit must be an evidence-only child
 
-### 3. Windows signing configuration
+Because a commit cannot contain its own Git SHA, the final release commit is intentionally distinct from the evaluated code commit.
 
-The repository workflow requires these externally provisioned settings:
+After external evidence is generated for the frozen evaluated code SHA, create one immediate child commit that changes **only**:
+
+```text
+evaluation/external-release-evidence.json
+```
+
+That evidence-only child is the release commit. `tools/release_preflight.py` fails closed unless:
+
+- the release commit has exactly one parent;
+- that parent equals evidence field `evaluated_commit`;
+- the parent-to-release diff contains exactly `evaluation/external-release-evidence.json`.
+
+Stale evidence, arbitrary ancestor evidence, merge commits, and evidence commits containing any code/workflow/docs/dependency change are rejected.
+
+### 4. Windows signing configuration
+
+The workflow requires:
 
 ```text
 Secret: WINDOWS_SIGNING_PFX_BASE64
@@ -74,37 +90,17 @@ Secret: WINDOWS_SIGNING_CERT_THUMBPRINT
 Variable: WINDOWS_SIGNING_TIMESTAMP_URL
 ```
 
-The connected repository interface cannot inspect secret values or reliably prove their presence. An authorized repository administrator must confirm configuration without exposing the values.
-
-The timestamp URL must be HTTPS. The certificate must contain the Code Signing EKU, expose the private key after import, match the configured thumbprint, successfully sign the executable, and produce a verifiable RFC3161 timestamp.
-
-### 4. Final release candidate must be the merged `main` commit
-
-The exact PR head above is validated, but it is not yet the final release candidate because it has not been merged to `main`.
-
-After approved merge, record the resulting exact `main` commit SHA and bind external evidence to that exact candidate. If the merge commit differs from the PR head, do not reuse evidence whose `evaluated_commit` points to the PR head.
+The connected repository interface cannot inspect secret values or reliably prove their presence. An authorized repository administrator must confirm configuration without exposing values. The certificate must contain Code Signing EKU/private key, match the approved thumbprint, and produce a verifiable RFC3161 timestamp through credential-free HTTPS.
 
 ### 5. Release workflow has not run
 
-No production v1.6.1 release workflow has been authorized or executed by this status review.
+No production v1.6.1 release workflow has been authorized or executed. The guarded workflow must run from the exact evidence-only release commit on `main` and all gates must pass.
 
-The release remains NO-GO until the exact merged candidate passes the guarded release workflow, including signing, checksum verification, attestation, smoke testing, and final publication checks.
+### 6. Post-publication verification remains required
 
-### 6. Post-publication verification is still required
-
-After a legitimate release is published, independently verify the assets downloaded from the GitHub Release page:
-
-- SHA-256 matches `AegisLog.exe.sha256`;
-- Authenticode status is valid;
-- signer thumbprint matches the approved release identity;
-- RFC3161 timestamp is present;
-- clean-machine smoke tests succeed;
-- published release points to the intended commit;
-- only the intended release assets are present.
+After legitimate publication, independently verify release target, exact asset set, SHA-256 checksum, Authenticode signer identity/thumbprint, RFC3161 timestamp, and clean-machine smoke behavior.
 
 ## Release decision
-
-Current decision:
 
 ```text
 NO-GO
@@ -113,9 +109,9 @@ NO-GO
 Reasons:
 
 1. PR #77 is Draft and unmerged.
-2. Required external release evidence is absent.
-3. Signing-secret/variable provisioning cannot yet be confirmed from repository-visible state.
-4. The final merged `main` candidate does not yet exist for this change set.
-5. The guarded v1.6.1 release workflow has not run against that final candidate.
+2. Required genuine external release evidence is absent.
+3. The merged evaluated code commit and its evidence-only release child do not yet exist.
+4. Signing configuration cannot yet be independently confirmed from repository-visible state.
+5. The guarded v1.6.1 release workflow has not run on the final release commit.
 
-A GO decision is appropriate only after every blocker above is resolved with evidence tied to the exact release commit.
+A GO decision is appropriate only after every blocker is resolved with evidence tied to the exact evaluated code commit and a release commit that satisfies the strict evidence-only child relationship.
