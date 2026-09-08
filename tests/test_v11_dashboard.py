@@ -42,7 +42,9 @@ def test_dashboard_render_is_terminal_safe(tmp_path: Path):
     console = Console(record=True, force_terminal=False, width=120)
     console.print(render_dashboard(data))
     output = console.export_text()
-    assert "AEGISLOG AI" in output
+    assert "AEGISLOG // INVESTIGATION" in output
+    assert "SOURCE" in output
+    assert "POSTURE" in output
     assert "not markup" in output
     assert "Detected findings" in output
 
