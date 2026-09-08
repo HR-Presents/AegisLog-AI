@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import sys
 from collections import Counter
 from dataclasses import dataclass
@@ -27,6 +28,8 @@ from .theme import (
     risk_style,
     severity_text,
 )
+
+_SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
 
 
 @dataclass(frozen=True)
@@ -85,74 +88,68 @@ def _risk_state(data: DashboardData) -> str:
     return "CLEAR"
 
 
+def _ordered_findings(data: DashboardData) -> list[Finding]:
+    return sorted(
+        data.findings,
+        key=lambda item: (-_SEVERITY_RANK.get(item.severity, 0), item.category, item.title),
+    )
+
+
 def _header(data: DashboardData) -> Panel:
     risk = _risk_state(data)
+    source_name = Path(data.source).name or data.source
     body = Text()
     body.append("AEGISLOG", style=f"bold {ACCENT}")
     body.append("  /  INVESTIGATION", style="bold white")
     body.append(f"  v{__version__}", style=MUTED)
     body.append("\n")
     body.append("SOURCE  ", style=MUTED)
-    body.append(data.source, style="white")
-    body.append("\n")
-    body.append("POSTURE  ", style=MUTED)
+    body.append(source_name, style="bold white")
+    body.append("    POSTURE  ", style=MUTED)
     body.append(risk, style=f"bold {risk_style(risk)}")
-    body.append("    EVENTS  ", style=MUTED)
+    body.append("\n")
+    body.append("EVENTS  ", style=MUTED)
     body.append(f"{data.lines:,}", style=f"bold {ACCENT}")
-    body.append("    LOCAL / READ-ONLY", style=MUTED)
-    return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1))
-
-
-def _posture_table(data: DashboardData) -> Table:
-    table = Table(
-        title="INVESTIGATION SUMMARY",
-        title_style=f"bold {ACCENT_SOFT}",
-        expand=True,
-        show_header=True,
-        header_style=MUTED,
+    body.append("    FINDINGS  ", style=MUTED)
+    body.append(str(len(data.findings)), style="bold white")
+    body.append("    INCIDENTS  ", style=MUTED)
+    body.append(str(len(data.incidents)), style=f"bold {INCIDENT}")
+    body.append("    ANOMALIES  ", style=MUTED)
+    body.append(str(len(data.anomalies)), style=f"bold {ANOMALY}")
+    if data.source != source_name:
+        body.append("\nPATH    ", style=MUTED)
+        body.append(data.source, style=MUTED)
+    body.append("\nLOCAL / READ-ONLY", style=MUTED)
+    return Panel(
+        body,
+        title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT_SOFT}"),
+        title_align="left",
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
-    table.add_column("CRITICAL", justify="center")
-    table.add_column("HIGH", justify="center")
-    table.add_column("MEDIUM", justify="center")
-    table.add_column("LOW", justify="center")
-    table.add_column("FINDINGS", justify="center")
-    table.add_column("INCIDENTS", justify="center")
-    table.add_column("ANOMALIES", justify="center")
-    table.add_row(
-        Text(str(data.severities.get("CRITICAL", 0)), style="bold bright_red"),
-        Text(str(data.severities.get("HIGH", 0)), style="bold bright_red"),
-        Text(str(data.severities.get("MEDIUM", 0)), style=f"bold {WARNING}"),
-        Text(str(data.severities.get("LOW", 0)), style=f"bold {INFO}"),
-        Text(str(len(data.findings)), style="bold white"),
-        Text(str(len(data.incidents)), style=f"bold {INCIDENT}"),
-        Text(str(len(data.anomalies)), style=f"bold {ANOMALY}"),
-    )
-    return table
 
 
 def _analyst_focus(data: DashboardData) -> Panel:
     risk = _risk_state(data)
+    ordered = _ordered_findings(data)
     body = Text()
     body.append("PRIORITY  ", style=MUTED)
     body.append(risk, style=f"bold {risk_style(risk)}")
 
-    if data.findings:
-        top = sorted(
-            data.findings,
-            key=lambda item: (
-                {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}.get(item.severity, 0),
-                item.title,
-            ),
-            reverse=True,
-        )[0]
-        body.append("\nFOCUS     ", style=MUTED)
+    if ordered:
+        top = ordered[0]
+        body.append("\nPRIMARY   ", style=MUTED)
         body.append(top.title, style="bold white")
         body.append("\nACTION    ", style=MUTED)
         body.append(top.recommendation, style="white")
+        if len(ordered) > 1:
+            next_item = ordered[1]
+            body.append("\nNEXT      ", style=MUTED)
+            body.append(next_item.severity, style=f"bold {risk_style(next_item.severity)}")
+            body.append("  ", style=MUTED)
+            body.append(next_item.title, style="white")
     else:
-        body.append("\nFOCUS     ", style=MUTED)
+        body.append("\nPRIMARY   ", style=MUTED)
         body.append("No elevated rule-backed findings retained", style=SUCCESS)
         body.append("\nACTION    ", style=MUTED)
         body.append("Review coverage and preserve original telemetry when required.", style="white")
@@ -195,14 +192,13 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
             Text(item.category),
             Text(item.title),
         )
-    if not data.incidents:
-        table.add_row("-", "-", "0", "-", Text("No correlated incidents", style=MUTED))
     return table
 
 
 def _finding_table(data: DashboardData, limit: int = 20) -> Table:
+    ordered = _ordered_findings(data)
     table = Table(
-        title=f"Detected findings  [{min(len(data.findings), limit)}/{len(data.findings)}]",
+        title=f"Detected findings  [{min(len(ordered), limit)}/{len(ordered)}]",
         title_style=f"bold {ACCENT}",
         expand=True,
         border_style=ACCENT_SOFT,
@@ -212,14 +208,14 @@ def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     table.add_column("CATEGORY", width=17)
     table.add_column("DETECTION", width=32)
     table.add_column("EVIDENCE", ratio=1, overflow="fold")
-    for item in data.findings[:limit]:
+    for item in ordered[:limit]:
         table.add_row(
             severity_text(item.severity),
             Text(item.category),
             Text(item.title),
             Text(item.evidence),
         )
-    if not data.findings:
+    if not ordered:
         table.add_row(
             "-",
             "-",
@@ -275,22 +271,29 @@ def _telemetry_table(data: DashboardData) -> Table:
     return table
 
 
+def _source_argument(source: str) -> str:
+    if sys.platform == "win32" or getattr(sys, "frozen", False):
+        return f'"{source.replace(chr(34), chr(34) * 2)}"'
+    return shlex.quote(source)
+
+
 def _next_steps(data: DashboardData) -> Panel:
     command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
+    source = _source_argument(data.source)
     body = Text()
     body.append("REPORT  ", style=MUTED)
     body.append("HTML investigation report generated automatically", style=SUCCESS)
-    body.append("\nNEXT    ", style=MUTED)
-    body.append(f"{command} incidents <file>", style=ACCENT)
+    body.append("\nLIST    ", style=MUTED)
+    body.append(f"{command} incidents {source}", style=ACCENT)
     if data.incidents:
         incident_id = f"INC-{data.incidents[0].id.upper()[:8]}"
-        body.append("    ", style=MUTED)
-        body.append(f"{command} investigate <file> {incident_id}", style=INCIDENT)
-        body.append("    ", style=MUTED)
-        body.append(f"{command} explain <file> {incident_id}", style=INFO)
+        body.append("\nOPEN    ", style=MUTED)
+        body.append(f"{command} investigate {source} {incident_id}", style=INCIDENT)
+        body.append("\nEXPLAIN ", style=MUTED)
+        body.append(f"{command} explain {source} {incident_id}", style=INFO)
     return Panel(
         body,
-        title=Text(" FOLLOW-UP ", style=f"bold {ACCENT}"),
+        title=Text(" FOLLOW-UP / COPY-READY ", style=f"bold {ACCENT}"),
         title_align="left",
         border_style=ACCENT_SOFT,
         padding=(0, 1),
@@ -299,11 +302,7 @@ def _next_steps(data: DashboardData) -> Panel:
 
 def render_dashboard(data: DashboardData) -> RenderableType:
     """Return a prioritized SOC-style investigation dashboard."""
-    sections: list[RenderableType] = [
-        _header(data),
-        _posture_table(data),
-        _analyst_focus(data),
-    ]
+    sections: list[RenderableType] = [_header(data), _analyst_focus(data)]
     if data.incidents:
         sections.append(_incident_table(data))
     sections.append(_finding_table(data))
