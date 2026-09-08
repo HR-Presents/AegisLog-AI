@@ -6,13 +6,25 @@ It is intentionally fail-closed. A checked item means the requirement has been v
 
 ## Candidate identity
 
+AegisLog v1.6.1 uses two distinct commit identities:
+
+- **Evaluated code commit:** exact reviewed `main` commit whose code is evaluated against the external dataset.
+- **Evidence-only release commit:** immediate single-parent child of the evaluated code commit that changes exactly `evaluation/external-release-evidence.json`.
+
 - [x] `pyproject.toml` declares version `1.6.1`.
 - [x] `src/aegislog/__init__.py` declares `__version__ = "1.6.1"`.
 - [x] The repository contains `docs/RELEASE_V1.6.1.md`.
-- [ ] The exact reviewed release candidate has been merged to `main`.
-- [ ] The final release candidate commit SHA on `main` has been recorded here before dispatch.
+- [ ] The reviewed change set has been merged to `main`.
+- [ ] The exact evaluated code commit SHA on `main` has been recorded before evidence generation.
+- [ ] The exact evidence-only release commit SHA has been recorded before workflow dispatch.
 
-Final candidate SHA:
+Evaluated code commit SHA:
+
+```text
+PENDING
+```
+
+Evidence-only release commit SHA:
 
 ```text
 PENDING
@@ -25,37 +37,41 @@ PENDING
 - [ ] No unresolved blocking review threads remain.
 - [ ] PR #77 has been merged into `main`.
 
-Do not publish directly from the PR branch. The release workflow itself requires `refs/heads/main`.
+Do not publish directly from the PR branch. The release workflow requires `refs/heads/main`.
 
-## Exact-candidate CI gates
+## Exact evaluated-code validation
 
-For the final candidate commit on `main`, verify all required workflows are green for that exact SHA:
+For the exact evaluated code commit on `main`, verify the required validation remains acceptable for release preparation. Historical green PR runs support review but do not identify the final merged code commit if the merge strategy changes its SHA.
 
-- [ ] CI
-- [ ] Security checks
-- [ ] Package build
-- [ ] Windows single executable
-- [ ] Runtime lock audit
-- [ ] Build toolchain lock audit
-- [ ] Validation toolchain lock audit
+- [ ] Exact evaluated code commit is recorded.
+- [ ] No unreviewed code/workflow/dependency changes occur after it is frozen.
+- [ ] Required CI/security/package/Windows/lock audits for the intended code are green or have been revalidated according to project policy.
 
-Historical green PR runs may support review, but they do not replace exact-candidate release evidence after merge.
+The evidence-only release commit must contain no code changes, so its release workflow preflight binds it back to this evaluated code commit.
 
 ## External release evidence
 
-Current status: **BLOCKED — `evaluation/external-release-evidence.json` is not present on the PR branch.**
+Current status: **BLOCKED — genuine external evidence has not yet been produced for the final merged evaluated code commit.**
 
 Before release:
 
 - [ ] Obtain a real, sanitized, independently labeled external evaluation dataset.
 - [ ] Keep underlying production/customer telemetry out of the repository unless explicitly authorized and safely sanitized.
-- [ ] Generate `evaluation/external-release-evidence.json` using `tools/build_external_evidence.py`.
+- [ ] Generate `evaluation/external-release-evidence.json` using `tools/build_external_evidence.py` with `--evaluated-commit` set to the exact evaluated code commit SHA.
 - [ ] Include real provenance, labeling procedure, reviewer metadata, `--independent-labeling`, and `--sanitized`.
-- [ ] Ensure the evidence identifies the exact final release candidate commit SHA.
-- [ ] Review the generated evidence for accuracy before dispatch.
-- [ ] Confirm release preflight accepts the evidence file.
+- [ ] Verify `dataset_sha256`, metrics, confidence intervals, limitations, and reviewer metadata.
+- [ ] Review the generated evidence for accuracy before it is committed.
 
-Do not substitute fabricated reviewer metadata, synthetic-only evidence, placeholder provenance, or a manual checkbox for the required external evidence.
+Then create the release commit:
+
+- [ ] Start from the exact evaluated code commit on `main`.
+- [ ] Commit only `evaluation/external-release-evidence.json`.
+- [ ] Confirm the new commit has exactly one parent and that parent is the evaluated code commit.
+- [ ] Confirm no code, workflow, docs, dependencies, lockfiles, or other paths changed in the evidence-only commit.
+- [ ] Record the resulting evidence-only release commit SHA.
+- [ ] Confirm `tools/release_preflight.py` accepts the evidence manifest and commit binding.
+
+Do not substitute fabricated reviewer metadata, synthetic-only evidence, placeholder provenance, or a manual checkbox for the required external evidence. Do not amend the evaluated code commit to include the evidence file and do not combine evidence with unrelated changes.
 
 ## Windows signing configuration
 
@@ -79,11 +95,13 @@ Workflow: `.github/workflows/release-v1.6.1.yml`
 
 Before dispatch:
 
-- [ ] Run from `main` only.
+- [ ] `main` points to the exact evidence-only release commit.
+- [ ] The evidence-only release commit is the direct single-parent child of the evaluated code commit.
+- [ ] Its only changed path is `evaluation/external-release-evidence.json`.
 - [ ] Use the exact workflow confirmation value `RELEASE-v1.6.1`.
 - [ ] Confirm tag `v1.6.1` does not already exist.
 - [ ] Confirm a GitHub Release named/tagged `v1.6.1` does not already exist.
-- [ ] Confirm release preflight passes repository, ref, SHA, tag, version, confirmation, signing, timestamp, and external-evidence checks.
+- [ ] Confirm release preflight passes repository, ref, release SHA, evidence binding, tag, version, confirmation, signing, timestamp, and external-evidence checks.
 
 The workflow must refuse publication if any of these checks fail.
 
@@ -113,6 +131,8 @@ GitHub Actions artifacts are temporary validation evidence. They are not the per
 
 After the GitHub Release is published:
 
+- [ ] Confirm the release/tag targets the evidence-only release commit.
+- [ ] Confirm that commit is correctly bound to the intended evaluated code commit.
 - [ ] Download `AegisLog.exe` from the public `v1.6.1` GitHub Release page.
 - [ ] Download `AegisLog.exe.sha256` from the same release.
 - [ ] Verify the downloaded executable against the published checksum.
@@ -140,5 +160,5 @@ Current decision:
 
 ```text
 NOT READY FOR PUBLICATION
-Reason: PR is still Draft/unmerged and required external release evidence is absent.
+Reason: PR is still Draft/unmerged, genuine external evidence is not yet available for the final evaluated code commit, and signing configuration still requires authorized administrator confirmation.
 ```
