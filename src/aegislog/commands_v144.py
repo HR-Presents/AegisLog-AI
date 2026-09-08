@@ -13,7 +13,6 @@ from .commands_v12 import (
     _choose_log_file,
     _choose_profile,
     _command_prompt,
-    _commands,
     _explain_menu,
     _menu_action_error,
     _native_choice,
@@ -21,10 +20,10 @@ from .commands_v12 import (
     _path,
     _resolve_demo,
     _run_inline_command,
-    _system_check,
 )
 from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
+from .console_pages import commands_reference, system_check
 from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
@@ -277,13 +276,13 @@ def start() -> None:
                 console.print()
                 dashboard(_resolve_demo(), timestamp_year=None)
             elif choice in {"8", "08"}:
-                _system_check()
+                system_check()
             elif choice in {"9", "09"}:
-                _commands()
+                commands_reference()
             elif lowered == "c":
                 _command_prompt()
             elif lowered in {"help", "commands", "?"}:
-                _commands()
+                commands_reference()
             else:
                 console.print()
                 _run_inline_command(choice)
