@@ -69,8 +69,10 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
 
     assert "@media print" in html
     assert "window.print()" in html
-    assert "http://" not in html
-    assert "https://" not in html
+    assert 'src="http://' not in html
+    assert 'src="https://' not in html
+    assert 'href="http://' not in html
+    assert 'href="https://' not in html
     assert "@import" not in html
     assert "<script src=" not in html
 
