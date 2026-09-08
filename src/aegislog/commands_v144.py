@@ -24,7 +24,7 @@ from .commands_v12 import (
 from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
 from .console_pages import commands_reference, system_check
-from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
+from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
 
 console = Console()
 _NARROW_MENU_BREAKPOINT = 72
@@ -144,7 +144,6 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
 def _home(screen_width: int | None = None) -> RenderableType:
     """Render the responsive SOC command-center home."""
-    frame_width = _frame_width(screen_width)
     footer = Text()
     footer.append("SELECT", style=f"bold {ACCENT_SOFT}")
     footer.append("  01-09 / C     ", style=MUTED)
