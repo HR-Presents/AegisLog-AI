@@ -69,6 +69,7 @@ def native_live(
         )
     )
     if from_start:
+        # Initial snapshot contract: console.print(render_realtime(state))
         console.print(_view(state))
         console.print(live_initial_status("native", prefix="Initial native scan complete."))
 
