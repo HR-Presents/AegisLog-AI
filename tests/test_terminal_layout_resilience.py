@@ -6,6 +6,7 @@ from rich.console import Console
 
 from aegislog.commands_v144 import _header
 from aegislog.multisource import MultiSourceState, render_multisource
+from aegislog.realtime import RealtimeState, render_realtime
 
 
 def _render_text(renderable, width: int) -> str:
@@ -48,6 +49,49 @@ def test_multisource_dashboard_keeps_all_sections_at_standard_width() -> None:
     ):
         assert label in text
     assert max(len(line) for line in text.splitlines()) <= width
+
+
+def test_realtime_dashboard_keeps_all_sections_at_standard_width() -> None:
+    state = RealtimeState("aegislog_v145_test.log", watch_profile="security")
+    state.ingest(
+        [
+            "2026-09-02T09:37:00Z ERROR auth: failed login user=admin source=198.51.100.42\n",
+            "2026-09-02T09:37:01Z WARNING sshd: invalid user root from 198.51.100.42\n",
+            "2026-09-02T09:37:31Z ERROR firewall: blocked inbound connection port=3389\n",
+            "2026-09-02T09:37:50Z ERROR firewall: blocked probe port=445\n",
+        ],
+        now=1.0,
+    )
+
+    width = 100
+    text = _render_text(render_realtime(state), width)
+
+    for label in (
+        "REAL-TIME DEFENSIVE MONITOR",
+        "Live summary",
+        "Profile telemetry",
+        "Rate & baseline intelligence",
+        "Recent findings - Security",
+        "Live status",
+    ):
+        assert label in text
+    assert max(len(line) for line in text.splitlines()) <= width
+
+
+def test_realtime_dashboard_static_labels_are_legacy_console_safe() -> None:
+    state = RealtimeState("aegislog_v145_test.log", watch_profile="security")
+    text = _render_text(render_realtime(state), 100)
+    for label in (
+        "REAL-TIME DEFENSIVE MONITOR",
+        "Live summary",
+        "Profile telemetry",
+        "Recent findings - Security",
+        "Live status",
+    ):
+        label.encode("cp1252")
+        assert label in text
+    assert "•" not in text
+    assert "—" not in text
 
 
 def test_interactive_header_uses_legacy_console_safe_status_text() -> None:
