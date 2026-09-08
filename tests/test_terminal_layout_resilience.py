@@ -112,15 +112,24 @@ def test_interactive_home_fits_terminal_width(width: int) -> None:
     assert "MULTI-SOURCE SOC" in text
     assert "INCIDENT INTEL" in text
     assert "COMMAND MODE" in text
+    assert "Remote AI is opt-in" in text
     assert max(len(line) for line in text.splitlines()) <= width
 
 
 def test_interactive_home_caps_wide_terminal_content() -> None:
-    assert _frame_width(100) == 96
-    assert _frame_width(160) == 96
-    assert _frame_width(220) == 96
+    assert _frame_width(100) == 84
+    assert _frame_width(160) == 84
+    assert _frame_width(220) == 84
     assert _frame_width(60) == 58
     assert _frame_width(40) == 38
+
+
+def test_interactive_home_is_left_anchored_on_wide_terminals() -> None:
+    text = _render_text(_home(220), 220)
+    lines = [line for line in text.splitlines() if line]
+    assert lines[0].startswith("╭") or lines[0].startswith("┌")
+    assert max(len(line) for line in lines) <= 84
+    assert "Ctrl+C exits live views | Remote AI is opt-in" in text
 
 
 def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
