@@ -28,6 +28,7 @@ from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
 _NARROW_MENU_BREAKPOINT = 72
+_WIDE_MENU_BREAKPOINT = 118
 
 
 def _frame_width(screen_width: int | None = None) -> int:
@@ -37,22 +38,22 @@ def _frame_width(screen_width: int | None = None) -> int:
 
 
 def _header(screen_width: int | None = None) -> Panel:
-    """Render the full-width command-center identity and runtime posture."""
+    """Render a strong full-width command-center identity and runtime posture."""
     frame_width = _frame_width(screen_width)
     title = Text()
     title.append("AEGISLOG", style=f"bold {ACCENT}")
-    title.append("  /  SECURITY OPERATIONS", style="bold white")
-    title.append("  /  v1.6.1", style=MUTED)
+    title.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
+    title.append("  v1.6.1", style=MUTED)
 
     status = Text()
-    separator = "     " if frame_width >= 84 else "\n"
-    status.append("[ READY ]", style=f"bold {SUCCESS}")
+    separator = "    " if frame_width >= 84 else "\n"
+    status.append("READY", style=f"bold {SUCCESS}")
     status.append(separator)
     status.append("LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
     status.append(separator)
     status.append("READ-ONLY MONITORING", style=MUTED)
     status.append(separator)
-    status.append("REMOTE AI: OPT-IN", style=MUTED)
+    status.append("REMOTE AI / OPT-IN", style=MUTED)
 
     return Panel(
         Text.assemble(title, "\n", status),
@@ -62,82 +63,98 @@ def _header(screen_width: int | None = None) -> Panel:
     )
 
 
-def _menu(screen_width: int | None = None) -> Table:
-    """Render a full-width command deck without fragile right-edge columns."""
-    frame_width = _frame_width(screen_width)
-    narrow = frame_width < _NARROW_MENU_BREAKPOINT
-    table = Table(
-        show_header=not narrow,
-        header_style=f"bold {ACCENT_SOFT}",
-        box=None,
-        padding=(0, 2),
-        expand=True,
-        width=frame_width,
+def _command_card(title: str, rows: list[tuple[str, str, str]], width: int) -> Panel:
+    """Build one compact command zone instead of a spreadsheet-like global table."""
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(width=4, justify="center", no_wrap=True)
+    grid.add_column(width=20, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
+    for key, action, description in rows:
+        grid.add_row(
+            Text(key, style=f"bold {ACCENT}"),
+            Text(action, style="bold white"),
+            Text(description, style=MUTED),
+        )
+    return Panel(
+        grid,
+        title=Text(title, style=f"bold {ACCENT_SOFT}"),
+        title_align="left",
+        border_style=MUTED,
+        padding=(1, 1),
+        width=width,
     )
-    table.add_column("KEY" if not narrow else "", width=5, justify="center", style=f"bold {ACCENT}", no_wrap=True)
 
-    if narrow:
+
+def _menu(screen_width: int | None = None) -> RenderableType:
+    """Render responsive command zones that use wide terminals intentionally."""
+    frame_width = _frame_width(screen_width)
+    core = [
+        ("01", "ANALYZE LOG", "Static investigation with findings and evidence"),
+        ("02", "LIVE MONITOR", "Watch one log with continuous detection"),
+        ("03", "MULTI-SOURCE SOC", "Correlate multiple live sources"),
+    ]
+    investigate = [
+        ("04", "NATIVE LOGS", "Inspect Windows, Linux, or container telemetry"),
+        ("05", "NATIVE MONITOR", "Watch supported native telemetry read-only"),
+        ("06", "INCIDENT INTEL", "Reconstruct incidents and evidence chains"),
+    ]
+    tools = [
+        ("07", "DEMO", "Open the built-in investigation dataset"),
+        ("08", "HEALTH", "Inspect engine and collector readiness"),
+        ("09", "COMMANDS", "Browse the complete command reference"),
+        ("C", "COMMAND MODE", "Open the direct-command interface"),
+        ("Q", "EXIT", "Close AegisLog safely"),
+    ]
+
+    if frame_width < _NARROW_MENU_BREAKPOINT:
+        table = Table.grid(expand=True, padding=(0, 1))
+        table.add_column(width=4, justify="center", no_wrap=True)
         table.add_column(ratio=1, overflow="fold")
-    else:
-        table.add_column("ACTION", width=22, style="bold white", no_wrap=True)
-        table.add_column("CAPABILITY", ratio=1, style=MUTED, overflow="fold")
+        for heading, rows in (("OPERATIONS", core), ("INVESTIGATE", investigate), ("SYSTEM", tools)):
+            table.add_row("", Text(heading, style=f"bold {ACCENT_SOFT}"))
+            for key, action, description in rows:
+                body = Text(action, style="bold white")
+                body.append("\n")
+                body.append(description, style=MUTED)
+                table.add_row(Text(key, style=f"bold {ACCENT}"), body)
+        return Panel(table, title="MISSION CONTROL", title_align="left", border_style=ACCENT_SOFT, width=frame_width)
 
-    def section(label: str) -> None:
-        heading = Text(label, style=f"bold {ACCENT_SOFT}")
-        if narrow:
-            table.add_row("", heading)
-        else:
-            table.add_row("", heading, "")
+    if frame_width >= _WIDE_MENU_BREAKPOINT:
+        gap = 2
+        left_width = (frame_width - gap) // 2
+        right_width = frame_width - gap - left_width
+        left = Group(
+            _command_card("OPERATIONS", core, left_width),
+            _command_card("INVESTIGATION", investigate, left_width),
+        )
+        right = _command_card("SYSTEM / TOOLS", tools, right_width)
+        layout = Table.grid(expand=True, padding=0)
+        layout.add_column(width=left_width)
+        layout.add_column(width=gap)
+        layout.add_column(width=right_width)
+        layout.add_row(left, Text(""), right)
+        return layout
 
-    def action(key: str, command: str | Text, description: str) -> None:
-        if narrow:
-            body = Text()
-            if isinstance(command, Text):
-                body.append_text(command)
-            else:
-                body.append(command, style="bold white")
-            body.append("\n")
-            body.append(description, style=MUTED)
-            table.add_row(key, body)
-        else:
-            table.add_row(key, command, description)
-
-    section("CORE OPERATIONS")
-    action("01", "ANALYZE LOG", "Deep static investigation of a log file with defensive findings and evidence")
-    action("02", "LIVE MONITOR", "Stream one log source with continuous profile-aware detection")
-    action("03", "MULTI-SOURCE SOC", "Correlate multiple live sources into a unified SOC view")
-    section("INVESTIGATION & TELEMETRY")
-    action("04", "NATIVE LOGS", "Inspect Windows, Linux, or container telemetry using local analysis")
-    action("05", "NATIVE MONITOR", "Continuously watch supported native telemetry in read-only mode")
-    action("06", "INCIDENT INTEL", "Reconstruct a correlated incident, evidence chain, and investigation context")
-    section("SYSTEM & TOOLS")
-    action("07", "DEMO", "Launch the built-in investigation dataset and explore the analysis workflow")
-    action("08", "HEALTH", "Inspect engine readiness, collectors, profiles, runtime, and local capabilities")
-    action("09", "COMMANDS", "Browse the complete AegisLog command surface and usage reference")
-    action("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Enter the advanced direct-command interface")
-    action("Q", Text("EXIT", style=f"bold {HIGH}"), "Close AegisLog safely")
-    return table
+    return Group(
+        _command_card("OPERATIONS", core, frame_width),
+        _command_card("INVESTIGATION", investigate, frame_width),
+        _command_card("SYSTEM / TOOLS", tools, frame_width),
+    )
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
-    """Render a full-width SOC shell at every terminal size."""
+    """Render the responsive SOC command-center home."""
     frame_width = _frame_width(screen_width)
-    menu_panel = Panel(
-        _menu(screen_width),
-        title=Text("MISSION CONTROL", style=f"bold {ACCENT}"),
-        title_align="left",
-        border_style=ACCENT_SOFT,
-        padding=(1, 1),
-        width=frame_width,
-    )
     footer = Text()
+    footer.append("SELECT", style=f"bold {ACCENT_SOFT}")
+    footer.append("  01-09 / C     ", style=MUTED)
+    footer.append("LOCAL", style=f"bold {SUCCESS}")
+    footer.append("  default     ", style=MUTED)
     footer.append("CTRL+C", style=f"bold {ACCENT_SOFT}")
     footer.append("  stop live view     ", style=MUTED)
-    footer.append("LOCAL", style=f"bold {SUCCESS}")
-    footer.append("  analysis default     ", style=MUTED)
     footer.append("AI", style=f"bold {ACCENT_SOFT}")
-    footer.append("  explicit opt-in only", style=MUTED)
-    return Group(_header(screen_width), Text(""), menu_panel, Text(""), footer)
+    footer.append("  opt-in only", style=MUTED)
+    return Group(_header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
 
 
 def _pause_for_menu() -> None:
@@ -191,14 +208,7 @@ def _launch_live_file(path: Path, profile: str) -> None:
 
 def _launch_live_multi_current(paths: list[Path], profile: str) -> None:
     try:
-        live_multi(
-            paths,
-            from_start=True,
-            refresh=1.0,
-            window=1000,
-            trend_seconds=60,
-            profile=profile,
-        )
+        live_multi(paths, from_start=True, refresh=1.0, window=1000, trend_seconds=60, profile=profile)
     except KeyboardInterrupt:
         console.print(Text("Multi-source monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
     except Exception as exc:
@@ -214,16 +224,7 @@ def _native_live_current() -> None:
     source, channel, container = choice
     profile = _choose_profile("docker" if source == "docker" else "security")
     try:
-        native_live(
-            source,
-            refresh=2.0,
-            window=500,
-            limit=300,
-            from_start=True,
-            channel=channel,
-            container=container,
-            profile=profile,
-        )
+        native_live(source, refresh=2.0, window=500, limit=300, from_start=True, channel=channel, container=container, profile=profile)
     except KeyboardInterrupt:
         console.print(Text("Native monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
     except Exception as exc:
