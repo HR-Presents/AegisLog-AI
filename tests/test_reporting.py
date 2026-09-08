@@ -59,7 +59,7 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
         "Executive brief / page 1",
         "Executive Summary",
         "Assessment",
-        "Primary analyst decision",
+        "Repeated &lt;script&gt;alert(1)&lt;/script&gt; failures",
         "Recommended Triage",
         "Incident Queue",
         "Findings and Recommendations",
