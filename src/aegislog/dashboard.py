@@ -15,7 +15,18 @@ from .anomaly import Anomaly, score_events
 from .engine import Finding, analyze_lines
 from .incidents import Incident, correlate
 from .parsers import Event, parse_line
-from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, INFO, MUTED, SUCCESS, WARNING, risk_style, severity_text
+from .theme import (
+    ACCENT,
+    ACCENT_SOFT,
+    ANOMALY,
+    INCIDENT,
+    INFO,
+    MUTED,
+    SUCCESS,
+    WARNING,
+    risk_style,
+    severity_text,
+)
 
 
 @dataclass(frozen=True)
@@ -76,24 +87,25 @@ def _risk_state(data: DashboardData) -> str:
 
 def _header(data: DashboardData) -> Panel:
     risk = _risk_state(data)
-    title = Text()
-    title.append("AEGISLOG", style=f"bold {ACCENT}")
-    title.append(" // INVESTIGATION", style="bold white")
-    title.append(f"  v{__version__}", style=MUTED)
-
-    metadata = Text()
-    metadata.append("SOURCE  ", style=MUTED)
-    metadata.append(data.source, style="bold white")
-    metadata.append("\nEVENTS  ", style=MUTED)
-    metadata.append(f"{data.lines:,}", style=ACCENT)
-    metadata.append("    POSTURE  ", style=MUTED)
-    metadata.append(f"[{risk}]", style=f"bold {risk_style(risk)}")
-    return Panel(Text.assemble(title, "\n", metadata), border_style=ACCENT_SOFT, padding=(0, 1))
+    body = Text()
+    body.append("AEGISLOG", style=f"bold {ACCENT}")
+    body.append("  /  INVESTIGATION", style="bold white")
+    body.append(f"  v{__version__}", style=MUTED)
+    body.append("\n")
+    body.append("SOURCE  ", style=MUTED)
+    body.append(data.source, style="white")
+    body.append("\n")
+    body.append("POSTURE  ", style=MUTED)
+    body.append(risk, style=f"bold {risk_style(risk)}")
+    body.append("    EVENTS  ", style=MUTED)
+    body.append(f"{data.lines:,}", style=f"bold {ACCENT}")
+    body.append("    LOCAL / READ-ONLY", style=MUTED)
+    return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1))
 
 
 def _posture_table(data: DashboardData) -> Table:
     table = Table(
-        title="THREAT POSTURE",
+        title="INVESTIGATION SUMMARY",
         title_style=f"bold {ACCENT_SOFT}",
         expand=True,
         show_header=True,
@@ -120,9 +132,51 @@ def _posture_table(data: DashboardData) -> Table:
     return table
 
 
+def _analyst_focus(data: DashboardData) -> Panel:
+    risk = _risk_state(data)
+    body = Text()
+    body.append("PRIORITY  ", style=MUTED)
+    body.append(risk, style=f"bold {risk_style(risk)}")
+
+    if data.findings:
+        top = sorted(
+            data.findings,
+            key=lambda item: (
+                {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}.get(item.severity, 0),
+                item.title,
+            ),
+            reverse=True,
+        )[0]
+        body.append("\nFOCUS     ", style=MUTED)
+        body.append(top.title, style="bold white")
+        body.append("\nACTION    ", style=MUTED)
+        body.append(top.recommendation, style="white")
+    else:
+        body.append("\nFOCUS     ", style=MUTED)
+        body.append("No elevated rule-backed findings retained", style=SUCCESS)
+        body.append("\nACTION    ", style=MUTED)
+        body.append("Review coverage and preserve original telemetry when required.", style="white")
+
+    if data.incidents:
+        incident = data.incidents[0]
+        body.append("\nINCIDENT  ", style=MUTED)
+        body.append(f"INC-{incident.id.upper()[:8]}", style=f"bold {INCIDENT}")
+        body.append("  ", style=MUTED)
+        body.append(incident.title, style="white")
+
+    body.append("\n\nSignals are investigative evidence, not proof of compromise.", style=MUTED)
+    return Panel(
+        body,
+        title=Text(" ANALYST FOCUS ", style=f"bold {risk_style(risk)}"),
+        title_align="left",
+        border_style=risk_style(risk),
+        padding=(0, 1),
+    )
+
+
 def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     table = Table(
-        title="ACTIVE INCIDENTS",
+        title=f"ACTIVE INCIDENTS  [{min(len(data.incidents), limit)}/{len(data.incidents)}]",
         title_style=f"bold {INCIDENT}",
         expand=True,
         border_style=ACCENT_SOFT,
@@ -132,7 +186,7 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     table.add_column("SEV", width=9)
     table.add_column("SIGNALS", width=8, justify="right", style=ACCENT)
     table.add_column("CATEGORY", width=18)
-    table.add_column("SUMMARY")
+    table.add_column("SUMMARY", ratio=1, overflow="fold")
     for item in data.incidents[:limit]:
         table.add_row(
             f"INC-{item.id.upper()[:8]}",
@@ -146,24 +200,6 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     return table
 
 
-def _anomaly_table(data: DashboardData, limit: int = 8) -> Table:
-    table = Table(
-        title="ANOMALY FEED",
-        title_style=f"bold {ANOMALY}",
-        expand=True,
-        border_style=ACCENT_SOFT,
-        padding=(0, 1),
-    )
-    table.add_column("SCORE", justify="right", width=8, style=ANOMALY)
-    table.add_column("EVENT CLASS", width=30)
-    table.add_column("REASON")
-    for item in data.anomalies[:limit]:
-        table.add_row(f"{item.score:.1f}", Text(item.key), Text(item.reason))
-    if not data.anomalies:
-        table.add_row("-", "-", Text("No rare concerning event classes detected", style=MUTED))
-    return table
-
-
 def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     table = Table(
         title=f"Detected findings  [{min(len(data.findings), limit)}/{len(data.findings)}]",
@@ -173,11 +209,16 @@ def _finding_table(data: DashboardData, limit: int = 20) -> Table:
         padding=(0, 1),
     )
     table.add_column("SEV", width=9)
-    table.add_column("CATEGORY", width=18)
-    table.add_column("DETECTION", width=34)
-    table.add_column("EVIDENCE")
+    table.add_column("CATEGORY", width=17)
+    table.add_column("DETECTION", width=32)
+    table.add_column("EVIDENCE", ratio=1, overflow="fold")
     for item in data.findings[:limit]:
-        table.add_row(severity_text(item.severity), Text(item.category), Text(item.title), Text(item.evidence))
+        table.add_row(
+            severity_text(item.severity),
+            Text(item.category),
+            Text(item.title),
+            Text(item.evidence),
+        )
     if not data.findings:
         table.add_row(
             "-",
@@ -188,16 +229,32 @@ def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     return table
 
 
+def _anomaly_table(data: DashboardData, limit: int = 6) -> Table:
+    table = Table(
+        title=f"ANOMALY SIGNALS  [{min(len(data.anomalies), limit)}/{len(data.anomalies)}]",
+        title_style=f"bold {ANOMALY}",
+        expand=True,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+    )
+    table.add_column("SCORE", justify="right", width=8, style=ANOMALY)
+    table.add_column("EVENT CLASS", width=28)
+    table.add_column("REASON", ratio=1, overflow="fold")
+    for item in data.anomalies[:limit]:
+        table.add_row(f"{item.score:.1f}", Text(item.key), Text(item.reason))
+    return table
+
+
 def _telemetry_table(data: DashboardData) -> Table:
     table = Table(
-        title="TELEMETRY SNAPSHOT",
+        title="TELEMETRY CONTEXT",
         title_style=f"bold {ACCENT_SOFT}",
         expand=True,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
     table.add_column("TYPE", width=14, style=MUTED)
-    table.add_column("TOP VALUES")
+    table.add_column("TOP VALUES", ratio=1)
 
     def render(values: dict[str, int], limit: int = 5) -> Text:
         text = Text()
@@ -220,27 +277,37 @@ def _telemetry_table(data: DashboardData) -> Table:
 
 def _next_steps(data: DashboardData) -> Panel:
     command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
-    text = Text()
-    text.append("analyst > ", style=f"bold {ACCENT}")
-    text.append(f"{command} incidents <file>", style=ACCENT)
+    body = Text()
+    body.append("REPORT  ", style=MUTED)
+    body.append("HTML investigation report generated automatically", style=SUCCESS)
+    body.append("\nNEXT    ", style=MUTED)
+    body.append(f"{command} incidents <file>", style=ACCENT)
     if data.incidents:
         incident_id = f"INC-{data.incidents[0].id.upper()[:8]}"
-        text.append("    |    ", style=MUTED)
-        text.append(f"{command} investigate <file> {incident_id}", style=INCIDENT)
-        text.append("    |    ", style=MUTED)
-        text.append(f"{command} explain <file> {incident_id}", style=INFO)
-    text.append("\nSignals are investigative evidence, not proof of compromise.", style=MUTED)
-    return Panel(text, border_style=ACCENT_SOFT, padding=(0, 1))
+        body.append("    ", style=MUTED)
+        body.append(f"{command} investigate <file> {incident_id}", style=INCIDENT)
+        body.append("    ", style=MUTED)
+        body.append(f"{command} explain <file> {incident_id}", style=INFO)
+    return Panel(
+        body,
+        title=Text(" FOLLOW-UP ", style=f"bold {ACCENT}"),
+        title_align="left",
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+    )
 
 
 def render_dashboard(data: DashboardData) -> RenderableType:
-    """Return a compact SOC-style terminal investigation dashboard."""
-    return Group(
+    """Return a prioritized SOC-style investigation dashboard."""
+    sections: list[RenderableType] = [
         _header(data),
         _posture_table(data),
-        _incident_table(data),
-        _anomaly_table(data),
-        _finding_table(data),
-        _telemetry_table(data),
-        _next_steps(data),
-    )
+        _analyst_focus(data),
+    ]
+    if data.incidents:
+        sections.append(_incident_table(data))
+    sections.append(_finding_table(data))
+    if data.anomalies:
+        sections.append(_anomaly_table(data))
+    sections.extend((_telemetry_table(data), _next_steps(data)))
+    return Group(*sections)
