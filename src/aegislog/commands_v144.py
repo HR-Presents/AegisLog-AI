@@ -24,7 +24,7 @@ from .commands_v12 import (
 from .commands_v13 import live_dashboard
 from .commands_v14 import live_multi
 from .console_pages import commands_reference, system_check
-from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
+from .theme import ACCENT, ACCENT_SOFT, HIGH, INCIDENT, INFO, MUTED, SUCCESS, WARNING
 
 console = Console()
 _NARROW_MENU_BREAKPOINT = 72
@@ -38,48 +38,69 @@ def _frame_width(screen_width: int | None = None) -> int:
 
 
 def _header(screen_width: int | None = None) -> Panel:
-    """Render a strong full-width command-center identity and runtime posture."""
+    """Render the AegisLog terminal identity as a compact branded command banner."""
     frame_width = _frame_width(screen_width)
-    title = Text()
-    title.append("AEGISLOG", style=f"bold {ACCENT}")
-    title.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
-    title.append("  v1.6.1", style=MUTED)
+    banner = Text()
 
-    status = Text()
-    separator = "    " if frame_width >= 84 else "\n"
-    status.append("READY", style=f"bold {SUCCESS}")
-    status.append(separator)
-    status.append("LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
-    status.append(separator)
-    status.append("READ-ONLY MONITORING", style=MUTED)
-    status.append(separator)
-    status.append("REMOTE AI / OPT-IN", style=MUTED)
+    if frame_width >= 76:
+        banner.append("    /\\      ", style=f"bold {ACCENT}")
+        banner.append("AEGISLOG", style=f"bold {ACCENT}")
+        banner.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
+        banner.append("  v1.6.1\n", style=MUTED)
+        banner.append("   /  \\     ", style=f"bold {INFO}")
+        banner.append("READY", style=f"bold {SUCCESS}")
+        banner.append("    LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
+        banner.append("    READ-ONLY MONITORING", style=MUTED)
+        banner.append("\n", style=MUTED)
+        banner.append("  /_/\\_\\    ", style=f"bold {INCIDENT}")
+        banner.append("REMOTE AI / OPT-IN", style=MUTED)
+        banner.append("    DEFENSIVE ANALYSIS", style=f"bold {INFO}")
+    else:
+        banner.append("AEGISLOG", style=f"bold {ACCENT}")
+        banner.append("  SECURITY OPERATIONS  v1.6.1\n", style="bold white")
+        banner.append("READY", style=f"bold {SUCCESS}")
+        banner.append("  LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
+        banner.append("\nREAD-ONLY MONITORING", style=MUTED)
+        banner.append("  REMOTE AI / OPT-IN", style=MUTED)
 
     return Panel(
-        Text.assemble(title, "\n", status),
+        banner,
         border_style=ACCENT,
         padding=(1, 2),
         width=frame_width,
     )
 
 
-def _command_card(title: str, rows: list[tuple[str, str, str]], width: int) -> Panel:
-    """Build one compact command zone instead of a spreadsheet-like global table."""
+def _command_card(
+    title: str,
+    rows: list[tuple[str, str, str]],
+    width: int,
+    accent: str,
+) -> Panel:
+    """Build one colored command zone with strong visual hierarchy."""
     grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(width=4, justify="center", no_wrap=True)
+    grid.add_column(width=6, justify="center", no_wrap=True)
     grid.add_column(width=20, no_wrap=True)
     grid.add_column(ratio=1, overflow="fold")
     for key, action, description in rows:
+        key_style = f"bold black on {accent}"
+        action_style = f"bold {accent}"
+        if key == "C":
+            key_style = f"bold black on {WARNING}"
+            action_style = f"bold {WARNING}"
+        elif key == "Q":
+            key_style = f"bold white on red"
+            action_style = f"bold {HIGH}"
         grid.add_row(
-            Text(key, style=f"bold {ACCENT}"),
-            Text(action, style="bold white"),
+            Text(f" {key} ", style=key_style),
+            Text(action, style=action_style),
             Text(description, style=MUTED),
         )
     return Panel(
         grid,
-        title=Text(title, style=f"bold {ACCENT_SOFT}"),
+        title=Text(f" {title} ", style=f"bold {accent}"),
         title_align="left",
-        border_style=MUTED,
+        border_style=accent,
         padding=(1, 1),
         width=width,
     )
@@ -89,7 +110,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
     """Render responsive command zones that use wide terminals intentionally."""
     frame_width = _frame_width(screen_width)
     core = [
-        ("01", "ANALYZE LOG", "Static investigation with findings and evidence"),
+        ("01", "ANALYZE LOG", "Static investigation + automatic HTML report"),
         ("02", "LIVE MONITOR", "Watch one log with continuous detection"),
         ("03", "MULTI-SOURCE SOC", "Correlate multiple live sources"),
     ]
@@ -108,26 +129,36 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
     if frame_width < _NARROW_MENU_BREAKPOINT:
         table = Table.grid(expand=True, padding=(0, 1))
-        table.add_column(width=4, justify="center", no_wrap=True)
+        table.add_column(width=5, justify="center", no_wrap=True)
         table.add_column(ratio=1, overflow="fold")
-        for heading, rows in (("OPERATIONS", core), ("INVESTIGATE", investigate), ("SYSTEM", tools)):
-            table.add_row("", Text(heading, style=f"bold {ACCENT_SOFT}"))
+        for heading, rows, accent in (
+            ("OPERATIONS", core, ACCENT),
+            ("INVESTIGATE", investigate, INCIDENT),
+            ("SYSTEM", tools, INFO),
+        ):
+            table.add_row("", Text(heading, style=f"bold {accent}"))
             for key, action, description in rows:
-                body = Text(action, style="bold white")
+                body = Text(action, style=f"bold {accent}")
                 body.append("\n")
                 body.append(description, style=MUTED)
-                table.add_row(Text(key, style=f"bold {ACCENT}"), body)
-        return Panel(table, title="MISSION CONTROL", title_align="left", border_style=ACCENT_SOFT, width=frame_width)
+                table.add_row(Text(key, style=f"bold {accent}"), body)
+        return Panel(
+            table,
+            title=Text(" MISSION CONTROL ", style=f"bold {ACCENT}"),
+            title_align="left",
+            border_style=ACCENT_SOFT,
+            width=frame_width,
+        )
 
     if frame_width >= _WIDE_MENU_BREAKPOINT:
         gap = 2
         left_width = (frame_width - gap) // 2
         right_width = frame_width - gap - left_width
         left = Group(
-            _command_card("OPERATIONS", core, left_width),
-            _command_card("INVESTIGATION", investigate, left_width),
+            _command_card("OPERATIONS", core, left_width, ACCENT),
+            _command_card("INVESTIGATION", investigate, left_width, INCIDENT),
         )
-        right = _command_card("SYSTEM / TOOLS", tools, right_width)
+        right = _command_card("SYSTEM / TOOLS", tools, right_width, INFO)
         layout = Table.grid(expand=True, padding=0)
         layout.add_column(width=left_width)
         layout.add_column(width=gap)
@@ -136,22 +167,22 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         return layout
 
     return Group(
-        _command_card("OPERATIONS", core, frame_width),
-        _command_card("INVESTIGATION", investigate, frame_width),
-        _command_card("SYSTEM / TOOLS", tools, frame_width),
+        _command_card("OPERATIONS", core, frame_width, ACCENT),
+        _command_card("INVESTIGATION", investigate, frame_width, INCIDENT),
+        _command_card("SYSTEM / TOOLS", tools, frame_width, INFO),
     )
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
     """Render the responsive SOC command-center home."""
     footer = Text()
-    footer.append("SELECT", style=f"bold {ACCENT_SOFT}")
+    footer.append("SELECT", style=f"bold {ACCENT}")
     footer.append("  01-09 / C     ", style=MUTED)
-    footer.append("LOCAL", style=f"bold {SUCCESS}")
-    footer.append("  default     ", style=MUTED)
-    footer.append("CTRL+C", style=f"bold {ACCENT_SOFT}")
+    footer.append("REPORT", style=f"bold {SUCCESS}")
+    footer.append("  auto on analysis     ", style=MUTED)
+    footer.append("CTRL+C", style=f"bold {WARNING}")
     footer.append("  stop live view     ", style=MUTED)
-    footer.append("AI", style=f"bold {ACCENT_SOFT}")
+    footer.append("AI", style=f"bold {INCIDENT}")
     footer.append("  opt-in only", style=MUTED)
     return Group(_header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
 
@@ -249,35 +280,35 @@ def start() -> None:
             console.print(Text("AegisLog closed safely.", style=SUCCESS))
             return
 
+        # Treat every selection as a new screen. This prevents the home menu from
+        # being pushed upward above command output and keeps the console app-like.
+        console.clear()
+
         try:
             if choice in {"1", "01"}:
                 path = _choose_log_file()
                 if path is not None:
-                    console.print()
+                    console.clear()
                     dashboard(path, timestamp_year=None)
             elif choice in {"2", "02"}:
                 path = _choose_log_file()
                 if path is not None:
                     profile = _choose_profile()
-                    console.print()
+                    console.clear()
                     _launch_live_file(path, profile)
             elif choice in {"3", "03"}:
                 paths = _choose_multisource_files()
                 if paths:
                     profile = _choose_profile()
-                    console.print()
+                    console.clear()
                     _launch_live_multi_current(paths, profile)
             elif choice in {"4", "04"}:
-                console.print()
                 _native_menu()
             elif choice in {"5", "05"}:
-                console.print()
                 _native_live_current()
             elif choice in {"6", "06"}:
-                console.print()
                 _explain_menu()
             elif choice in {"7", "07"}:
-                console.print()
                 dashboard(_resolve_demo(), timestamp_year=None)
             elif choice in {"8", "08"}:
                 system_check()
@@ -288,7 +319,6 @@ def start() -> None:
             elif lowered in {"help", "commands", "?"}:
                 commands_reference()
             else:
-                console.print()
                 _run_inline_command(choice)
         except KeyboardInterrupt:
             console.print()
