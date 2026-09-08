@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rich.console import Console
+from rich.align import Align
+from rich.console import Console, Group, RenderableType
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
@@ -28,47 +29,91 @@ from .commands_v14 import live_multi
 from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
+_MAX_HOME_WIDTH = 96
+_NARROW_MENU_BREAKPOINT = 60
 
 
-def _header() -> Panel:
-    """Render a compact, analyst-focused SOC console header."""
+def _frame_width(screen_width: int | None = None) -> int:
+    """Return a safe content width that never grows wider than the terminal."""
+    width = console.size.width if screen_width is None else screen_width
+    return max(1, min(max(width - 2, 1), _MAX_HOME_WIDTH))
+
+
+def _header(screen_width: int | None = None) -> Panel:
+    """Render a bounded SOC header that wraps cleanly on narrow terminals."""
+    frame_width = _frame_width(screen_width)
     line = Text()
     line.append("AEGISLOG", style=f"bold {ACCENT}")
     line.append(" // SECURITY OPERATIONS CONSOLE", style="bold white")
     line.append("  v1.6.1", style=MUTED)
+
     status = Text()
+    separator = "    " if frame_width >= 72 else "\n"
     status.append("[+] ENGINE ONLINE", style=f"bold {SUCCESS}")
-    status.append("    [+] LOCAL MODE", style=f"bold {ACCENT_SOFT}")
-    status.append("    [-] REMOTE AI OFF BY DEFAULT", style=MUTED)
+    status.append(separator)
+    status.append("[+] LOCAL MODE", style=f"bold {ACCENT_SOFT}")
+    status.append(separator)
+    status.append("[-] REMOTE AI OFF BY DEFAULT", style=MUTED)
+
     body = Text.assemble(line, "\n", status)
-    return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1))
+    return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1), width=frame_width)
 
 
-def _menu() -> Table:
-    """Render a dense command matrix that reads like an analyst console."""
-    table = Table(show_header=False, box=None, padding=(0, 1), expand=True)
-    table.add_column(width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
-    table.add_column(width=24, style="bold white", no_wrap=True)
-    table.add_column(style=MUTED)
+def _menu(screen_width: int | None = None) -> Table:
+    """Render an adaptive command matrix for narrow, standard, and wide terminals."""
+    frame_width = _frame_width(screen_width)
+    narrow = frame_width < _NARROW_MENU_BREAKPOINT
+    table = Table(show_header=False, box=None, padding=(0, 1), expand=False, width=frame_width)
+    table.add_column(max_width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
+
+    if narrow:
+        table.add_column(ratio=1, overflow="fold")
+    else:
+        table.add_column(min_width=16, max_width=22, style="bold white", overflow="fold")
+        table.add_column(min_width=18, ratio=1, style=MUTED, overflow="fold")
 
     def section(label: str) -> None:
-        table.add_row("", Text(f"-- {label}", style=f"bold {ACCENT_SOFT}"), "")
+        if narrow:
+            table.add_row("", Text(f"-- {label}", style=f"bold {ACCENT_SOFT}"))
+        else:
+            table.add_row("", Text(f"-- {label}", style=f"bold {ACCENT_SOFT}"), "")
+
+    def action(key: str, command: str | Text, description: str) -> None:
+        if narrow:
+            body = Text()
+            if isinstance(command, Text):
+                body.append_text(command)
+            else:
+                body.append(command, style="bold white")
+            body.append("\n")
+            body.append(description, style=MUTED)
+            table.add_row(key, body)
+        else:
+            table.add_row(key, command, description)
 
     section("OPERATIONS")
-    table.add_row("01", "ANALYZE LOG", "Static log investigation")
-    table.add_row("02", "LIVE MONITOR", "Real-time event monitoring")
-    table.add_row("03", "MULTI-SOURCE SOC", "Correlate multiple log sources")
+    action("01", "ANALYZE LOG", "Static log investigation")
+    action("02", "LIVE MONITOR", "Real-time event monitoring")
+    action("03", "MULTI-SOURCE SOC", "Correlate multiple log sources")
     section("INVESTIGATION")
-    table.add_row("04", "NATIVE LOGS", "System and container telemetry")
-    table.add_row("05", "NATIVE MONITOR", "Live native telemetry")
-    table.add_row("06", "INCIDENT INTEL", "Explain a correlated incident")
+    action("04", "NATIVE LOGS", "System and container telemetry")
+    action("05", "NATIVE MONITOR", "Live native telemetry")
+    action("06", "INCIDENT INTEL", "Explain a correlated incident")
     section("TOOLS")
-    table.add_row("07", "DEMO", "Run demonstration dataset")
-    table.add_row("08", "HEALTH", "Engine diagnostics")
-    table.add_row("09", "COMMANDS", "CLI reference")
-    table.add_row("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Run a direct AegisLog command")
-    table.add_row("Q", Text("EXIT", style=f"bold {HIGH}"), "Close the console")
+    action("07", "DEMO", "Run demonstration dataset")
+    action("08", "HEALTH", "Engine diagnostics")
+    action("09", "COMMANDS", "CLI reference")
+    action("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Run a direct AegisLog command")
+    action("Q", Text("EXIT", style=f"bold {HIGH}"), "Close the console")
     return table
+
+
+def _home(screen_width: int | None = None) -> RenderableType:
+    """Render the home screen centered without stretching on wide terminals."""
+    return Group(
+        Align.center(_header(screen_width)),
+        Align.center(_menu(screen_width)),
+    )
 
 
 def _pause_for_menu() -> None:
@@ -165,10 +210,9 @@ def start() -> None:
     """Open the hardened one-terminal control center used by the packaged EXE."""
     while True:
         console.clear()
-        console.print(_header())
-        console.print(_menu())
+        console.print(_home(console.size.width))
         console.print()
-        console.print(Text("Ctrl+C exits a live view and returns here. Remote AI remains opt-in.", style=MUTED))
+        console.print(Align.center(Text("Ctrl+C exits a live view and returns here. Remote AI remains opt-in.", style=MUTED)))
         try:
             choice = Prompt.ask(f"[bold {ACCENT}]aegis@console >[/bold {ACCENT}]", default="1").strip()
         except (KeyboardInterrupt, EOFError):
