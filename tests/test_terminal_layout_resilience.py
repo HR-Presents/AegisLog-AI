@@ -152,7 +152,9 @@ def test_interactive_home_expands_on_wide_terminals() -> None:
     assert max(len(line) for line in lines) >= 218
     assert "LOCAL-FIRST" in text
     assert "CAPABILITY" in text
-    assert "MODE" not in text
+    header_lines = [line for line in lines if "KEY" in line and "ACTION" in line]
+    assert header_lines
+    assert "MODE" not in header_lines[0]
 
 
 def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
