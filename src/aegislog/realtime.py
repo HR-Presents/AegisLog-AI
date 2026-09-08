@@ -18,7 +18,7 @@ from .anomaly import score_events
 from .engine import Finding, analyze_lines
 from .incidents import correlate
 from .parsers import Event, parse_line
-from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, MUTED, SUCCESS, risk_style, severity_text
+from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, severity_text
 from .trends import TrendSnapshot, TrendTracker, render_trends
 from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
 
