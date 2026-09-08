@@ -31,58 +31,50 @@ console = Console()
 
 
 def _header() -> Panel:
-    """Render the packaged interactive console as a compact SOC control center."""
-    body = Text(justify="center")
-    body.append("AEGISLOG AI", style=f"bold {ACCENT}")
-    body.append("  v1.6.1", style=MUTED)
-    body.append("\nDEFENSIVE SECURITY CONSOLE", style="bold white")
-    body.append("\n\n● ENGINE READY", style=f"bold {SUCCESS}")
-    body.append("    LOCAL ANALYSIS", style=ACCENT_SOFT)
-    body.append("    REMOTE AI: OPT-IN", style=MUTED)
-    return Panel(
-        body,
-        title=f"[bold {ACCENT}] SECURITY CONTROL CENTER [/bold {ACCENT}]",
-        subtitle=f"[{MUTED}]Defensive log intelligence • local-first[/{MUTED}]",
-        border_style=ACCENT,
-        padding=(1, 2),
-    )
+    """Render a compact, analyst-focused SOC console header."""
+    line = Text()
+    line.append("AEGISLOG", style=f"bold {ACCENT}")
+    line.append(" // SECURITY OPERATIONS CONSOLE", style="bold white")
+    line.append("  v1.6.1", style=MUTED)
+    status = Text()
+    status.append("● ENGINE ONLINE", style=f"bold {SUCCESS}")
+    status.append("    ● LOCAL MODE", style=f"bold {ACCENT_SOFT}")
+    status.append("    ○ REMOTE AI OFF BY DEFAULT", style=MUTED)
+    body = Text.assemble(line, "\n", status)
+    return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1))
 
 
 def _menu() -> Table:
-    """Group interactive actions by analyst workflow instead of one flat list."""
-    table = Table(show_header=False, box=None, padding=(0, 1), expand=False)
-    table.add_column(width=16, no_wrap=True)
-    table.add_column(style=f"bold {ACCENT}", width=5, justify="center")
-    table.add_column()
+    """Render a dense command matrix that reads like an analyst console."""
+    table = Table(show_header=False, box=None, padding=(0, 1), expand=True)
+    table.add_column(width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
+    table.add_column(width=24, style="bold white", no_wrap=True)
+    table.add_column(style=MUTED)
 
     def section(label: str) -> None:
-        table.add_row(Text(label, style=f"bold {ACCENT_SOFT}"), "", "")
+        table.add_row("", Text(f"── {label}", style=f"bold {ACCENT_SOFT}"), "")
 
-    section("ANALYSIS")
-    table.add_row("", "[1]", "Analyze log file")
-    table.add_row("", "[2]", "Real-time file dashboard")
-    table.add_row("", "[3]", "Multi-source live SOC")
-    table.add_row("", "", "")
-    section("MONITORING")
-    table.add_row("", "[4]", "Native system / container logs")
-    table.add_row("", "[5]", "Native real-time monitor")
-    table.add_row("", "", "")
+    section("OPERATIONS")
+    table.add_row("01", "ANALYZE LOG", "Static log investigation")
+    table.add_row("02", "LIVE MONITOR", "Real-time event monitoring")
+    table.add_row("03", "MULTI-SOURCE SOC", "Correlate multiple log sources")
     section("INVESTIGATION")
-    table.add_row("", "[6]", "Explain an incident")
-    table.add_row("", "[7]", "Run built-in demo analysis")
-    table.add_row("", "", "")
-    section("SYSTEM")
-    table.add_row("", "[8]", "System check")
-    table.add_row("", "[9]", "Useful commands")
-    table.add_row("", Text("[C]", style=f"bold {ACCENT}"), "Command mode")
-    table.add_row("", Text("[Q]", style=f"bold {HIGH}"), Text("Exit AegisLog", style=MUTED))
+    table.add_row("04", "NATIVE LOGS", "System and container telemetry")
+    table.add_row("05", "NATIVE MONITOR", "Live native telemetry")
+    table.add_row("06", "INCIDENT INTEL", "Explain a correlated incident")
+    section("TOOLS")
+    table.add_row("07", "DEMO", "Run demonstration dataset")
+    table.add_row("08", "HEALTH", "Engine diagnostics")
+    table.add_row("09", "COMMANDS", "CLI reference")
+    table.add_row("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Run a direct AegisLog command")
+    table.add_row("Q", Text("EXIT", style=f"bold {HIGH}"), "Close the console")
     return table
 
 
 def _pause_for_menu() -> None:
-    """Wait for a plain Enter without Rich's empty-default `()` prompt."""
+    """Wait for a plain Enter without Rich's empty-default prompt."""
     try:
-        console.input(f"\n[{MUTED}]Press Enter to return to the AegisLog menu[/{MUTED}]")
+        console.input(f"\n[{MUTED}]press Enter to return to console[/{MUTED}]")
     except (KeyboardInterrupt, EOFError):
         pass
 
@@ -176,15 +168,9 @@ def start() -> None:
         console.print(_header())
         console.print(_menu())
         console.print()
-        console.print(
-            Text(
-                "Numbers are shortcuts. Live options load the current source first, then continue monitoring. "
-                "Press Ctrl+C inside a live view to return here.",
-                style=MUTED,
-            )
-        )
+        console.print(Text("Ctrl+C exits a live view and returns here. Remote AI remains opt-in.", style=MUTED))
         try:
-            choice = Prompt.ask(f"[bold {ACCENT}]Select operation[/bold {ACCENT}]", default="1").strip()
+            choice = Prompt.ask(f"[bold {ACCENT}]aegis@console ›[/bold {ACCENT}]", default="1").strip()
         except (KeyboardInterrupt, EOFError):
             console.print()
             console.print(Text("AegisLog closed safely.", style=SUCCESS))
@@ -196,38 +182,38 @@ def start() -> None:
             return
 
         try:
-            if choice == "1":
+            if choice in {"1", "01"}:
                 path = _choose_log_file()
                 if path is not None:
                     console.print()
                     dashboard(path, timestamp_year=None)
-            elif choice == "2":
+            elif choice in {"2", "02"}:
                 path = _choose_log_file()
                 if path is not None:
                     profile = _choose_profile()
                     console.print()
                     _launch_live_file(path, profile)
-            elif choice == "3":
+            elif choice in {"3", "03"}:
                 paths = _choose_multisource_files()
                 if paths:
                     profile = _choose_profile()
                     console.print()
                     _launch_live_multi_current(paths, profile)
-            elif choice == "4":
+            elif choice in {"4", "04"}:
                 console.print()
                 _native_menu()
-            elif choice == "5":
+            elif choice in {"5", "05"}:
                 console.print()
                 _native_live_current()
-            elif choice == "6":
+            elif choice in {"6", "06"}:
                 console.print()
                 _explain_menu()
-            elif choice == "7":
+            elif choice in {"7", "07"}:
                 console.print()
                 dashboard(_resolve_demo(), timestamp_year=None)
-            elif choice == "8":
+            elif choice in {"8", "08"}:
                 _system_check()
-            elif choice == "9":
+            elif choice in {"9", "09"}:
                 _commands()
             elif lowered == "c":
                 _command_prompt()
