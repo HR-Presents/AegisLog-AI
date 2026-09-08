@@ -4,14 +4,14 @@ Use this handoff only after reading the v1.6.1 release checklist, go/no-go recor
 
 ## Current PR evidence point
 
-At the time this handoff was prepared, PR #77 (`fix/polished-responsive-home` -> `main`) had an exact fully validated PR head:
+At the time this handoff was refreshed, PR #77 (`fix/polished-responsive-home` -> `main`) had an exact fully validated PR head:
 
-- Commit: `eced0a47acc4270a4b0ef6a60e68e97c5639c7f9`
+- Commit: `971a7bf8c92af70238361adf3b39814c1e5c4c30`
 - PR workflows: 7/7 successful
-- Windows workflow: `Windows single executable #420`
+- Windows workflow: `Windows single executable #421`
 - Temporary validation artifact: `AegisLog-Windows-Single-EXE`
-- Artifact ID: `10072272475`
-- Artifact digest: `sha256:92e8062ef257d74eaa514c07cc79f296822093a65d034593440f1bec4f4c23b5`
+- Artifact ID: `10072377163`
+- Artifact digest: `sha256:d55d166a36d97d69b0b4e7732ee7a661610ada3d3ea960584a06b03467b6252a`
 
 This is PR validation evidence only. It is not the v1.6.1 production release binary. Any later commit requires its own exact-head validation before it can replace this evidence point.
 
@@ -134,7 +134,7 @@ Stop the release and keep status NO-GO if any of the following is true:
 
 ## Copy/paste maintainer handoff
 
-> PR #77 has a fully validated PR evidence point at `eced0a47acc4270a4b0ef6a60e68e97c5639c7f9` with 7/7 PR workflows successful, including Windows single executable #420. Please complete normal code/review-policy checks before taking the PR out of Draft or merging. After an approved merge, record the exact resulting `main` SHA; do not assume it is the PR-head SHA. No v1.6.1 release should be dispatched until genuine external evidence is generated for that exact candidate and signing configuration is confirmed by an authorized admin.
+> PR #77 has a fully validated PR evidence point at `971a7bf8c92af70238361adf3b39814c1e5c4c30` with 7/7 PR workflows successful, including Windows single executable #421. Please complete normal code/review-policy checks before taking the PR out of Draft or merging. After an approved merge, record the exact resulting `main` SHA; do not assume it is the PR-head SHA. No v1.6.1 release should be dispatched until genuine external evidence is generated for that exact candidate and signing configuration is confirmed by an authorized admin.
 
 ## Copy/paste release-operator handoff
 
