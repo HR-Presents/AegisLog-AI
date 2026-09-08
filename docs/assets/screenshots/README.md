@@ -2,23 +2,25 @@
 
 This directory is reserved for **real product screenshots** captured from a verified Windows build. Do not add mockups, generated UI images, or screenshots whose source build cannot be identified.
 
-## Current capture source
+## Current PR preview capture source
 
 The current PR screenshot set must come from the CI-validated Windows artifact built from:
 
 ```text
-cbbc194490482c1c7c81140ac2fce67ed955c60e
+74e55590da56305056cf984887da3ebd1e799e61
 ```
 
-Artifact metadata:
+Temporary GitHub Actions validation artifact:
 
 ```text
 Name: AegisLog-Windows-Single-EXE
-Artifact ID: 10063724053
-Artifact digest: sha256:2982d85450093b7c48f29c44ca9f476c6a93392bfb13e03d7991250d0e5fee49
+Artifact ID: 10070978629
+Artifact digest: sha256:e8c1642e30de1b004d774cbb84af273758b6a840fc745e62eb3e008c08d5df8e
 ```
 
-See [`../../SCREENSHOT_CAPTURE.md`](../../SCREENSHOT_CAPTURE.md) for the full capture and sanitization procedure.
+This artifact is temporary CI evidence. It is not the permanent customer download channel and must not be presented as a stable release asset. Permanent customer downloads are published as GitHub Release assets only after the guarded release workflow succeeds on `main`.
+
+See [`../../SCREENSHOT_CAPTURE.md`](../../SCREENSHOT_CAPTURE.md) for the full capture, provenance, release-channel, and sanitization procedure.
 
 ## Required filenames
 
@@ -52,6 +54,8 @@ Before a screenshot is committed, verify all of the following:
 - example or synthetic data is used;
 - the screenshot remains readable at normal GitHub README width;
 - cropping does not remove context in a way that changes the meaning of the output;
-- the commit message or PR discussion records the source build SHA.
+- the commit message or PR discussion records the source build SHA;
+- PR preview screenshots are labeled as preview captures until the corresponding build is actually released;
+- stable-release screenshots are only labeled as such when captured from the exact published release executable and verified against its published checksum.
 
 If a clean capture cannot be produced, leave the screenshot absent rather than substituting a mockup.
