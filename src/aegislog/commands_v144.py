@@ -89,7 +89,7 @@ def _command_card(
             key_style = f"bold black on {WARNING}"
             action_style = f"bold {WARNING}"
         elif key == "Q":
-            key_style = f"bold white on red"
+            key_style = "bold white on red"
             action_style = f"bold {HIGH}"
         grid.add_row(
             Text(f" {key} ", style=key_style),
