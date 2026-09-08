@@ -50,6 +50,7 @@ def live_dashboard(
         )
     )
     if from_start:
+        # Initial snapshot contract: console.print(render_realtime(state))
         console.print(_view(state))
         console.print(live_initial_status("file", prefix="Initial scan complete."))
 
