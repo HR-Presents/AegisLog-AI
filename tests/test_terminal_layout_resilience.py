@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from rich.console import Console
 
-from aegislog.commands_v144 import _header
+from aegislog.commands_v144 import _frame_width, _header, _home
 from aegislog.multisource import MultiSourceState, render_multisource
 from aegislog.realtime import RealtimeState, render_realtime
 
@@ -101,3 +102,30 @@ def test_interactive_header_uses_legacy_console_safe_status_text() -> None:
     assert "[-] REMOTE AI OFF BY DEFAULT" in plain
     assert "●" not in plain
     assert "○" not in plain
+
+
+@pytest.mark.parametrize("width", [40, 50, 59, 60, 80, 100, 120, 160, 220])
+def test_interactive_home_fits_terminal_width(width: int) -> None:
+    text = _render_text(_home(width), width)
+    assert "AEGISLOG" in text
+    assert "ANALYZE LOG" in text
+    assert "MULTI-SOURCE SOC" in text
+    assert "INCIDENT INTEL" in text
+    assert "COMMAND MODE" in text
+    assert max(len(line) for line in text.splitlines()) <= width
+
+
+def test_interactive_home_caps_wide_terminal_content() -> None:
+    assert _frame_width(100) == 96
+    assert _frame_width(160) == 96
+    assert _frame_width(220) == 96
+    assert _frame_width(60) == 58
+    assert _frame_width(40) == 38
+
+
+def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
+    text = _render_text(_home(40), 40)
+    assert "Static log investigation" in text
+    assert "Real-time event monitoring" in text
+    assert "Correlate multiple log sources" in text
+    assert max(len(line) for line in text.splitlines()) <= 40
