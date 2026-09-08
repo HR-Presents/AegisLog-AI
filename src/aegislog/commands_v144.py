@@ -83,7 +83,7 @@ def _header(screen_width: int | None = None) -> Panel:
         banner.append("\n")
         banner.append("  /_/\\_\\    ", style=f"bold {INCIDENT}")
         banner.append("READ-ONLY", style=MUTED)
-        banner.append("    AI / OPT-IN", style=MUTED)
+        banner.append("    REMOTE AI / OPT-IN", style=MUTED)
     else:
         banner.append("AEGISLOG", style=f"bold {ACCENT}")
         banner.append("  SECURITY OPERATIONS  v1.6.1\n", style="bold white")
