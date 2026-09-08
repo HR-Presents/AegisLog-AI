@@ -46,8 +46,8 @@ def live_startup_panel(
     for index, source in enumerate(source_list, start=1):
         targets.add_row(str(index), Text(source))
 
-    guidance = Text("Ctrl+C stops safely. ", style=f"bold {SUCCESS}")
-    guidance.append("No source data or host configuration is modified.", style=MUTED)
+    guidance = Text("Live analysis is read-only. ", style=f"bold {SUCCESS}")
+    guidance.append("Ctrl+C stops safely; no source data or host configuration is modified.", style=MUTED)
 
     body = Group(
         heading,
@@ -71,18 +71,18 @@ def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
 def live_source_status(source: str, *, available: bool) -> Text:
     """Render a one-line source transition without implying host modification."""
     if available:
-        status = Text("SOURCE RECOVERED  ", style=f"bold {SUCCESS}")
+        status = Text("Source recovered: ", style=f"bold {SUCCESS}")
         status.append(source, style="white")
-        status.append("  monitoring resumed from the safe cursor", style=MUTED)
+        status.append(". Monitoring resumed automatically from the safe cursor.", style=MUTED)
         return status
-    status = Text("SOURCE UNAVAILABLE  ", style=f"bold {WARNING}")
+    status = Text("Source temporarily unavailable: ", style=f"bold {WARNING}")
     status.append(source, style="white")
-    status.append("  retaining the current dashboard and retrying read-only polling", style=MUTED)
+    status.append(". Retaining the current dashboard and retrying read-only polling.", style=MUTED)
     return status
 
 
 def live_stopped_status(kind: str, *, degraded: bool = False) -> Text:
     style = WARNING if degraded else SUCCESS
-    status = Text(f"\n{kind.upper()} MONITOR STOPPED  ", style=f"bold {style}")
+    status = Text(f"\n{kind} monitoring stopped safely. ", style=f"bold {style}")
     status.append("No host configuration or source data was modified.", style=MUTED)
     return status
