@@ -46,52 +46,32 @@ def _frame_width(screen_width: int | None = None) -> int:
 
 def _brand_mark() -> Text:
     mark = Text()
-    mark.append(" /\\ ", style=f"bold {ACCENT}")
     mark.append("AEGIS", style=f"bold {ACCENT}")
     mark.append("LOG", style="bold white")
     return mark
 
 
 def _header(screen_width: int | None = None) -> Panel:
-    """Render the AegisLog terminal identity as a branded command banner."""
+    """Render a compact AegisLog command masthead."""
     frame_width = _frame_width(screen_width)
     banner = Text()
-    if frame_width >= 90:
-        banner.append("        /\\        ", style=f"bold {ACCENT}")
-        banner.append("AEGISLOG", style=f"bold {ACCENT}")
+    banner.append_text(_brand_mark())
+    if frame_width >= 82:
         banner.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
-        banner.append("  v1.6.1\n", style=MUTED)
-        banner.append("       /  \\       ", style=f"bold {INFO}")
-        banner.append("READY", style=f"bold {SUCCESS}")
-        banner.append("    LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
-        banner.append("    READ-ONLY MONITORING", style=MUTED)
-        banner.append("\n")
-        banner.append("      / /\\ \\      ", style=f"bold {INCIDENT}")
-        banner.append("REMOTE AI / OPT-IN", style=MUTED)
-        banner.append("    DEFENSIVE ANALYSIS", style=f"bold {INFO}")
-        banner.append("\n")
-        banner.append("     /_/  \\_\\     ", style=f"bold {ACCENT}")
-        banner.append("LOCAL SOC WORKSPACE", style=f"bold {ACCENT_SOFT}")
-    elif frame_width >= 76:
-        banner.append("    /\\      ", style=f"bold {ACCENT}")
-        banner.append("AEGISLOG", style=f"bold {ACCENT}")
-        banner.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
-        banner.append("  v1.6.1\n", style=MUTED)
-        banner.append("   /  \\     ", style=f"bold {INFO}")
-        banner.append("READY", style=f"bold {SUCCESS}")
-        banner.append("    LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
-        banner.append("\n")
-        banner.append("  /_/\\_\\    ", style=f"bold {INCIDENT}")
-        banner.append("READ-ONLY", style=MUTED)
-        banner.append("    REMOTE AI / OPT-IN", style=MUTED)
     else:
-        banner.append("AEGISLOG", style=f"bold {ACCENT}")
-        banner.append("  SECURITY OPERATIONS  v1.6.1\n", style="bold white")
-        banner.append("READY", style=f"bold {SUCCESS}")
-        banner.append("  LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
-        banner.append("\nREAD-ONLY MONITORING", style=MUTED)
-        banner.append("  REMOTE AI / OPT-IN", style=MUTED)
-    return Panel(banner, border_style=ACCENT, padding=(1, 2), width=frame_width)
+        banner.append("  SECURITY OPERATIONS", style="bold white")
+    banner.append("  v1.6.1", style=MUTED)
+    banner.append("\n")
+    banner.append("READY", style=f"bold {SUCCESS}")
+    banner.append("  LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
+    banner.append("  READ-ONLY MONITORING", style=MUTED)
+    banner.append("  REMOTE AI / OPT-IN", style=MUTED)
+    return Panel(
+        banner,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=frame_width,
+    )
 
 
 def _operation_header(
@@ -101,27 +81,22 @@ def _operation_header(
     *,
     screen_width: int | None = None,
 ) -> Panel:
-    """Give every interactive workflow the same product-level identity."""
+    """Render one compact workflow identity block."""
     width = _frame_width(screen_width)
     body = Text()
     body.append_text(_brand_mark())
     body.append("  //  ", style=MUTED)
     body.append(title, style=f"bold {accent}")
     body.append("\n")
-    body.append(subtitle, style="bold white")
-    body.append("\n\n")
-    body.append("LOCAL", style=f"bold {SUCCESS}")
-    body.append("  defensive processing    ", style=MUTED)
-    body.append("READ-ONLY", style=f"bold {INFO}")
-    body.append("  source preserved    ", style=MUTED)
-    body.append("AI", style=f"bold {INCIDENT}")
-    body.append("  opt-in only", style=MUTED)
+    body.append(subtitle, style="white")
+    body.append("\n")
+    body.append("LOCAL / READ-ONLY", style=MUTED)
     return Panel(
         body,
         title=Text(" ACTIVE WORKSPACE ", style=f"bold {accent}"),
         title_align="left",
         border_style=accent,
-        padding=(1, 2),
+        padding=(0, 1),
         width=width,
     )
 
@@ -135,7 +110,7 @@ def _input_panel(
 ) -> Panel:
     frame_width = _frame_width(screen_width)
     grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(width=12 if frame_width < 60 else 16, no_wrap=True)
+    grid.add_column(width=11 if frame_width < 60 else 14, no_wrap=True)
     grid.add_column(ratio=1, overflow="fold")
     for label, value in lines:
         grid.add_row(Text(label, style=f"bold {accent}"), Text(value, style=MUTED))
@@ -143,122 +118,123 @@ def _input_panel(
         grid,
         title=Text(f" {title} ", style=f"bold {accent}"),
         title_align="left",
-        border_style=accent,
-        padding=(1, 2),
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
         width=frame_width,
     )
 
 
-def _command_card(title: str, rows: list[tuple[str, str, str]], width: int, accent: str) -> Panel:
-    grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(width=6, justify="center", no_wrap=True)
-    grid.add_column(width=20, no_wrap=True)
-    grid.add_column(ratio=1, overflow="fold")
-    for key, action, description in rows:
-        key_style = f"bold black on {accent}"
-        action_style = f"bold {accent}"
-        if key == "C":
-            key_style = f"bold black on {WARNING}"
-            action_style = f"bold {WARNING}"
-        elif key == "Q":
-            key_style = "bold white on red"
-            action_style = f"bold {HIGH}"
-        grid.add_row(
-            Text(f" {key} ", style=key_style),
-            Text(action, style=action_style),
-            Text(description, style=MUTED),
-        )
-    return Panel(
-        grid,
-        title=Text(f" {title} ", style=f"bold {accent}"),
-        title_align="left",
-        border_style=accent,
-        padding=(1, 1),
-        width=width,
-    )
+def _menu_column(
+    sections: tuple[tuple[str, list[tuple[str, str, str]], str], ...],
+    *,
+    compact: bool,
+) -> Table:
+    table = Table.grid(expand=True, padding=(0, 1))
+    table.add_column(width=5, justify="center", no_wrap=True)
+    if compact:
+        table.add_column(ratio=1, overflow="fold")
+    else:
+        table.add_column(width=19, no_wrap=True)
+        table.add_column(ratio=1, overflow="fold")
+
+    first = True
+    for heading, rows, accent in sections:
+        if not first:
+            table.add_row(*([Text("")] * (2 if compact else 3)))
+        first = False
+        if compact:
+            table.add_row(Text(""), Text(heading, style=f"bold {accent}"))
+        else:
+            table.add_row(Text(""), Text(heading, style=f"bold {accent}"), Text(""))
+        for key, action, description in rows:
+            key_style = f"bold {accent}"
+            action_style = f"bold {accent}"
+            if key == "C":
+                key_style = f"bold {WARNING}"
+                action_style = f"bold {WARNING}"
+            elif key == "Q":
+                key_style = f"bold {HIGH}"
+                action_style = f"bold {HIGH}"
+            if compact:
+                body = Text(action, style=action_style)
+                body.append("\n")
+                body.append(description, style=MUTED)
+                table.add_row(Text(key, style=key_style), body)
+            else:
+                table.add_row(
+                    Text(key, style=key_style),
+                    Text(action, style=action_style),
+                    Text(description, style=MUTED),
+                )
+    return table
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
     frame_width = _frame_width(screen_width)
-    core = [
-        ("01", "ANALYZE LOG", "Static investigation + automatic HTML report"),
-        ("02", "LIVE MONITOR", "Watch one log with continuous detection"),
+    operations = [
+        ("01", "ANALYZE LOG", "Static investigation and HTML report"),
+        ("02", "LIVE MONITOR", "Continuous detection for one log"),
         ("03", "MULTI-SOURCE SOC", "Correlate multiple live sources"),
     ]
-    investigate = [
-        ("04", "NATIVE LOGS", "Inspect Windows, Linux, or container telemetry"),
-        ("05", "NATIVE MONITOR", "Watch supported native telemetry read-only"),
-        ("06", "INCIDENT INTEL", "Reconstruct incidents and evidence chains"),
+    investigation = [
+        ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
+        ("05", "NATIVE MONITOR", "Watch native telemetry read-only"),
+        ("06", "INCIDENT INTEL", "Review correlated evidence chains"),
     ]
     system = [
-        ("07", "DEMO", "Open the built-in investigation dataset"),
-        ("08", "HEALTH", "Inspect engine and collector readiness"),
-        ("09", "COMMANDS", "Browse the complete command reference"),
+        ("07", "DEMO", "Run the built-in investigation dataset"),
+        ("08", "HEALTH", "Check engine and collector readiness"),
+        ("09", "COMMANDS", "Open the command reference"),
     ]
     control = [
-        ("C", "COMMAND MODE", "Open the direct-command interface"),
+        ("C", "COMMAND MODE", "Open the direct command interface"),
         ("Q", "EXIT", "Close AegisLog safely"),
     ]
+
+    left_sections = (
+        ("OPERATIONS", operations, ACCENT),
+        ("INVESTIGATION", investigation, INCIDENT),
+    )
+    right_sections = (
+        ("SYSTEM / TOOLS", system, INFO),
+        ("CONTROL", control, WARNING),
+    )
+
     if frame_width < _NARROW_MENU_BREAKPOINT:
-        table = Table.grid(expand=True, padding=(0, 1))
-        table.add_column(width=5, justify="center", no_wrap=True)
-        table.add_column(ratio=1, overflow="fold")
-        sections = (
-            ("OPERATIONS", core, ACCENT),
-            ("INVESTIGATE", investigate, INCIDENT),
-            ("SYSTEM / TOOLS", system, INFO),
-            ("CONTROL", control, WARNING),
+        content: RenderableType = _menu_column(
+            left_sections + right_sections,
+            compact=True,
         )
-        for heading, rows, accent in sections:
-            table.add_row("", Text(heading, style=f"bold {accent}"))
-            for key, action, description in rows:
-                body = Text(action, style=f"bold {accent}")
-                body.append("\n")
-                body.append(description, style=MUTED)
-                table.add_row(Text(key, style=f"bold {accent}"), body)
-        return Panel(
-            table,
-            title=Text(" MISSION CONTROL ", style=f"bold {ACCENT}"),
-            title_align="left",
-            border_style=ACCENT_SOFT,
-            width=frame_width,
+    elif frame_width >= _WIDE_MENU_BREAKPOINT:
+        layout = Table.grid(expand=True, padding=(0, 2))
+        layout.add_column(ratio=1)
+        layout.add_column(ratio=1)
+        layout.add_row(
+            _menu_column(left_sections, compact=False),
+            _menu_column(right_sections, compact=False),
         )
-    if frame_width >= _WIDE_MENU_BREAKPOINT:
-        gap = 2
-        left_width = (frame_width - gap) // 2
-        right_width = frame_width - gap - left_width
-        left = Group(
-            _command_card("OPERATIONS", core, left_width, ACCENT),
-            _command_card("INVESTIGATION", investigate, left_width, INCIDENT),
-        )
-        right = Group(
-            _command_card("SYSTEM / TOOLS", system, right_width, INFO),
-            _command_card("CONTROL", control, right_width, WARNING),
-        )
-        layout = Table.grid(expand=True, padding=0)
-        layout.add_column(width=left_width)
-        layout.add_column(width=gap)
-        layout.add_column(width=right_width)
-        layout.add_row(left, Text(""), right)
-        return layout
-    return Group(
-        _command_card("OPERATIONS", core, frame_width, ACCENT),
-        _command_card("INVESTIGATION", investigate, frame_width, INCIDENT),
-        _command_card("SYSTEM / TOOLS", system, frame_width, INFO),
-        _command_card("CONTROL", control, frame_width, WARNING),
+        content = layout
+    else:
+        content = _menu_column(left_sections + right_sections, compact=False)
+
+    return Panel(
+        content,
+        title=Text(" MISSION CONTROL ", style=f"bold {ACCENT}"),
+        title_align="left",
+        border_style=ACCENT_SOFT,
+        padding=(1, 1),
+        width=frame_width,
     )
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
     footer = Text()
-    footer.append("SELECT", style=f"bold {ACCENT}")
-    footer.append("  01-09 / C     ", style=MUTED)
-    footer.append("REPORT", style=f"bold {SUCCESS}")
-    footer.append("  auto on analysis     ", style=MUTED)
-    footer.append("CTRL+C", style=f"bold {WARNING}")
-    footer.append("  stop live view     ", style=MUTED)
-    footer.append("AI", style=f"bold {INCIDENT}")
-    footer.append("  opt-in only", style=MUTED)
+    footer.append("01-09", style=f"bold {ACCENT}")
+    footer.append(" run   ", style=MUTED)
+    footer.append("C", style=f"bold {WARNING}")
+    footer.append(" command mode   ", style=MUTED)
+    footer.append("Q", style=f"bold {HIGH}")
+    footer.append(" exit   |   reports automatic   |   Ctrl+C stops live views", style=MUTED)
     return Group(_header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
 
 
@@ -286,7 +262,7 @@ def _choose_single_file_workspace(
                 "SOURCE INPUT",
                 [
                     ("INPUT", "Drag a log file here or paste its full path"),
-                    ("DEMO", "Type demo to use the built-in investigation dataset"),
+                    ("DEMO", "Type demo to use the built-in dataset"),
                     ("BACK", "Type back to return to Mission Control"),
                     ("OUTPUT", output_note),
                 ],
@@ -313,20 +289,20 @@ def _choose_multisource_files() -> list[Path]:
         console.print(
             _operation_header(
                 "MULTI-SOURCE SOC",
-                "Build a live correlation workspace across multiple telemetry sources.",
+                "Select two or more telemetry sources for live correlation.",
                 INCIDENT,
             )
         )
         console.print()
-        selected = ", ".join(path.name for path in paths) if paths else "No sources selected yet"
+        selected = ", ".join(path.name for path in paths) if paths else "None selected"
         console.print(
             _input_panel(
                 "TELEMETRY SOURCES",
                 [
                     ("SELECTED", selected),
                     ("REQUIRED", "At least two different existing log files"),
-                    ("INPUT", "Add one path at a time; drag-and-drop is supported"),
-                    ("CONTROL", "Type back to cancel"),
+                    ("INPUT", "Add one path at a time"),
+                    ("BACK", "Type back to cancel"),
                 ],
                 INCIDENT,
             )
@@ -369,11 +345,11 @@ def _choose_profile_workspace(
         _input_panel(
             "WATCH PROFILE",
             [
-                ("SECURITY", "Balanced defensive detection across common security signals"),
-                ("AUTH", "Authentication failures, account activity, and brute-force patterns"),
-                ("WEB", "Web/API errors and suspicious request activity"),
-                ("DOCKER", "Container-focused operational and security signals"),
-                ("OPERATIONS", "Availability, runtime, and service-health signals"),
+                ("SECURITY", "Balanced defensive detection"),
+                ("AUTH", "Authentication and brute-force patterns"),
+                ("WEB", "Web/API errors and suspicious requests"),
+                ("DOCKER", "Container-focused security signals"),
+                ("OPERATIONS", "Availability and service-health signals"),
             ],
             accent,
         )
@@ -390,10 +366,10 @@ def _choose_native_workspace(title: str, subtitle: str, accent: str) -> tuple[st
         _input_panel(
             "NATIVE SOURCE",
             [
-                ("WINDOWS", "Windows Event Logs when running on Windows"),
-                ("JOURNALD", "systemd journal when running on Linux"),
+                ("WINDOWS", "Windows Event Logs on Windows"),
+                ("JOURNALD", "systemd journal on Linux"),
                 ("DOCKER", "Container logs when Docker is available"),
-                ("ACCESS", "Read-only collection; AegisLog does not change host configuration"),
+                ("ACCESS", "Read-only collection"),
             ],
             accent,
         )
@@ -408,12 +384,11 @@ def _run_analysis_workspace(path: Path, title: str, subtitle: str, accent: str =
     console.print()
     console.print(
         _input_panel(
-            "INVESTIGATION STATUS",
+            "ANALYSIS",
             [
                 ("SOURCE", str(path)),
-                ("ENGINE", "Local defensive analysis"),
-                ("SOURCE MODE", "Read-only"),
-                ("REPORT", "HTML investigation report will be written automatically"),
+                ("MODE", "Local / read-only"),
+                ("REPORT", "HTML report generated automatically"),
             ],
             accent,
         )
@@ -426,7 +401,7 @@ def _launch_live_file(path: Path, profile: str) -> None:
     try:
         live_dashboard(path, from_start=True, refresh=1.0, window=500, profile=profile)
     except KeyboardInterrupt:
-        console.print(Text("Live monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
+        console.print(Text("Live monitoring stopped - returning to Mission Control.", style=SUCCESS))
     except Exception as exc:
         _menu_action_error("Real-time file dashboard", exc)
 
@@ -442,7 +417,7 @@ def _launch_live_multi_current(paths: list[Path], profile: str) -> None:
             profile=profile,
         )
     except KeyboardInterrupt:
-        console.print(Text("Multi-source monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
+        console.print(Text("Multi-source monitoring stopped - returning to Mission Control.", style=SUCCESS))
     except Exception as exc:
         _menu_action_error("Multi-source live SOC", exc)
 
@@ -473,7 +448,7 @@ def _launch_native_live(choice: tuple[str, str, str], profile: str) -> None:
             profile=profile,
         )
     except KeyboardInterrupt:
-        console.print(Text("Native monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
+        console.print(Text("Native monitoring stopped - returning to Mission Control.", style=SUCCESS))
     except Exception as exc:
         _menu_action_error("Native real-time monitor", exc)
 
@@ -484,9 +459,9 @@ def _incident_workspace() -> None:
 
     path = _choose_single_file_workspace(
         "INCIDENT INTELLIGENCE",
-        "Select a source to reconstruct evidence chains and explain correlated activity.",
+        "Select a source to reconstruct correlated defensive evidence.",
         INCIDENT,
-        output_note="Local incident list and evidence-backed explanation",
+        output_note="Local incident list and evidence explanation",
     )
     if path is None:
         return
@@ -495,7 +470,7 @@ def _incident_workspace() -> None:
     console.print(
         _operation_header(
             "INCIDENT INTELLIGENCE",
-            "Review correlated incidents before opening the evidence explanation.",
+            "Review correlated incidents before opening an explanation.",
             INCIDENT,
         )
     )
@@ -511,8 +486,8 @@ def _incident_workspace() -> None:
                 "INCIDENT STATUS",
                 [
                     ("SOURCE", str(path)),
-                    ("RESULT", "No correlated incidents were detected in this log"),
-                    ("NEXT", "Return to Mission Control or analyze a different source"),
+                    ("RESULT", "No correlated incidents detected"),
+                    ("NEXT", "Return to Mission Control or choose another source"),
                 ],
                 WARNING,
             )
@@ -522,7 +497,7 @@ def _incident_workspace() -> None:
     table = Table(
         title="INCIDENT QUEUE",
         title_style=f"bold {INCIDENT}",
-        border_style=INCIDENT,
+        border_style=ACCENT_SOFT,
         expand=True,
         padding=(0, 1),
     )
@@ -546,7 +521,7 @@ def _incident_workspace() -> None:
     console.print(
         _operation_header(
             "INCIDENT EXPLANATION",
-            "Local evidence-backed explanation for the selected correlated incident.",
+            "Evidence-backed explanation for the selected correlated incident.",
             INCIDENT,
         )
     )
@@ -575,28 +550,28 @@ def start() -> None:
             if choice in {"1", "01"}:
                 path = _choose_single_file_workspace(
                     "ANALYZE LOG",
-                    "Start a static defensive investigation and produce a complete report.",
+                    "Run a static defensive investigation.",
                     ACCENT,
-                    output_note="HTML investigation report generated automatically after analysis",
+                    output_note="HTML report generated after analysis",
                 )
                 if path is not None:
                     _run_analysis_workspace(
                         path,
                         "ANALYZE LOG",
-                        "Static defensive investigation with automatic report generation.",
+                        "Static defensive investigation.",
                         ACCENT,
                     )
             elif choice in {"2", "02"}:
                 path = _choose_single_file_workspace(
                     "LIVE MONITOR",
-                    "Open a continuous read-only detection session for one log source.",
+                    "Watch one log continuously in read-only mode.",
                     INFO,
-                    output_note="Continuous terminal dashboard; Ctrl+C returns to Mission Control",
+                    output_note="Live terminal view; Ctrl+C stops monitoring",
                 )
                 if path is not None:
                     profile = _choose_profile_workspace(
                         "LIVE MONITOR",
-                        f"Configure continuous detection for {path.name}.",
+                        f"Configure detection for {path.name}.",
                         default="security",
                         accent=INFO,
                     )
@@ -607,7 +582,7 @@ def start() -> None:
                 if paths:
                     profile = _choose_profile_workspace(
                         "MULTI-SOURCE SOC",
-                        f"Configure correlation across {len(paths)} selected telemetry sources.",
+                        f"Configure correlation across {len(paths)} sources.",
                         default="security",
                         accent=INCIDENT,
                     )
@@ -616,7 +591,7 @@ def start() -> None:
             elif choice in {"4", "04"}:
                 native_choice = _choose_native_workspace(
                     "NATIVE LOGS",
-                    "Inspect supported operating-system or container telemetry.",
+                    "Inspect supported OS or container telemetry.",
                     INCIDENT,
                 )
                 if native_choice is not None:
@@ -624,7 +599,7 @@ def start() -> None:
                     console.print(
                         _operation_header(
                             "NATIVE LOGS",
-                            "Collecting a bounded read-only snapshot from the selected native source.",
+                            "Collecting a bounded read-only snapshot.",
                             INCIDENT,
                         )
                     )
@@ -633,7 +608,7 @@ def start() -> None:
             elif choice in {"5", "05"}:
                 native_choice = _choose_native_workspace(
                     "NATIVE MONITOR",
-                    "Watch supported native telemetry continuously in read-only mode.",
+                    "Watch supported native telemetry continuously.",
                     INFO,
                 )
                 if native_choice is not None:
@@ -652,7 +627,7 @@ def start() -> None:
                 _run_analysis_workspace(
                     _resolve_demo(),
                     "DEMO INVESTIGATION",
-                    "Run the built-in defensive dataset through the complete analysis pipeline.",
+                    "Run the built-in dataset through the analysis pipeline.",
                     ACCENT,
                 )
             elif choice in {"8", "08"}:
@@ -669,7 +644,7 @@ def start() -> None:
                 console.print(
                     _operation_header(
                         "COMMAND REFERENCE",
-                        "Browse supported AegisLog workflows and direct commands.",
+                        "Browse supported AegisLog workflows and commands.",
                         INFO,
                     )
                 )
@@ -689,7 +664,7 @@ def start() -> None:
                 console.print(
                     _operation_header(
                         "COMMAND REFERENCE",
-                        "Browse supported AegisLog workflows and direct commands.",
+                        "Browse supported AegisLog workflows and commands.",
                         INFO,
                     )
                 )
@@ -699,6 +674,6 @@ def start() -> None:
                 _run_inline_command(choice)
         except KeyboardInterrupt:
             console.print()
-            console.print(Text("Stopped - returning to the AegisLog menu.", style=WARNING))
+            console.print(Text("Stopped - returning to Mission Control.", style=WARNING))
             continue
         _pause_for_menu()
