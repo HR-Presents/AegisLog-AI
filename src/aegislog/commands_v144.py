@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rich.align import Align
 from rich.console import Console, Group, RenderableType
 from rich.panel import Panel
 from rich.prompt import Prompt
@@ -29,18 +28,18 @@ from .commands_v14 import live_multi
 from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
-_MAX_HOME_WIDTH = 96
+_MAX_HOME_WIDTH = 84
 _NARROW_MENU_BREAKPOINT = 60
 
 
 def _frame_width(screen_width: int | None = None) -> int:
-    """Return a safe content width that never grows wider than the terminal."""
+    """Return a compact content width that never grows wider than the terminal."""
     width = console.size.width if screen_width is None else screen_width
     return max(1, min(max(width - 2, 1), _MAX_HOME_WIDTH))
 
 
 def _header(screen_width: int | None = None) -> Panel:
-    """Render a bounded SOC header that wraps cleanly on narrow terminals."""
+    """Render a compact SOC header that wraps cleanly on narrow terminals."""
     frame_width = _frame_width(screen_width)
     line = Text()
     line.append("AEGISLOG", style=f"bold {ACCENT}")
@@ -48,7 +47,7 @@ def _header(screen_width: int | None = None) -> Panel:
     line.append("  v1.6.1", style=MUTED)
 
     status = Text()
-    separator = "    " if frame_width >= 72 else "\n"
+    separator = "   " if frame_width >= 72 else "\n"
     status.append("[+] ENGINE ONLINE", style=f"bold {SUCCESS}")
     status.append(separator)
     status.append("[+] LOCAL MODE", style=f"bold {ACCENT_SOFT}")
@@ -69,7 +68,7 @@ def _menu(screen_width: int | None = None) -> Table:
     if narrow:
         table.add_column(ratio=1, overflow="fold")
     else:
-        table.add_column(min_width=16, max_width=22, style="bold white", overflow="fold")
+        table.add_column(min_width=16, max_width=20, style="bold white", overflow="fold")
         table.add_column(min_width=18, ratio=1, style=MUTED, overflow="fold")
 
     def section(label: str) -> None:
@@ -109,11 +108,9 @@ def _menu(screen_width: int | None = None) -> Table:
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
-    """Render the home screen centered without stretching on wide terminals."""
-    return Group(
-        Align.center(_header(screen_width)),
-        Align.center(_menu(screen_width)),
-    )
+    """Render one compact, left-anchored console block at every terminal width."""
+    footer = Text("Ctrl+C exits live views | Remote AI is opt-in", style=MUTED)
+    return Group(_header(screen_width), _menu(screen_width), Text("  ").append_text(footer))
 
 
 def _pause_for_menu() -> None:
@@ -212,7 +209,6 @@ def start() -> None:
         console.clear()
         console.print(_home(console.size.width))
         console.print()
-        console.print(Align.center(Text("Ctrl+C exits a live view and returns here. Remote AI remains opt-in.", style=MUTED)))
         try:
             choice = Prompt.ask(f"[bold {ACCENT}]aegis@console >[/bold {ACCENT}]", default="1").strip()
         except (KeyboardInterrupt, EOFError):
