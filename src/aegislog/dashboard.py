@@ -77,7 +77,7 @@ def _risk_state(data: DashboardData) -> str:
 def _header(data: DashboardData) -> Panel:
     risk = _risk_state(data)
     title = Text()
-    title.append("AEGISLOG", style=f"bold {ACCENT}")
+    title.append("AEGISLOG AI", style=f"bold {ACCENT}")
     title.append(" // ANALYSIS", style="bold white")
     title.append(f"  v{__version__}", style=MUTED)
 
@@ -222,13 +222,13 @@ def _next_steps(data: DashboardData) -> Panel:
     command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
     text = Text()
     text.append("analyst › ", style=f"bold {ACCENT}")
+    text.append(f"{command} incidents <file>", style=ACCENT)
     if data.incidents:
         incident_id = f"INC-{data.incidents[0].id.upper()[:8]}"
+        text.append("    |    ", style=MUTED)
         text.append(f"{command} investigate <file> {incident_id}", style=INCIDENT)
         text.append("    |    ", style=MUTED)
         text.append(f"{command} explain <file> {incident_id}", style=INFO)
-    else:
-        text.append(f"{command} incidents <file>", style=ACCENT)
     text.append("\nSignals are investigative evidence, not proof of compromise.", style=MUTED)
     return Panel(text, border_style=ACCENT_SOFT, padding=(0, 1))
 
