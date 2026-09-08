@@ -98,6 +98,20 @@ body:
       required: true
 
   - type: textarea
+    id: quote
+    attributes:
+      label: Short public quote
+      description: Optional. Write one or two sentences that summarize your experience and could be featured in the AegisLog README.
+      placeholder: "AegisLog helped me turn raw logs into a clear investigation workflow without sending my telemetry elsewhere."
+
+  - type: checkboxes
+    id: testimonial_permission
+    attributes:
+      label: README testimonial permission
+      options:
+        - label: The maintainers may quote my Short public quote in the AegisLog README and attribute it to my public GitHub username.
+
+  - type: textarea
     id: notes
     attributes:
       label: Anything else?
