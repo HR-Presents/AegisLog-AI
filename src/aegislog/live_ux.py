@@ -8,6 +8,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
+from .ui import bounded
 
 
 def live_startup_panel(
@@ -20,32 +21,44 @@ def live_startup_panel(
     refresh: float,
     extra: str = "",
 ) -> RenderableType:
-    """Render a consistent, operator-focused summary before live monitoring begins."""
+    """Render one compact operator card before a live monitor takes over the terminal."""
     source_list = tuple(str(source) for source in sources)
-    summary = Table.grid(expand=True)
-    summary.add_column(style=MUTED, width=18)
-    summary.add_column(style="white")
+
+    heading = Text()
+    heading.append("AEGISLOG", style=f"bold {ACCENT}")
+    heading.append(" // ", style=MUTED)
+    heading.append(title, style="bold white")
+    heading.append("\nREAD-ONLY LIVE SESSION", style=f"bold {SUCCESS}")
+
+    summary = Table.grid(expand=True, padding=(0, 1))
+    summary.add_column(style=MUTED, min_width=10, max_width=16)
+    summary.add_column(style="white", ratio=1, overflow="fold")
     summary.add_row("Profile", Text(profile, style=f"bold {ACCENT}"))
     summary.add_row("Mode", mode)
-    summary.add_row("Rolling window", f"{window:,} lines")
+    summary.add_row("Window", f"{window:,} lines")
     summary.add_row("Refresh", f"{refresh:g}s")
-    summary.add_row("Sources", str(len(source_list)))
     if extra:
         summary.add_row("Collector", extra)
 
-    sources_table = Table(title="Monitoring targets", title_style=f"bold {ACCENT}", border_style=ACCENT_SOFT, expand=True)
-    sources_table.add_column("#", justify="right", width=4, style=MUTED)
-    sources_table.add_column("Source")
+    targets = Table(show_header=False, box=None, padding=(0, 1), expand=True)
+    targets.add_column("#", justify="right", min_width=2, max_width=4, style=ACCENT)
+    targets.add_column("Target", ratio=1, overflow="fold")
     for index, source in enumerate(source_list, start=1):
-        sources_table.add_row(str(index), Text(source))
+        targets.add_row(str(index), Text(source))
 
-    guidance = Text("Live analysis is read-only. ", style=SUCCESS)
-    guidance.append("The dashboard refreshes in place; press Ctrl+C to stop safely.", style=MUTED)
-    return Group(
-        Panel(summary, title=title, subtitle="AegisLog real-time defensive monitoring", border_style=ACCENT),
-        sources_table,
-        Panel(guidance, title="Operator guidance", border_style=ACCENT_SOFT),
+    guidance = Text("Ctrl+C stops safely. ", style=f"bold {SUCCESS}")
+    guidance.append("No source data or host configuration is modified.", style=MUTED)
+
+    body = Group(
+        heading,
+        Text(""),
+        summary,
+        Text("\nMONITORING TARGETS", style=f"bold {ACCENT_SOFT}"),
+        targets,
+        Text(""),
+        guidance,
     )
+    return bounded(Panel(body, border_style=ACCENT, padding=(1, 1)))
 
 
 def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
@@ -58,18 +71,18 @@ def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
 def live_source_status(source: str, *, available: bool) -> Text:
     """Render a one-line source transition without implying host modification."""
     if available:
-        status = Text("Source recovered: ", style=f"bold {SUCCESS}")
+        status = Text("SOURCE RECOVERED  ", style=f"bold {SUCCESS}")
         status.append(source, style="white")
-        status.append(". Monitoring resumed automatically from the safe cursor.", style=MUTED)
+        status.append("  monitoring resumed from the safe cursor", style=MUTED)
         return status
-    status = Text("Source temporarily unavailable: ", style=f"bold {WARNING}")
+    status = Text("SOURCE UNAVAILABLE  ", style=f"bold {WARNING}")
     status.append(source, style="white")
-    status.append(". AegisLog will keep the current dashboard and retry read-only polling.", style=MUTED)
+    status.append("  retaining the current dashboard and retrying read-only polling", style=MUTED)
     return status
 
 
 def live_stopped_status(kind: str, *, degraded: bool = False) -> Text:
     style = WARNING if degraded else SUCCESS
-    status = Text(f"\n{kind} monitoring stopped safely. ", style=f"bold {style}")
+    status = Text(f"\n{kind.upper()} MONITOR STOPPED  ", style=f"bold {style}")
     status.append("No host configuration or source data was modified.", style=MUTED)
     return status
