@@ -59,7 +59,10 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
         "Executive brief / page 1",
         "Executive Summary",
         "Assessment",
+        "Disposition",
+        "IMMEDIATE REVIEW",
         "Repeated &lt;script&gt;alert(1)&lt;/script&gt; failures",
+        "Primary analyst decision",
         "Recommended Triage",
         "Incident Queue",
         "Findings and Recommendations",
@@ -134,6 +137,37 @@ def test_html_report_orders_triage_by_severity() -> None:
     assert high_position < medium_position
 
 
+def test_incident_only_report_keeps_high_posture_and_primary_incident() -> None:
+    incident = Incident(
+        id="deadbeef1234",
+        category="authentication",
+        severity="HIGH",
+        count=5,
+        title="Correlated authentication activity",
+        evidence=("failed password",),
+    )
+    data = DashboardData(
+        source="/tmp/incident-only.log",
+        lines=5,
+        findings=(),
+        anomalies=(),
+        incidents=(incident,),
+        levels={"ERROR": 5},
+        services={"sshd": 5},
+        categories={},
+        severities={},
+    )
+    html = build_html_report(data)
+
+    assert "Current posture" in html
+    assert ">HIGH<" in html
+    assert "IMMEDIATE REVIEW" in html
+    assert "INC-DEADBEEF" in html
+    assert "Correlated authentication activity" in html
+    assert "Review INC-DEADBEEF" in html
+    assert "No elevated rule-backed finding requires immediate action" not in html
+
+
 def test_empty_report_has_clear_empty_states() -> None:
     data = DashboardData(
         source="/tmp/quiet.log",
@@ -150,6 +184,7 @@ def test_empty_report_has_clear_empty_states() -> None:
 
     assert "Current posture" in html
     assert ">CLEAR<" in html
+    assert "ROUTINE REVIEW" in html
     assert "No immediate rule-backed remediation items were generated." in html
     assert "No correlated incidents were recorded." in html
     assert "No rule-backed findings were recorded." in html
