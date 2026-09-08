@@ -171,7 +171,7 @@ def test_interactive_home_uses_balanced_wide_layout() -> None:
 def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
     text = _render_text(_home(40), 40)
     assert "Static investigation" in text
-    assert "Watch one log" in text
+    assert "Continuous detection" in text
     assert "Correlate multiple live" in text
     assert "opt-in" in text.lower()
     assert max(len(line) for line in text.splitlines()) <= 40
