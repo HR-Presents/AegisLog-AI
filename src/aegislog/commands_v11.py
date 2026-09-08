@@ -8,6 +8,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .dashboard import analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
+from .ui import bounded
 
 console = Console()
 
@@ -32,7 +33,7 @@ def dashboard(
         task = progress.add_task(f"Analyzing {path.name}...", total=None)
         data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
         progress.update(task, description="Building terminal dashboard...")
-    console.print(render_dashboard(data))
+    console.print(bounded(render_dashboard(data)))
 
 
 def analyze_dashboard_command(
