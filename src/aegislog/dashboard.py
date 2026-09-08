@@ -77,12 +77,18 @@ def analyze_dashboard(path: Path, *, timestamp_year_hint: int | None = None) -> 
     )
 
 
+def _severity_rank(value: str) -> int:
+    return _SEVERITY_RANK.get(value.upper(), 0)
+
+
 def _risk_state(data: DashboardData) -> str:
-    if data.severities.get("CRITICAL", 0):
+    severities = set(data.severities)
+    severities.update(item.severity for item in data.incidents)
+    if "CRITICAL" in severities:
         return "CRITICAL"
-    if data.severities.get("HIGH", 0):
+    if "HIGH" in severities:
         return "HIGH"
-    if data.severities.get("MEDIUM", 0):
+    if "MEDIUM" in severities:
         return "REVIEW"
     return "CLEAR"
 
@@ -90,13 +96,26 @@ def _risk_state(data: DashboardData) -> str:
 def _ordered_findings(data: DashboardData) -> list[Finding]:
     return sorted(
         data.findings,
-        key=lambda item: (-_SEVERITY_RANK.get(item.severity, 0), item.category, item.title),
+        key=lambda item: (-_severity_rank(item.severity), item.category, item.title),
+    )
+
+
+def _ordered_incidents(data: DashboardData) -> list[Incident]:
+    return sorted(
+        data.incidents,
+        key=lambda item: (-_severity_rank(item.severity), -item.count, item.category, item.title),
     )
 
 
 def _header(data: DashboardData) -> Panel:
     risk = _risk_state(data)
     source_name = Path(data.source).name or data.source
+    elevated = sum(
+        count
+        for severity, count in data.severities.items()
+        if _severity_rank(severity) >= _severity_rank("MEDIUM")
+    )
+
     body = Text()
     body.append("AEGISLOG", style=f"bold {ACCENT}")
     body.append("  /  INVESTIGATION", style="bold white")
@@ -111,6 +130,8 @@ def _header(data: DashboardData) -> Panel:
     body.append(f"{data.lines:,}", style=f"bold {ACCENT}")
     body.append("    FINDINGS  ", style=MUTED)
     body.append(str(len(data.findings)), style="bold white")
+    body.append("    ELEVATED  ", style=MUTED)
+    body.append(str(elevated), style=f"bold {risk_style(risk)}")
     body.append("    INCIDENTS  ", style=MUTED)
     body.append(str(len(data.incidents)), style=f"bold {INCIDENT}")
     body.append("    ANOMALIES  ", style=MUTED)
@@ -119,6 +140,7 @@ def _header(data: DashboardData) -> Panel:
         body.append("\nPATH    ", style=MUTED)
         body.append(data.source, style=MUTED)
     body.append("\nLOCAL / READ-ONLY", style=MUTED)
+
     return Panel(
         body,
         title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT_SOFT}"),
@@ -130,35 +152,60 @@ def _header(data: DashboardData) -> Panel:
 
 def _analyst_focus(data: DashboardData) -> Panel:
     risk = _risk_state(data)
-    ordered = _ordered_findings(data)
+    findings = _ordered_findings(data)
+    incidents = _ordered_incidents(data)
+    top_finding = findings[0] if findings else None
+    top_incident = incidents[0] if incidents else None
+
     body = Text()
     body.append("PRIORITY  ", style=MUTED)
     body.append(risk, style=f"bold {risk_style(risk)}")
 
-    if ordered:
-        top = ordered[0]
+    incident_first = bool(
+        top_incident
+        and (
+            top_finding is None
+            or _severity_rank(top_incident.severity) >= _severity_rank(top_finding.severity)
+        )
+    )
+
+    if incident_first and top_incident:
+        incident_id = f"INC-{top_incident.id.upper()[:8]}"
         body.append("\nPRIMARY   ", style=MUTED)
-        body.append(top.title, style="bold white")
+        body.append(incident_id, style=f"bold {INCIDENT}")
+        body.append("  ", style=MUTED)
+        body.append(top_incident.title, style="bold white")
         body.append("\nACTION    ", style=MUTED)
-        body.append(top.recommendation, style="white")
-        if len(ordered) > 1:
-            next_item = ordered[1]
+        body.append(
+            "Review the correlated evidence chain with source, identity, host, and surrounding telemetry context.",
+            style="white",
+        )
+        if top_finding:
+            body.append("\nNEXT      ", style=MUTED)
+            body.append(top_finding.severity, style=f"bold {risk_style(top_finding.severity)}")
+            body.append("  ", style=MUTED)
+            body.append(top_finding.title, style="white")
+    elif top_finding:
+        body.append("\nPRIMARY   ", style=MUTED)
+        body.append(top_finding.title, style="bold white")
+        body.append("\nACTION    ", style=MUTED)
+        body.append(top_finding.recommendation, style="white")
+        if top_incident:
+            body.append("\nNEXT      ", style=MUTED)
+            body.append(f"INC-{top_incident.id.upper()[:8]}", style=f"bold {INCIDENT}")
+            body.append("  ", style=MUTED)
+            body.append(top_incident.title, style="white")
+        elif len(findings) > 1:
+            next_item = findings[1]
             body.append("\nNEXT      ", style=MUTED)
             body.append(next_item.severity, style=f"bold {risk_style(next_item.severity)}")
             body.append("  ", style=MUTED)
             body.append(next_item.title, style="white")
     else:
         body.append("\nPRIMARY   ", style=MUTED)
-        body.append("No elevated rule-backed findings retained", style=SUCCESS)
+        body.append("No elevated rule-backed findings or correlated incidents retained", style=SUCCESS)
         body.append("\nACTION    ", style=MUTED)
         body.append("Review coverage and preserve original telemetry when required.", style="white")
-
-    if data.incidents:
-        incident = data.incidents[0]
-        body.append("\nINCIDENT  ", style=MUTED)
-        body.append(f"INC-{incident.id.upper()[:8]}", style=f"bold {INCIDENT}")
-        body.append("  ", style=MUTED)
-        body.append(incident.title, style="white")
 
     body.append("\n\nSignals are investigative evidence, not proof of compromise.", style=MUTED)
     return Panel(
@@ -171,8 +218,9 @@ def _analyst_focus(data: DashboardData) -> Panel:
 
 
 def _incident_table(data: DashboardData, limit: int = 8) -> Table:
+    ordered = _ordered_incidents(data)
     table = Table(
-        title=f"ACTIVE INCIDENTS  [{min(len(data.incidents), limit)}/{len(data.incidents)}]",
+        title=f"ACTIVE INCIDENTS  [{min(len(ordered), limit)}/{len(ordered)}]",
         title_style=f"bold {INCIDENT}",
         expand=True,
         border_style=ACCENT_SOFT,
@@ -183,7 +231,7 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     table.add_column("SIGNALS", width=8, justify="right", style=ACCENT)
     table.add_column("CATEGORY", width=18)
     table.add_column("SUMMARY", ratio=1, overflow="fold")
-    for item in data.incidents[:limit]:
+    for item in ordered[:limit]:
         table.add_row(
             f"INC-{item.id.upper()[:8]}",
             severity_text(item.severity),
@@ -194,10 +242,17 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     return table
 
 
-def _finding_table(data: DashboardData, limit: int = 20) -> Table:
+def _evidence_preview(value: str, limit: int = 180) -> str:
+    normalized = " ".join(value.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 1].rstrip() + "…"
+
+
+def _finding_table(data: DashboardData, limit: int = 12) -> Table:
     ordered = _ordered_findings(data)
     table = Table(
-        title=f"Detected findings  [{min(len(ordered), limit)}/{len(ordered)}]",
+        title=f"DETECTED FINDINGS  [{min(len(ordered), limit)}/{len(ordered)}]",
         title_style=f"bold {ACCENT}",
         expand=True,
         border_style=ACCENT_SOFT,
@@ -206,13 +261,13 @@ def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     table.add_column("SEV", width=9)
     table.add_column("CATEGORY", width=17)
     table.add_column("DETECTION", width=32)
-    table.add_column("EVIDENCE", ratio=1, overflow="fold")
+    table.add_column("EVIDENCE PREVIEW", ratio=1, overflow="fold")
     for item in ordered[:limit]:
         table.add_row(
             severity_text(item.severity),
             Text(item.category),
             Text(item.title),
-            Text(item.evidence),
+            Text(_evidence_preview(item.evidence)),
         )
     if not ordered:
         table.add_row(
@@ -279,17 +334,20 @@ def _source_argument(source: str) -> str:
 def _next_steps(data: DashboardData) -> Panel:
     command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
     source = _source_argument(data.source)
+    incidents = _ordered_incidents(data)
+
     body = Text()
     body.append("REPORT  ", style=MUTED)
     body.append("HTML investigation report generated automatically", style=SUCCESS)
     body.append("\nLIST    ", style=MUTED)
     body.append(f"{command} incidents {source}", style=ACCENT)
-    if data.incidents:
-        incident_id = f"INC-{data.incidents[0].id.upper()[:8]}"
+    if incidents:
+        incident_id = f"INC-{incidents[0].id.upper()[:8]}"
         body.append("\nOPEN    ", style=MUTED)
         body.append(f"{command} investigate {source} {incident_id}", style=INCIDENT)
         body.append("\nEXPLAIN ", style=MUTED)
         body.append(f"{command} explain {source} {incident_id}", style=INFO)
+
     return Panel(
         body,
         title=Text(" FOLLOW-UP / COPY-READY ", style=f"bold {ACCENT}"),
