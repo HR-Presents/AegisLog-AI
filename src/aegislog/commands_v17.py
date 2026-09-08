@@ -12,24 +12,24 @@ from .commands_v11 import dashboard
 from .native_collectors import CollectorError, collect, source_status
 from .native_diagnostics import failure_guidance, source_state
 from .theme import ACCENT, MUTED, SUCCESS, WARNING
+from .ui import bounded, compact_footer
 
 console = Console()
 
 
 def native_sources() -> None:
     """Show native operating-system and container log sources."""
-    table = Table(title="Native log sources", border_style=ACCENT)
-    table.add_column("Source", style=ACCENT)
-    table.add_column("Status")
-    table.add_column("Details", style=MUTED)
+    table = Table(title="NATIVE LOG SOURCES", border_style=ACCENT, expand=True, padding=(0, 1))
+    table.add_column("Source", min_width=10, ratio=2, style=ACCENT, overflow="fold")
+    table.add_column("Status", min_width=10, max_width=16)
+    table.add_column("Details", min_width=18, ratio=4, style=MUTED, overflow="fold")
     for item in source_status():
         label, style = source_state(item)
         table.add_row(Text(item.label), Text(label, style=style), Text(item.detail))
-    console.print(table)
+    console.print(bounded(table))
     console.print(
-        Text(
-            "Native collectors are read-only. Unsupported sources stay disabled; unavailable sources should be fixed at the source/permission layer rather than by changing host policy.",
-            style=MUTED,
+        compact_footer(
+            "Native collectors are read-only. Unsupported sources stay disabled; fix unavailable sources at the source or permission layer rather than changing host policy."
         )
     )
 
