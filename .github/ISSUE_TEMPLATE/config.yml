@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Leave a public AegisLog review
+    url: https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml
+    about: Used AegisLog? Share a public rating, recommendation, and sanitized feedback.
   - name: Security vulnerability
     url: https://github.com/HR-Presents/AegisLog-AI/security/policy
     about: Read the private reporting instructions before sharing security-sensitive details.
