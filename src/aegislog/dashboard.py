@@ -24,7 +24,6 @@ from .theme import (
     INFO,
     MUTED,
     SUCCESS,
-    WARNING,
     risk_style,
     severity_text,
 )
