@@ -166,7 +166,7 @@ def _anomaly_table(data: DashboardData, limit: int = 8) -> Table:
 
 def _finding_table(data: DashboardData, limit: int = 20) -> Table:
     table = Table(
-        title=f"FINDINGS  [{min(len(data.findings), limit)}/{len(data.findings)}]",
+        title=f"Detected findings  [{min(len(data.findings), limit)}/{len(data.findings)}]",
         title_style=f"bold {ACCENT}",
         expand=True,
         border_style=ACCENT_SOFT,
