@@ -11,7 +11,11 @@
 
 **Stable release: v1.6.0**
 
-[Download AegisLog.exe](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0) · [Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Leave a public review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) · [Release Notes](docs/RELEASE_V1.6.0.md)
+### [Download AegisLog for Windows](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0)
+
+**One standalone EXE · Local-first · Read-only · No Python required for normal Windows use**
+
+[Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Community Reviews](docs/COMMUNITY_REVIEWS.md) · [Leave a Review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) · [Release Notes](docs/RELEASE_V1.6.0.md)
 
 **Used AegisLog?** Star the repository if it helped you, and leave a public review so maintainers and future users can learn from your experience.
 
@@ -28,6 +32,26 @@ It turns authentication, Linux, Windows Event Log, web, Docker, system, and appl
 The core workflow is deterministic and read-only. AegisLog does not automatically remediate hosts, change firewall rules, modify accounts or services, deploy persistence, evade controls, or perform exploitation.
 
 > **Windows users:** the recommended distribution is a standalone `AegisLog.exe`. Normal use does not require Python, a virtual environment, a requirements file, an installer, or a support folder.
+
+---
+
+## Product at a glance
+
+| | |
+|---|---|
+| **Primary use** | Defensive log analysis and incident investigation |
+| **Windows delivery** | Single standalone `AegisLog.exe` |
+| **Core processing** | Local-first and deterministic |
+| **Host behavior** | Read-only analysis; no automatic remediation |
+| **Reports** | Analyst-oriented HTML / Save-to-PDF investigation report |
+| **Remote AI** | Optional; not required for the core workflow |
+| **Public feedback** | GitHub User Review form with optional README testimonial permission |
+
+### See AegisLog in action
+
+AegisLog's current UI is a terminal-first SOC investigation experience with **Mission Control**, **Analyst Focus**, correlated incident prioritization, bounded evidence previews, copy-ready follow-up commands, and an executive-first investigation report.
+
+> **Screenshots:** the project will publish screenshots from a verified Windows release build rather than mockups. This keeps the README representative of what users actually download.
 
 ---
 
@@ -261,11 +285,19 @@ Public GitHub activity provides transparent community signals:
 - **Issues and reviews** show feedback submitted by users.
 - **Pull requests and commits** record public contributions to the project.
 
-After trying AegisLog, please [leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml). The structured review asks for a rating, recommendation, version/environment, workflows used, what worked well, and what should improve.
+After trying AegisLog, please [leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml). The structured review asks for a rating, recommendation, version/environment, workflows used, what worked well, what should improve, and an optional short testimonial.
+
+Read the [Community Reviews policy and index](docs/COMMUNITY_REVIEWS.md) for how public testimonials are handled. Testimonials are only featured with explicit permission and are attributed to the reviewer's public GitHub username. AegisLog does not fabricate reviews or hide legitimate criticism.
 
 Please sanitize everything before posting. Never include credentials, tokens, real production logs, personal data, private hostnames, or customer information in a public review.
 
 If AegisLog was useful, starring the repository is also a simple way to support the project and make public interest visible on GitHub.
+
+### Featured community reviews
+
+_No testimonials have been featured yet. This section will only contain quotes from real public reviews whose authors explicitly allowed README attribution._
+
+[Leave the first public review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) · [Review policy](docs/COMMUNITY_REVIEWS.md)
 
 ---
 
@@ -341,6 +373,7 @@ See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific deta
 - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — performance and bounded-state notes
 - [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) — current project status
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — maintenance and future-direction notes
+- [`docs/COMMUNITY_REVIEWS.md`](docs/COMMUNITY_REVIEWS.md) — public review and testimonial policy
 - [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) — stable release notes
 
 ---
