@@ -54,7 +54,7 @@ The core workflow is deterministic and read-only. AegisLog does not automaticall
 
 AegisLog's current UI is a terminal-first SOC investigation experience with **Mission Control**, **Analyst Focus**, correlated incident prioritization, bounded evidence previews, copy-ready follow-up commands, and an executive-first investigation report.
 
-> **Verified screenshots in progress:** screenshots will be captured from the CI-validated Windows PR build at commit `cbbc194490482c1c7c81140ac2fce67ed955c60e`, not from mockups. The reproducible capture and sanitization contract is documented in [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md). Until those captures are committed, this README intentionally does not display simulated product images.
+> **Verified screenshots in progress:** PR preview screenshots will be captured from the CI-validated Windows build at commit `74e55590da56305056cf984887da3ebd1e799e61`, not from mockups. Its GitHub Actions artifact is temporary validation evidence, not the permanent customer download. Stable customer downloads remain the GitHub Release assets linked above. The reproducible capture, provenance, release-channel, and sanitization contract is documented in [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md). Until real captures are committed, this README intentionally does not display simulated product images.
 
 ---
 
