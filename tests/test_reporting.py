@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from aegislog.anomaly import Anomaly
@@ -52,19 +53,32 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
 
     for text in (
         "Security Investigation Report",
+        "Investigation record",
+        "Case reference",
         "Executive Summary",
+        "Assessment",
         "Recommended Triage",
         "Incident Queue",
         "Findings and Recommendations",
         "Anomaly Signals",
         "Observed Distribution",
+        "Analysis Profile",
+        "Evidence limitations",
         "LOCAL / READ-ONLY",
         "REMOTE AI NOT REQUIRED",
         "Print / Save PDF",
     ):
         assert text in html
 
-    for anchor in ("#executive", "#triage", "#incidents", "#findings", "#anomalies", "#telemetry"):
+    for anchor in (
+        "#executive",
+        "#triage",
+        "#incidents",
+        "#findings",
+        "#anomalies",
+        "#telemetry",
+        "#method",
+    ):
         assert anchor in html
 
     assert "@media print" in html
@@ -75,6 +89,16 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
     assert 'href="https://' not in html
     assert "@import" not in html
     assert "<script src=" not in html
+
+
+def test_html_report_has_stable_case_reference_for_same_snapshot() -> None:
+    first = build_html_report(_data())
+    second = build_html_report(_data())
+    pattern = re.compile(r"AL-[A-F0-9]{10}")
+    first_ids = pattern.findall(first)
+    second_ids = pattern.findall(second)
+    assert first_ids
+    assert first_ids[0] == second_ids[0]
 
 
 def test_html_report_escapes_retained_evidence() -> None:
@@ -115,6 +139,7 @@ def test_empty_report_has_clear_empty_states() -> None:
     assert "No correlated incidents were recorded." in html
     assert "No rule-backed findings were recorded." in html
     assert "No rare concerning event classes were recorded." in html
+    assert "No critical, high, or medium rule-backed findings were retained" in html
 
 
 def test_write_html_report_uses_safe_predictable_filename(tmp_path: Path) -> None:
