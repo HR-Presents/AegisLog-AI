@@ -12,219 +12,413 @@ _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
 
 _REPORT_STYLE = """
 :root {
-  --bg: #061019;
-  --surface: #0b1722;
-  --surface-2: #102231;
-  --surface-3: #132b3d;
-  --line: #23465d;
-  --line-soft: #183247;
-  --text: #e9f7ff;
-  --muted: #91adbe;
-  --cyan: #38e8ff;
-  --blue: #5a8fff;
-  --violet: #ba68ff;
-  --green: #54f5a7;
-  --yellow: #ffd65c;
-  --red: #ff627b;
-  --shadow: 0 22px 70px rgba(0, 0, 0, .34);
+  --ink: #172033;
+  --muted: #667085;
+  --paper: #ffffff;
+  --page: #eef2f6;
+  --navy: #0c1b2d;
+  --navy-2: #13263d;
+  --line: #d8e0e8;
+  --line-strong: #c5d0dc;
+  --accent: #087d92;
+  --accent-soft: #e8f6f8;
+  --good: #137a50;
+  --good-bg: #e8f7ef;
+  --warn: #8a5a00;
+  --warn-bg: #fff5d8;
+  --danger: #b4233a;
+  --danger-bg: #fdecef;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 86% -10%, rgba(90, 143, 255, .22), transparent 33rem),
-    radial-gradient(circle at -5% 18%, rgba(56, 232, 255, .12), transparent 26rem),
-    var(--bg);
-  color: var(--text);
-  font: 15px/1.58 "Segoe UI", Inter, Arial, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.52 "Segoe UI", Arial, sans-serif;
 }
 a { color: inherit; }
-.report { max-width: 1380px; margin: 0 auto; padding: 24px 28px 54px; }
-.cover {
-  min-height: 560px;
-  border: 1px solid #23627f;
-  background:
-    linear-gradient(140deg, rgba(56, 232, 255, .08), transparent 36%),
-    linear-gradient(318deg, rgba(186, 104, 255, .16), transparent 34%),
-    linear-gradient(145deg, #07131d 0%, #0b2130 60%, #121b32 100%);
-  border-radius: 26px;
-  padding: 44px;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 34px;
-  box-shadow: var(--shadow);
+.report {
+  max-width: 1180px;
+  margin: 24px auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(18, 38, 61, .10);
+  overflow: hidden;
 }
-.brand { display: flex; align-items: center; gap: 18px; }
-.mark { width: 76px; height: 86px; filter: drop-shadow(0 0 18px rgba(56, 232, 255, .35)); }
-.brand-name { font-size: 34px; line-height: 1; font-weight: 900; letter-spacing: .09em; }
-.brand-sub, .eyebrow {
-  color: var(--cyan);
-  font-size: 11px;
-  letter-spacing: .17em;
-  font-weight: 900;
-  text-transform: uppercase;
+.masthead {
+  background: var(--navy);
+  color: #f8fbff;
+  padding: 28px 34px 24px;
+  border-bottom: 4px solid var(--accent);
 }
-.cover-main { align-self: center; max-width: 980px; }
-.cover h1 { font-size: clamp(40px, 6vw, 68px); line-height: 1.02; margin: 12px 0 18px; letter-spacing: -.035em; }
-.lede { max-width: 880px; color: #c9deea; font-size: 19px; margin: 0; }
-.risk-line { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 24px; }
-.risk-badge {
-  display: inline-flex;
+.brand-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 8px 13px;
-  font-size: 12px;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.brand-mark {
+  width: 44px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #7fd8e5;
+  border-radius: 10px 10px 16px 16px;
+  color: #b9f2fa;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+.brand-name {
+  font-size: 23px;
+  line-height: 1;
   font-weight: 900;
   letter-spacing: .08em;
 }
-.risk-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 14px currentColor; }
-.risk-badge.good { color: var(--green); background: rgba(84, 245, 167, .10); border: 1px solid rgba(84, 245, 167, .35); }
-.risk-badge.warning { color: var(--yellow); background: rgba(255, 214, 92, .10); border: 1px solid rgba(255, 214, 92, .35); }
-.risk-badge.danger { color: var(--red); background: rgba(255, 98, 123, .10); border: 1px solid rgba(255, 98, 123, .35); }
-.cover-note { color: var(--muted); font-size: 13px; }
-.meta { display: grid; grid-template-columns: 1.45fr .65fr 1fr .75fr; gap: 12px; }
+.brand-sub {
+  margin-top: 5px;
+  color: #9ec4d1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: end;
+}
+.eyebrow {
+  color: #83d8e6;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 5px 0 8px;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -.025em;
+}
+.subtitle {
+  max-width: 760px;
+  margin: 0;
+  color: #c9d8e3;
+  font-size: 15px;
+}
+.posture {
+  min-width: 132px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,.20);
+  border-radius: 10px;
+  text-align: right;
+  background: rgba(255,255,255,.05);
+}
+.posture small {
+  display: block;
+  color: #9ec4d1;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: 9px;
+}
+.posture strong { display: block; margin-top: 2px; font-size: 22px; }
+.posture.good strong { color: #82e0b4; }
+.posture.warning strong { color: #ffd978; }
+.posture.danger strong { color: #ff9aaa; }
+
+.meta {
+  display: grid;
+  grid-template-columns: 1.5fr .7fr 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
 .meta div {
   min-width: 0;
-  padding: 14px 15px;
-  border: 1px solid rgba(255, 255, 255, .11);
-  background: rgba(255, 255, 255, .045);
-  border-radius: 13px;
+  padding: 12px 18px;
+  border-right: 1px solid var(--line);
 }
-.meta small { display: block; color: #9eb9c9; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .07em; font-size: 10px; }
-.meta strong { display: block; overflow-wrap: anywhere; }
-.toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 18px 0;
-  padding: 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
-  background: rgba(6, 16, 25, .91);
-  backdrop-filter: blur(14px);
+.meta div:last-child { border-right: 0; }
+.meta small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
-.toolbar .spacer { flex: 1; }
-.toolbar a, .toolbar button {
-  border: 1px solid #2a5770;
-  background: #0f2231;
-  color: var(--text);
-  text-decoration: none;
-  border-radius: 9px;
-  padding: 9px 12px;
-  font: inherit;
+.meta strong {
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
   font-size: 12px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+.toolbar a {
+  color: #344054;
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.toolbar a:hover { background: #f2f4f7; }
+.toolbar .spacer { flex: 1; }
+.toolbar button {
+  border: 1px solid #0b7183;
+  border-radius: 7px;
+  background: var(--accent);
+  color: white;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 11px;
   font-weight: 800;
   cursor: pointer;
 }
-.toolbar .primary { background: linear-gradient(90deg, var(--cyan), var(--blue)); color: #031019; border: 0; }
-.metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 18px 0; }
-.metric, .card {
+
+.content { padding: 22px 26px 34px; }
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.metric {
+  min-width: 0;
+  padding: 14px 15px;
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
-  border-radius: 16px;
+  border-radius: 9px;
+  background: #fff;
 }
-.metric { padding: 17px 18px; min-width: 0; }
-.metric span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .09em; }
-.metric strong { display: block; margin-top: 3px; font-size: 27px; overflow-wrap: anywhere; }
-.metric.good strong { color: var(--green); }
-.metric.warning strong { color: var(--yellow); }
-.metric.danger strong { color: var(--red); }
-.card { padding: 24px; margin-top: 16px; box-shadow: 0 12px 34px rgba(0, 0, 0, .13); }
-.kicker { color: var(--cyan); text-transform: uppercase; letter-spacing: .16em; font-size: 10px; font-weight: 900; }
-h2 { margin: 4px 0 18px; font-size: 25px; letter-spacing: -.015em; }
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.metric strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 23px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.metric.good strong { color: var(--good); }
+.metric.warning strong { color: var(--warn); }
+.metric.danger strong { color: var(--danger); }
+
+.section {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.section:first-of-type { border-top: 0; }
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.section-label {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+h2 {
+  margin: 2px 0 0;
+  font-size: 21px;
+  letter-spacing: -.01em;
+}
+.section-note {
+  max-width: 520px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
 .summary {
-  padding: 18px 20px;
-  border-left: 4px solid var(--cyan);
-  background: linear-gradient(90deg, rgba(56, 232, 255, .09), rgba(90, 143, 255, .04));
-  border-radius: 10px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--accent);
+  background: #f7fafc;
+  color: #344054;
 }
-.severity-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; }
-.severity-item { padding: 13px; border: 1px solid var(--line-soft); border-radius: 11px; background: #091720; }
-.severity-item small { display: block; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-.severity-item strong { font-size: 22px; }
-.bar { height: 5px; margin-top: 9px; background: #061019; border-radius: 999px; overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
-.triage { display: grid; gap: 10px; }
+.overview {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+.severity-table,
+.triage {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.severity-row {
+  display: grid;
+  grid-template-columns: 90px 52px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--line);
+}
+.severity-row:last-child { border-bottom: 0; }
+.severity-row small {
+  color: var(--muted);
+  font-weight: 800;
+}
+.track {
+  height: 5px;
+  background: #edf1f5;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.track i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+}
 .triage-item {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
-  border: 1px solid var(--line-soft);
-  background: #091720;
-  border-radius: 12px;
+  grid-template-columns: 76px minmax(0,1fr);
+  gap: 10px;
+  padding: 10px 11px;
+  border-bottom: 1px solid var(--line);
 }
-.triage-item p { margin: 3px 0 0; color: #c6dbe6; }
+.triage-item:last-child { border-bottom: 0; }
+.triage-item strong { font-size: 12px; }
+.triage-item p { margin: 2px 0 0; color: #475467; font-size: 11px; }
+
 .pill {
   display: inline-block;
   width: max-content;
-  padding: 4px 9px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
-  letter-spacing: .05em;
+  letter-spacing: .04em;
 }
-.pill.good { color: #0c5a35; background: #b9ffda; }
-.pill.warning { color: #654900; background: #ffeba7; }
-.pill.danger { color: #790b20; background: #ffc2cc; }
-.pill.neutral { color: #10394f; background: #c7eaf8; }
-.table-wrap { width: 100%; overflow-x: auto; }
+.pill.good { color: var(--good); background: var(--good-bg); }
+.pill.warning { color: var(--warn); background: var(--warn-bg); }
+.pill.danger { color: var(--danger); background: var(--danger-bg); }
+.pill.neutral { color: #475467; background: #eef2f6; }
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
 table { width: 100%; border-collapse: collapse; }
-th, td { padding: 11px 10px; border-bottom: 1px solid #1a3548; text-align: left; vertical-align: top; }
-thead th { position: sticky; top: 51px; z-index: 2; background: #102231; }
-th { color: #a0bdcd; font-size: 11px; text-transform: uppercase; letter-spacing: .055em; }
+th, td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+tr:last-child th, tr:last-child td { border-bottom: 0; }
+thead th {
+  background: #f7f9fb;
+  color: #475467;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
 td { overflow-wrap: anywhere; }
-code { color: var(--cyan); font-family: "Cascadia Mono", Consolas, monospace; }
-code.evidence { color: #cfe7f2; white-space: pre-wrap; }
-.evidence-list { margin: 0; padding-left: 18px; }
-.evidence-list li + li { margin-top: 4px; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { border: 1px solid #274b62; background: #0a1b27; border-radius: 999px; padding: 6px 9px; color: #c8dee9; font-size: 12px; }
-.empty { color: var(--muted); text-align: center; padding: 24px 10px; }
-.note { color: #c3d9e4; }
-.footer { margin-top: 26px; text-align: center; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
-@media (max-width: 1050px) {
-  .metrics { grid-template-columns: repeat(3, 1fr); }
+code {
+  color: #0a6474;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+}
+code.evidence {
+  color: #344054;
+  white-space: pre-wrap;
+}
+.evidence-list { margin: 0; padding-left: 17px; }
+.evidence-list li + li { margin-top: 3px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 4px 7px;
+  color: #475467;
+  font-size: 10px;
+}
+.empty { color: var(--muted); text-align: center; padding: 18px 8px; }
+.note {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+}
+.footer {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
   .meta { grid-template-columns: repeat(2, 1fr); }
+  .meta div:nth-child(2) { border-right: 0; }
+  .meta div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .metrics { grid-template-columns: repeat(3, 1fr); }
+  .overview { grid-template-columns: 1fr; }
 }
-@media (max-width: 720px) {
-  .report { padding: 12px; }
-  .cover { padding: 26px; min-height: auto; border-radius: 18px; }
-  .brand-name { font-size: 28px; }
-  .mark { width: 58px; height: 66px; }
-  .metrics, .meta, .severity-grid { grid-template-columns: 1fr 1fr; }
-  .toolbar { overflow-x: auto; }
+@media (max-width: 620px) {
+  body { background: #fff; }
+  .report { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .masthead { padding: 22px 18px; }
+  .title-row { grid-template-columns: 1fr; align-items: start; }
+  .posture { text-align: left; min-width: 0; }
+  .content { padding: 16px; }
+  .metrics, .meta { grid-template-columns: 1fr 1fr; }
+  .section-head { display: block; }
+  .section-note { margin-top: 5px; text-align: left; }
+  .toolbar { overflow-x: auto; flex-wrap: nowrap; }
+}
+@media (max-width: 420px) {
+  .metrics, .meta { grid-template-columns: 1fr; }
+  .meta div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .severity-row { grid-template-columns: 76px 40px 1fr; }
   .triage-item { grid-template-columns: 1fr; }
-  .card { padding: 18px; }
-}
-@media (max-width: 480px) {
-  .metrics, .meta, .severity-grid { grid-template-columns: 1fr; }
 }
 @media print {
-  @page { margin: 12mm; }
-  body { background: #fff; color: #111; font-size: 11px; }
-  .report { max-width: none; padding: 0; }
-  .cover {
-    min-height: 250mm;
-    border-radius: 0;
-    box-shadow: none;
-    break-after: page;
+  @page { margin: 11mm; }
+  body { background: #fff; color: #111827; font-size: 10px; }
+  .report { max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .masthead {
+    background: var(--navy);
+    padding: 18px 20px;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+  .brand-row { margin-bottom: 14px; }
   .toolbar { display: none; }
-  .metrics { grid-template-columns: repeat(3, 1fr); }
-  .metric, .card, .severity-item, .triage-item { background: #fff; color: #111; box-shadow: none; break-inside: avoid; }
-  .summary { color: #111; background: #f2f8fb; }
-  .note, .triage-item p, code.evidence { color: #222; }
-  thead th { position: static; background: #f4f7f9; color: #444; }
-  th { color: #555; }
-  .table-wrap { overflow: visible; }
+  .content { padding: 14px 0 0; }
+  .metrics { grid-template-columns: repeat(5, 1fr); }
+  .metric, .severity-table, .triage, .table-wrap { break-inside: avoid; }
+  .section { break-inside: auto; padding: 14px 0; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  a { text-decoration: none; }
 }
 """
 
@@ -272,17 +466,17 @@ def _metric(label: str, value: str, modifier: str = "") -> str:
 
 def _severity_overview(data: DashboardData) -> str:
     total = max(sum(data.severities.values()), 1)
-    blocks = []
+    rows = []
     for severity in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         count = data.severities.get(severity, 0)
         percent = min(100.0, (count / total) * 100.0)
-        blocks.append(
-            '<div class="severity-item">'
+        rows.append(
+            '<div class="severity-row">'
             f"<small>{severity}</small><strong>{count}</strong>"
-            f'<div class="bar"><i style="width:{percent:.1f}%"></i></div>'
+            f'<div class="track"><i style="width:{percent:.1f}%"></i></div>'
             "</div>"
         )
-    return "".join(blocks)
+    return "".join(rows)
 
 
 def _triage_actions(data: DashboardData) -> str:
@@ -305,7 +499,7 @@ def _triage_actions(data: DashboardData) -> str:
             f"<p>{escape(recommendation)}</p>"
             "</div></div>"
         )
-        if len(actions) == 6:
+        if len(actions) == 5:
             break
     if not actions:
         return '<div class="empty">No immediate rule-backed remediation items were generated.</div>'
@@ -368,39 +562,37 @@ def build_html_report(data: DashboardData) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark">
 <title>AegisLog Investigation Report - {escape(source_name)}</title>
 <style>{_REPORT_STYLE}</style>
 </head>
 <body>
 <main class="report">
-<section class="cover" id="cover">
-  <div class="brand">
-    <svg class="mark" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AegisLog shield">
-      <defs><linearGradient id="a" x1="0" x2="1"><stop stop-color="#38e8ff"/><stop offset="1" stop-color="#ba68ff"/></linearGradient></defs>
-      <path d="M50 4 91 19v32c0 28-17 47-41 57C26 98 9 79 9 51V19L50 4Z" fill="none" stroke="url(#a)" stroke-width="6"/>
-      <path d="M50 24 70 74H58l-4-11H36l-4 11H20l22-50h8Zm0 18-9 13h18L50 42Z" fill="#e9f7ff"/>
-    </svg>
-    <div><div class="brand-name">AEGISLOG</div><div class="brand-sub">Security operations / local-first</div></div>
-  </div>
-  <div class="cover-main">
-    <div class="eyebrow">Defensive investigation report</div>
-    <h1>Security Investigation Report</h1>
-    <p class="lede">A structured analyst view of retained evidence for <strong>{escape(source_name)}</strong>, covering rule-backed findings, incident correlation, anomaly signals, telemetry distribution, and remediation priorities.</p>
-    <div class="risk-line">
-      <span class="risk-badge {_risk_class(risk)}">POSTURE {escape(risk)}</span>
-      <span class="cover-note">Findings are investigative evidence, not proof of compromise.</span>
+<header class="masthead" id="cover">
+  <div class="brand-row">
+    <div class="brand-mark" aria-hidden="true">AL</div>
+    <div>
+      <div class="brand-name">AEGISLOG</div>
+      <div class="brand-sub">Security operations / local-first</div>
     </div>
   </div>
-  <div>
-    <div class="meta">
-      <div><small>Source</small><strong>{escape(source_name)}</strong></div>
-      <div><small>Version</small><strong>{escape(__version__)}</strong></div>
-      <div><small>Generated</small><strong>{generated}</strong></div>
-      <div><small>Processing</small><strong>LOCAL / READ-ONLY</strong></div>
+  <div class="title-row">
+    <div>
+      <div class="eyebrow">Defensive investigation</div>
+      <h1>Security Investigation Report</h1>
+      <p class="subtitle">Analyst-ready summary of retained findings, incident correlation, anomaly signals, and recommended defensive actions for <strong>{escape(source_name)}</strong>.</p>
     </div>
-    <div class="brand-sub" style="margin-top:16px">REMOTE AI NOT REQUIRED / SELF-CONTAINED REPORT</div>
+    <div class="posture {_risk_class(risk)}">
+      <small>Current posture</small>
+      <strong>{escape(risk)}</strong>
+    </div>
   </div>
+</header>
+
+<section class="meta" aria-label="Report metadata">
+  <div><small>Source</small><strong>{escape(source_name)}</strong></div>
+  <div><small>Version</small><strong>{escape(__version__)}</strong></div>
+  <div><small>Generated</small><strong>{generated}</strong></div>
+  <div><small>Processing</small><strong>LOCAL / READ-ONLY</strong></div>
 </section>
 
 <nav class="toolbar" aria-label="Report sections">
@@ -411,35 +603,87 @@ def build_html_report(data: DashboardData) -> str:
   <a href="#anomalies">Anomalies</a>
   <a href="#telemetry">Telemetry</a>
   <span class="spacer"></span>
-  <a href="#cover">Cover</a>
-  <button class="primary" type="button" onclick="window.print()">Print / Save PDF</button>
+  <span class="brand-sub">REMOTE AI NOT REQUIRED</span>
+  <button type="button" onclick="window.print()">Print / Save PDF</button>
 </nav>
 
+<div class="content">
 <section class="metrics" aria-label="Investigation metrics">
   {_metric("Events", f"{data.lines:,}")}
   {_metric("Findings", str(len(data.findings)))}
   {_metric("Incidents", str(len(data.incidents)))}
   {_metric("Anomalies", str(len(data.anomalies)))}
-  {_metric("Critical / High", f"{data.severities.get('CRITICAL', 0)} / {data.severities.get('HIGH', 0)}", _risk_class(risk))}
   {_metric("Posture", risk, _risk_class(risk))}
 </section>
 
-<section class="card" id="executive">
-  <div class="kicker">Executive view</div>
-  <h2>Executive Summary</h2>
-  <div class="summary">AegisLog analyzed <strong>{data.lines:,}</strong> event line(s) and retained <strong>{len(data.findings)}</strong> rule-backed finding(s), <strong>{len(data.incidents)}</strong> correlated incident(s), and <strong>{len(data.anomalies)}</strong> anomaly signal(s). The current defensive posture is <strong>{escape(risk)}</strong>. Validate important findings against source telemetry, asset context, identity context, and other defensive evidence before escalation.</div>
-  <div class="severity-grid">{_severity_overview(data)}</div>
+<section class="section" id="executive">
+  <div class="section-head">
+    <div><div class="section-label">Executive view</div><h2>Executive Summary</h2></div>
+    <div class="section-note">Findings are investigative evidence and should be validated in operational context.</div>
+  </div>
+  <div class="summary">AegisLog analyzed <strong>{data.lines:,}</strong> event line(s) and retained <strong>{len(data.findings)}</strong> rule-backed finding(s), <strong>{len(data.incidents)}</strong> correlated incident(s), and <strong>{len(data.anomalies)}</strong> anomaly signal(s). Current defensive posture: <strong>{escape(risk)}</strong>.</div>
+  <div class="overview">
+    <div>
+      <div class="section-label" style="margin-bottom:7px">Severity distribution</div>
+      <div class="severity-table">{_severity_overview(data)}</div>
+    </div>
+    <div id="triage">
+      <div class="section-label" style="margin-bottom:7px">Recommended Triage</div>
+      <div class="triage">{_triage_actions(data)}</div>
+    </div>
+  </div>
 </section>
 
-<section class="card" id="triage">
-  <div class="kicker">Priorities</div>
-  <h2>Recommended Triage</h2>
-  <div class="triage">{_triage_actions(data)}</div>
+<section class="section" id="incidents">
+  <div class="section-head">
+    <div><div class="section-label">Correlation</div><h2>Incident Queue</h2></div>
+    <div class="section-note">Grouped signals that should be reviewed together.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Severity</th><th>Category</th><th>Signals</th><th>Summary</th><th>Evidence chain</th></tr></thead>
+    <tbody>{incidents}</tbody>
+  </table></div>
 </section>
 
-<section class="card">
-  <div class="kicker">Scope</div>
-  <h2>Analysis Profile</h2>
+<section class="section" id="findings">
+  <div class="section-head">
+    <div><div class="section-label">Detection</div><h2>Findings and Recommendations</h2></div>
+    <div class="section-note">Rule-backed detections ordered by severity.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Severity</th><th>Category</th><th>Detection</th><th>Evidence</th><th>Recommended action</th></tr></thead>
+    <tbody>{findings}</tbody>
+  </table></div>
+</section>
+
+<section class="section" id="anomalies">
+  <div class="section-head">
+    <div><div class="section-label">Behavior</div><h2>Anomaly Signals</h2></div>
+    <div class="section-note">Rare concerning event classes surfaced for analyst review.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Score</th><th>Event class</th><th>Reason</th></tr></thead>
+    <tbody>{anomalies}</tbody>
+  </table></div>
+</section>
+
+<section class="section" id="telemetry">
+  <div class="section-head">
+    <div><div class="section-label">Telemetry</div><h2>Observed Distribution</h2></div>
+    <div class="section-note">High-level distribution of parsed telemetry retained by the analysis.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Categories</th><td><div class="chips">{_telemetry_chips(data.categories)}</div></td></tr>
+    <tr><th>Log levels</th><td><div class="chips">{_telemetry_chips(data.levels)}</div></td></tr>
+    <tr><th>Services</th><td><div class="chips">{_telemetry_chips(data.services)}</div></td></tr>
+  </table></div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div><div class="section-label">Scope</div><h2>Analysis Profile</h2></div>
+    <div class="section-note">This report is generated locally from retained, derived evidence.</div>
+  </div>
   <div class="table-wrap"><table>{_rows((
       ("Source path", data.source),
       ("Source file", source_name),
@@ -450,52 +694,11 @@ def build_html_report(data: DashboardData) -> str:
       ("Source handling", "Read-only; source content is not modified"),
       ("Remote AI", "Not required for this report"),
   ))}</table></div>
+  <p class="note" style="margin-top:12px">The report intentionally does not reproduce the complete raw source log. Missing detections do not prove malicious activity is absent. Preserve original telemetry separately when evidence retention, chain-of-custody, or incident-response procedures require it.</p>
 </section>
 
-<section class="card" id="incidents">
-  <div class="kicker">Correlation</div>
-  <h2>Incident Queue</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>ID</th><th>Severity</th><th>Category</th><th>Signals</th><th>Summary</th><th>Evidence chain</th></tr></thead>
-    <tbody>{incidents}</tbody>
-  </table></div>
-</section>
-
-<section class="card" id="findings">
-  <div class="kicker">Detection</div>
-  <h2>Findings and Recommendations</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Severity</th><th>Category</th><th>Detection</th><th>Evidence</th><th>Recommended action</th></tr></thead>
-    <tbody>{findings}</tbody>
-  </table></div>
-</section>
-
-<section class="card" id="anomalies">
-  <div class="kicker">Behavior</div>
-  <h2>Anomaly Signals</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Score</th><th>Event class</th><th>Reason</th></tr></thead>
-    <tbody>{anomalies}</tbody>
-  </table></div>
-</section>
-
-<section class="card" id="telemetry">
-  <div class="kicker">Telemetry</div>
-  <h2>Observed Distribution</h2>
-  <table>
-    <tr><th>Categories</th><td><div class="chips">{_telemetry_chips(data.categories)}</div></td></tr>
-    <tr><th>Log levels</th><td><div class="chips">{_telemetry_chips(data.levels)}</div></td></tr>
-    <tr><th>Services</th><td><div class="chips">{_telemetry_chips(data.services)}</div></td></tr>
-  </table>
-</section>
-
-<section class="card">
-  <div class="kicker">Interpretation</div>
-  <h2>Analyst Notes</h2>
-  <p class="note">This report contains the retained, derived evidence used by the terminal investigation dashboard. It intentionally does not reproduce the full raw source log. Missing detections do not prove that malicious activity is absent. Preserve original telemetry separately when evidence retention, chain-of-custody, or incident-response procedures require it.</p>
-</section>
-
-<div class="footer">AEGISLOG v{escape(__version__)} / Defensive security analysis / Generated locally / Remote AI not required</div>
+<div class="footer">AEGISLOG v{escape(__version__)} / Defensive security analysis / Generated locally</div>
+</div>
 </main>
 </body>
 </html>"""
