@@ -9,9 +9,14 @@ from rich.live import Live
 
 from .live_ux import live_initial_status, live_source_status, live_startup_panel, live_stopped_status
 from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
+from .ui import bounded
 from .watch_profiles import get_profile
 
 console = Console()
+
+
+def _view(state: MultiSourceState):
+    return bounded(render_multisource(state))
 
 
 def live_multi(
@@ -55,13 +60,13 @@ def live_multi(
         )
     )
     if from_start:
-        console.print(render_multisource(state))
+        console.print(_view(state))
         console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
 
     missing_sources: set[Path] = set()
     try:
         with Live(
-            render_multisource(state),
+            _view(state),
             console=console,
             refresh_per_second=max(1, int(round(1 / refresh))),
             screen=False,
@@ -78,7 +83,7 @@ def live_multi(
                 batches, cursors = poll_sources(unique, cursors)
                 for path, lines in batches:
                     state.ingest(path, lines)
-                live.update(render_multisource(state), refresh=True)
+                live.update(_view(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         console.print(live_stopped_status("Multi-source", degraded=bool(missing_sources)))
