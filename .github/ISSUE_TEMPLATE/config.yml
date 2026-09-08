@@ -3,6 +3,9 @@ contact_links:
   - name: Leave a public AegisLog review
     url: https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml
     about: Used AegisLog? Share a public rating, recommendation, and sanitized feedback.
+  - name: Support and help
+    url: https://github.com/HR-Presents/AegisLog-AI/blob/main/SUPPORT.md
+    about: Choose the right support path and learn how to sanitize logs before posting publicly.
   - name: Security vulnerability
     url: https://github.com/HR-Presents/AegisLog-AI/security/policy
     about: Read the private reporting instructions before sharing security-sensitive details.
