@@ -77,7 +77,7 @@ def live_source_status(source: str, *, available: bool) -> Text:
         return status
     status = Text("Source temporarily unavailable: ", style=f"bold {WARNING}")
     status.append(source, style="white")
-    status.append(". Retaining the current dashboard and retrying read-only polling.", style=MUTED)
+    status.append(". Retaining the current dashboard; retry read-only polling.", style=MUTED)
     return status
 
 
