@@ -14,7 +14,7 @@ MAX_HOME_WIDTH = 88
 
 def bounded(renderable: RenderableType, max_width: int = MAX_CONTENT_WIDTH) -> RenderableType:
     """Keep dense console views readable on ultrawide terminals without harming narrow screens."""
-    return Constrain(renderable, max_width=max(1, max_width))
+    return Constrain(renderable, width=max(1, max_width))
 
 
 def console_title(
