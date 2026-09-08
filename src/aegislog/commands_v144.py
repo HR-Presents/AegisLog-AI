@@ -10,7 +10,6 @@ from rich.text import Text
 
 from .commands_v11 import dashboard
 from .commands_v12 import (
-    _choose_log_file,
     _choose_profile,
     _command_prompt,
     _explain_menu,
