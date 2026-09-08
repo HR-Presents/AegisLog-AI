@@ -115,9 +115,10 @@ def test_realtime_dashboard_static_labels_are_legacy_console_safe() -> None:
 def test_interactive_header_uses_legacy_console_safe_status_text() -> None:
     plain = _header().renderable.plain
     plain.encode("cp1252")
-    assert "ENGINE READY" in plain
-    assert "LOCAL ANALYSIS" in plain
-    assert "REMOTE AI: EXPLICIT OPT-IN" in plain
+    assert "[ READY ]" in plain
+    assert "LOCAL-FIRST" in plain
+    assert "READ-ONLY MONITORING" in plain
+    assert "REMOTE AI: OPT-IN" in plain
     assert "●" not in plain
     assert "○" not in plain
 
@@ -126,7 +127,7 @@ def test_interactive_header_uses_legacy_console_safe_status_text() -> None:
 def test_interactive_home_fits_terminal_width(width: int) -> None:
     text = _render_text(_home(width), width)
     assert "AEGISLOG" in text
-    assert "OPERATOR COMMAND DECK" in text
+    assert "MISSION CONTROL" in text
     assert "ANALYZE LOG" in text
     assert "MULTI-SOURCE SOC" in text
     assert "INCIDENT INTEL" in text
@@ -150,12 +151,14 @@ def test_interactive_home_expands_on_wide_terminals() -> None:
     assert max(len(line) for line in lines) <= 220
     assert max(len(line) for line in lines) >= 218
     assert "LOCAL-FIRST" in text
+    assert "CAPABILITY" in text
+    assert "MODE" not in text
 
 
 def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
     text = _render_text(_home(40), 40)
-    assert "Investigate one log" in text
-    assert "Follow a log in real time" in text
-    assert "Correlate multiple sources" in text
+    assert "Deep static" in text
+    assert "Stream one log" in text
+    assert "Correlate multiple live" in text
     assert "opt-in" in text.lower()
     assert max(len(line) for line in text.splitlines()) <= 40
