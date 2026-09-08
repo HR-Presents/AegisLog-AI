@@ -2,14 +2,24 @@
 
 Use this template when preparing the real external detection evidence required for an AegisLog release. This is an audit record, not a checkbox exercise. Do not fabricate reviewer identity, provenance, labels, or sanitization claims.
 
-## Release candidate
+## Release candidate identities
+
+AegisLog v1.6.1 intentionally uses two distinct commits for release evidence:
+
+1. **Evaluated code commit** — the exact reviewed `main` commit whose code is evaluated against the external dataset.
+2. **Evidence-only release commit** — the immediate single-parent child of the evaluated code commit that changes exactly `evaluation/external-release-evidence.json` and no other path.
+
+Record:
 
 - **Release version:** `v1.6.1`
-- **Evaluated commit SHA:** `<40-character lowercase Git SHA>`
+- **Evaluated code commit SHA:** `<40-character lowercase Git SHA>`
+- **Evidence-only release commit SHA:** `<filled only after the evidence file is committed>`
 - **Dataset file:** `<path to external JSONL dataset>`
 - **Minimum reported severity:** `MEDIUM` unless an approved release decision changes it
 
-The evaluated commit must be the exact reviewed candidate intended for release. Evidence generated for a different commit must not be relabeled for the release candidate.
+`evaluated_commit` in the evidence JSON must equal the evaluated code commit, not the evidence-only release commit. Evidence generated for another code commit must not be relabeled or reused.
+
+The release workflow must be dispatched from the evidence-only release commit. `tools/release_preflight.py` verifies that this release commit has exactly one parent, that its parent equals `evaluated_commit`, and that the only changed path is `evaluation/external-release-evidence.json`.
 
 ## Dataset provenance
 
@@ -66,6 +76,8 @@ A negative/control case can use an empty `expected_categories` array when the in
 
 Confirm all of the following before generating evidence:
 
+- [ ] PR #77 has completed required human review and has been merged to `main`.
+- [ ] The exact evaluated code commit on `main` is frozen and recorded.
 - [ ] Dataset is external to the repository's synthetic regression fixtures.
 - [ ] Every case has a unique `id`.
 - [ ] Every case has at least one string in `lines`.
@@ -75,15 +87,14 @@ Confirm all of the following before generating evidence:
 - [ ] Labeling procedure is accurate and sufficiently detailed.
 - [ ] Independent labeling is genuinely satisfied.
 - [ ] Sanitization has been completed and reviewed.
-- [ ] Evaluated commit is the exact release candidate.
 
 ## Evidence generation command
 
-Run from the repository root after the candidate commit is known:
+Run from the repository root after the evaluated code commit is fixed:
 
 ```bash
 python tools/build_external_evidence.py <external-dataset.jsonl> \
-  --evaluated-commit <40-character-lowercase-Git-SHA> \
+  --evaluated-commit <40-character-lowercase-evaluated-code-SHA> \
   --provenance "<real provenance description>" \
   --labeling-procedure "<real independent labeling procedure>" \
   --reviewer "<real reviewer identity>" \
@@ -94,7 +105,7 @@ python tools/build_external_evidence.py <external-dataset.jsonl> \
   --output evaluation/external-release-evidence.json
 ```
 
-The generator refuses to overwrite an existing evidence file. Remove or archive stale evidence only through the normal reviewed repository process; do not silently replace it during release preparation.
+The generator refuses to overwrite an existing evidence file. Resolve stale evidence deliberately; do not weaken that protection.
 
 ## Generated evidence review
 
@@ -103,12 +114,25 @@ After generation, review `evaluation/external-release-evidence.json` and verify:
 - `schema_version` is supported.
 - `dataset_kind` is `external`.
 - `dataset_sha256` matches the exact dataset used for evaluation.
-- `evaluated_commit` is the exact release candidate SHA.
+- `evaluated_commit` equals the exact evaluated code commit SHA.
 - `provenance`, `labeling_procedure`, `reviewer`, and `reviewer_role` are accurate.
 - `independent_labeling` and `sanitized` are both true only because those requirements were actually satisfied.
 - `sample_count` is plausible for the submitted dataset.
 - Precision, recall, case accuracy, false positives, false negatives, and confidence intervals were generated from the submitted dataset rather than copied manually.
 - Limitations remain visible in the final evidence record.
+
+## Evidence-only release commit
+
+Only after the evidence JSON has been reviewed:
+
+1. Confirm the working branch is `main` at the exact evaluated code commit.
+2. Add only `evaluation/external-release-evidence.json`.
+3. Create one normal commit with the evaluated code commit as its only parent.
+4. Confirm no code, workflow, documentation, dependency, lockfile, or other file changed in that commit.
+5. Record the resulting evidence-only release commit SHA.
+6. Dispatch the guarded v1.6.1 release workflow from that evidence-only release commit only after all other release gates are satisfied.
+
+Do not amend the evaluated code commit to include the evidence file. Do not combine the evidence file with any other change. Do not use a merge commit for the evidence-only release commit.
 
 ## Approval record
 
@@ -119,4 +143,4 @@ After generation, review `evaluation/external-release-evidence.json` and verify:
 - **Decision:** `approved / rejected`
 - **Notes:** `<important limitations, sampling caveats, or reasons for rejection>`
 
-AegisLog v1.6.1 must not be published if the required external evidence is absent, fabricated, tied to the wrong commit, unsanitized, or not independently labeled.
+AegisLog v1.6.1 must not be published if the required external evidence is absent, fabricated, tied to the wrong evaluated code commit, unsanitized, not independently labeled, or committed in a release commit that violates the evidence-only direct-child rule.
