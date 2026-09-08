@@ -54,7 +54,7 @@ The core workflow is deterministic and read-only. AegisLog does not automaticall
 
 AegisLog's current UI is a terminal-first SOC investigation experience with **Mission Control**, **Analyst Focus**, correlated incident prioritization, bounded evidence previews, copy-ready follow-up commands, and an executive-first investigation report.
 
-> **Screenshots:** the project will publish screenshots from a verified Windows release build rather than mockups. This keeps the README representative of what users actually download.
+> **Verified screenshots in progress:** screenshots will be captured from the CI-validated Windows PR build at commit `cbbc194490482c1c7c81140ac2fce67ed955c60e`, not from mockups. The reproducible capture and sanitization contract is documented in [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md). Until those captures are committed, this README intentionally does not display simulated product images.
 
 ---
 
@@ -103,7 +103,7 @@ The executable is currently unsigned, so Windows SmartScreen or endpoint-securit
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 pip install -e .
 aegislog doctor
 aegislog dashboard examples/auth.log
@@ -124,17 +124,17 @@ From there you can move into file analysis, live dashboards, multi-source monito
 Useful Windows commands:
 
 ```text
-AegisLog.exe dashboard C:\path\to\auth.log
-AegisLog.exe live C:\path\to\auth.log --profile security
-AegisLog.exe live-multi C:\logs\auth.log C:\logs\web.log --profile authentication
+AegisLog.exe dashboard C:\\path\\to\\auth.log
+AegisLog.exe live C:\\path\\to\\auth.log --profile security
+AegisLog.exe live-multi C:\\logs\\auth.log C:\\logs\\web.log --profile authentication
 AegisLog.exe native-sources
 AegisLog.exe native-analyze windows --channel Security
 AegisLog.exe native-live windows --channel Security --profile security
-AegisLog.exe incidents C:\path\to\auth.log
-AegisLog.exe investigate C:\path\to\auth.log <incident-id>
-AegisLog.exe explain C:\path\to\auth.log <incident-id>
-AegisLog.exe intel-entities C:\path\to\auth.log
-AegisLog.exe mitre C:\path\to\auth.log
+AegisLog.exe incidents C:\\path\\to\\auth.log
+AegisLog.exe investigate C:\\path\\to\\auth.log <incident-id>
+AegisLog.exe explain C:\\path\\to\\auth.log <incident-id>
+AegisLog.exe intel-entities C:\\path\\to\\auth.log
+AegisLog.exe mitre C:\\path\\to\\auth.log
 AegisLog.exe case-history
 ```
 
@@ -329,7 +329,7 @@ To report a vulnerability, use the private reporting path described in `SECURITY
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 pip install -e '.[dev]'
 
 aegislog doctor
@@ -377,6 +377,7 @@ See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific deta
 - [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) — current project status
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — maintenance and future-direction notes
 - [`docs/COMMUNITY_REVIEWS.md`](docs/COMMUNITY_REVIEWS.md) — public review and testimonial policy
+- [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md) — verified Windows screenshot capture and sanitization contract
 - [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) — stable release notes
 
 ---
@@ -384,6 +385,7 @@ See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific deta
 ## Contributing and support
 
 - Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
+- Read [`SUPPORT.md`](SUPPORT.md) for the public support and reporting paths.
 - Used AegisLog? [Leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml).
 - Use the bug-report issue template with sanitized logs and reproducible steps.
 - Feature requests should stay within the defensive, local-first scope.
