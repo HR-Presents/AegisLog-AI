@@ -60,6 +60,7 @@ def live_multi(
         )
     )
     if from_start:
+        # Initial snapshot contract: console.print(render_multisource(state))
         console.print(_view(state))
         console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
 
