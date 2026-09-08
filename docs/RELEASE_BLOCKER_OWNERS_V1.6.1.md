@@ -1,160 +1,89 @@
 # AegisLog AI v1.6.1 — Release blocker owners
 
-This file converts the remaining v1.6.1 release blockers into an owner-by-owner action list. It is intentionally fail-closed: completing one item does not authorize publication unless every release gate is satisfied on the exact release candidate commit.
+This file converts the remaining v1.6.1 release blockers into an owner-by-owner action list. It is intentionally fail-closed: completing one item does not authorize publication unless every release gate is satisfied on the exact release commit.
 
 ## Current status
 
 Production release status: **NO-GO**.
 
-The PR branch has demonstrated a fully green seven-workflow validation on commit `1856a53c7d632cadce0049f0fb191e5e9e833bab`, including the Windows single-executable build. That validation remains PR evidence only. The actual release must be validated from the exact merged `main` candidate through the guarded `release-v1.6.1.yml` workflow.
+The PR branch has demonstrated fully green seven-workflow validation on commit `dcde3f5d147715a952e743fe3216eca6efd8344c`, including Windows single executable #425 and matching temporary artifact `10073054699` (`sha256:b87c7ff06eecdb37e6c8765f57cad58c107d04caca88efeffcbd820513866db7`). This remains PR evidence only.
 
 ## 1. PR owner / maintainers
 
-**Owner:** PR author and repository maintainers.
+Complete review of PR #77, keep it Draft until review is genuinely complete, resolve requested changes, merge only after approval, and record the exact resulting `main` commit SHA.
 
-Actions:
-
-- complete review of PR #77;
-- keep the PR Draft until review is genuinely complete;
-- resolve any requested changes;
-- merge only after approval and only when the release-supporting documentation and code are accepted;
-- record the exact merged `main` commit SHA that will become the release candidate.
-
-Blocker is closed when:
-
-- PR #77 is approved and merged;
-- the exact resulting `main` commit is known;
-- no additional unreviewed commits are added before release validation.
+Blocker closes when PR #77 is approved and merged and the exact merged `main` code SHA is known. That SHA becomes the **evaluated code commit**.
 
 ## 2. External dataset owner
 
-**Owner:** person or organization authorized to provide the external evaluation data.
+Provide a real external JSONL evaluation dataset, minimize/sanitize it before use, document source/sampling/provenance, and do not substitute repository synthetic fixtures or commit sensitive production/customer telemetry.
 
-Actions:
-
-- provide a real external JSONL evaluation dataset;
-- ensure it is minimized and sanitized before use;
-- document source, sampling, and provenance;
-- do not substitute repository synthetic fixtures for external data;
-- do not commit production/customer telemetry merely to run the release evaluation.
-
-Blocker is closed when:
-
-- the external dataset exists in an approved working location;
-- its provenance and sanitization are documented;
-- the dataset is ready for independent labeling.
-
-See `docs/EXTERNAL_EVIDENCE_SUBMISSION.md`.
+Blocker closes when an authorized sanitized dataset and its provenance are available for independent labeling. See `docs/EXTERNAL_EVIDENCE_SUBMISSION.md`.
 
 ## 3. Independent reviewer / labeler
 
-**Owner:** reviewer who did not derive labels from AegisLog output.
+Assign expected detection categories independently of AegisLog output, document the labeling procedure, provide genuine reviewer identity/role, and confirm independent labeling and sanitization truthfully.
 
-Actions:
-
-- assign the expected detection categories independently;
-- document the labeling procedure;
-- provide the reviewer identity and reviewer role used for release evidence;
-- confirm independent labeling and sanitization truthfully;
-- review the generated evidence for accuracy.
-
-Blocker is closed when:
-
-- the required reviewer metadata is available;
-- the labels are independently produced;
-- the reviewer has approved the resulting evidence record.
+Blocker closes when reviewer metadata and independently produced labels are complete and reviewed.
 
 ## 4. Release evidence operator
 
-**Owner:** release engineer or maintainer preparing the exact candidate.
+After the exact merged `main` code SHA is fixed:
 
-Actions:
+- generate `evaluation/external-release-evidence.json` with `tools/build_external_evidence.py`;
+- set `evaluated_commit` to that exact lowercase 40-character code SHA;
+- verify dataset SHA-256, provenance, labeling procedure, reviewer metadata, metrics, uncertainty, and limitations;
+- commit **only** `evaluation/external-release-evidence.json` as the immediate direct child of the evaluated code commit;
+- do not include code, workflow, documentation, dependency, or any other path in the evidence commit;
+- record the evidence-only child SHA as the release commit.
 
-- wait until the exact merged `main` release candidate SHA is known;
-- generate `evaluation/external-release-evidence.json` using `tools/build_external_evidence.py`;
-- bind the evidence to that exact lowercase 40-character commit SHA;
-- verify the recorded dataset SHA-256;
-- verify the evidence records provenance, labeling procedure, reviewer metadata, independent labeling, sanitization, metrics, uncertainty, and limitations;
-- do not reuse evidence generated for a different commit.
+Blocker closes when the evidence file is genuine and reviewed and the release commit is a single-parent direct child of `evaluated_commit` whose parent-to-child diff is exactly `evaluation/external-release-evidence.json`.
 
-Blocker is closed when:
-
-- `evaluation/external-release-evidence.json` exists;
-- its `evaluated_commit` equals the exact release candidate SHA;
-- its metadata is genuine and reviewed.
+The release preflight rejects stale evidence, arbitrary ancestor evidence, merge commits, and evidence commits containing any additional changed path.
 
 ## 5. Organization administrator / signing owner
 
-**Owner:** authorized administrator controlling code-signing material.
+Provision or confirm without exposing values:
 
-Actions:
+- secret `WINDOWS_SIGNING_PFX_BASE64`;
+- secret `WINDOWS_SIGNING_PFX_PASSWORD`;
+- secret `WINDOWS_SIGNING_CERT_THUMBPRINT`;
+- variable `WINDOWS_SIGNING_TIMESTAMP_URL`.
 
-- provision or confirm these repository-level release settings without exposing their values:
-  - secret `WINDOWS_SIGNING_PFX_BASE64`;
-  - secret `WINDOWS_SIGNING_PFX_PASSWORD`;
-  - secret `WINDOWS_SIGNING_CERT_THUMBPRINT`;
-  - variable `WINDOWS_SIGNING_TIMESTAMP_URL`;
-- ensure the certificate contains a Code Signing EKU and private key;
-- ensure the configured thumbprint is the approved release signer;
-- ensure the timestamp endpoint is HTTPS and suitable for RFC3161 timestamping;
-- keep private signing material out of the repository, issues, PR comments, chat, and logs.
+Ensure the certificate has Code Signing EKU and private key, the thumbprint is the approved signer, and the timestamp endpoint is credential-free HTTPS/RFC3161. Keep private material out of the repository, issues, PR comments, chat, and logs.
 
-Blocker is closed when:
-
-- an authorized admin confirms the four required settings are correctly provisioned;
-- the approved certificate identity and timestamp policy are documented operationally without leaking secrets.
-
-See `docs/SIGNING_READINESS_V1.6.1.md`.
+Blocker closes when an authorized administrator confirms all required signing settings and release identity are correctly provisioned. See `docs/SIGNING_READINESS_V1.6.1.md`.
 
 ## 6. Release operator
 
-**Owner:** maintainer authorized to publish releases.
+After all previous blockers close:
 
-Actions after all previous blockers are closed:
+- confirm current `main` is exactly the intended evidence-only release commit;
+- confirm its sole parent equals evidence field `evaluated_commit`;
+- confirm the parent-to-release diff is exactly `evaluation/external-release-evidence.json`;
+- confirm no later unreviewed commit moved `main`;
+- confirm `v1.6.1` tag and GitHub Release do not exist;
+- dispatch `.github/workflows/release-v1.6.1.yml` from `main` with `RELEASE-v1.6.1`;
+- do not bypass preflight, test, audit, signing, checksum, attestation, or smoke-test failures;
+- verify the workflow publishes exactly `AegisLog.exe` and `AegisLog.exe.sha256`.
 
-- confirm the release candidate is the intended exact commit on `main`;
-- confirm `v1.6.1` tag and GitHub Release still do not exist;
-- dispatch `.github/workflows/release-v1.6.1.yml` from `main`;
-- enter the exact confirmation `RELEASE-v1.6.1`;
-- do not bypass a failed preflight, test, audit, signing, checksum, attestation, or smoke-test gate;
-- verify that the workflow publishes exactly:
-  - `AegisLog.exe`;
-  - `AegisLog.exe.sha256`.
-
-Blocker is closed when:
-
-- the guarded release workflow succeeds end-to-end on the exact candidate;
-- the GitHub Release is published from that commit;
-- both permanent release assets are present.
+Blocker closes when the guarded workflow succeeds end-to-end on that exact evidence-only release commit and the GitHub Release is published with both permanent assets.
 
 ## 7. Post-release verifier
 
-**Owner:** maintainer or independent verifier who can test the published assets.
+Download the assets from the published GitHub Release, verify SHA-256, Authenticode signer/thumbprint/timestamp, clean-machine smoke behavior, release target, and exact asset set. Stable screenshots, if added, must come from the exact published release executable.
 
-Actions:
-
-- download `AegisLog.exe` from the published GitHub Release, not from a temporary Actions artifact;
-- download `AegisLog.exe.sha256`;
-- verify the SHA-256 checksum;
-- verify the Authenticode signature, expected signer thumbprint, and timestamp;
-- perform a clean-machine smoke test of core commands;
-- record any release-specific screenshot provenance using the published release asset if stable screenshots are added.
-
-Blocker is closed when:
-
-- checksum verification passes;
-- Authenticode and timestamp verification pass;
-- clean-install smoke testing passes;
-- no critical release regression is found.
+Blocker closes when checksum, signing/timestamp, clean-install smoke tests, and release-target verification all pass without a critical regression.
 
 ## Required order
 
 1. Finish PR review.
-2. Merge PR #77.
-3. Freeze the exact `main` release candidate SHA.
-4. Complete real external dataset labeling and evidence generation for that SHA.
-5. Confirm signing configuration.
-6. Run the guarded v1.6.1 release workflow from `main`.
-7. Verify the published GitHub Release assets independently.
+2. Merge PR #77 and record the exact merged `main` code SHA.
+3. Freeze that SHA as the evaluated commit.
+4. Complete real external dataset labeling and generate evidence bound to that evaluated commit.
+5. Commit only `evaluation/external-release-evidence.json` as the immediate direct child; this creates the release commit.
+6. Confirm signing configuration and that `main` still points exactly to the evidence-only release commit.
+7. Run the guarded v1.6.1 release workflow from that commit.
+8. Independently verify the published GitHub Release assets.
 
-Do not reverse this order by generating final evidence for a moving branch, publishing unsigned binaries, treating a PR artifact as a release asset, or releasing before review and merge.
+Do not reverse this order by generating final evidence for a moving branch, adding unrelated changes to the evidence commit, publishing unsigned binaries, treating a PR artifact as a release asset, or releasing before review and merge.
