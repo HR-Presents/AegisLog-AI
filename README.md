@@ -7,6 +7,9 @@
 [![CI](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml)
 [![Security](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml)
 [![Latest release](https://img.shields.io/github/v/release/HR-Presents/AegisLog-AI?display_name=tag&style=flat-square)](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/HR-Presents/AegisLog-AI?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/HR-Presents/AegisLog-AI?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/forks)
+[![Release downloads](https://img.shields.io/github/downloads/HR-Presents/AegisLog-AI/total?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 **Stable release: v1.6.0**
