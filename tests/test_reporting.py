@@ -72,7 +72,6 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
 
     for anchor in (
         "#executive",
-        "#triage",
         "#incidents",
         "#findings",
         "#anomalies",
@@ -81,6 +80,7 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
     ):
         assert anchor in html
 
+    assert 'id="triage"' in html
     assert "@media print" in html
     assert "window.print()" in html
     assert 'src="http://' not in html
