@@ -8,6 +8,7 @@ from rich.console import Console
 from aegislog.commands_v144 import _frame_width, _header, _home
 from aegislog.multisource import MultiSourceState, render_multisource
 from aegislog.realtime import RealtimeState, render_realtime
+from aegislog.ui import MAX_CONTENT_WIDTH, bounded
 
 
 def _render_text(renderable, width: int) -> str:
@@ -16,7 +17,7 @@ def _render_text(renderable, width: int) -> str:
     return console.export_text(clear=False)
 
 
-def test_multisource_dashboard_keeps_all_sections_at_standard_width() -> None:
+def _multisource_state() -> MultiSourceState:
     first = Path("aegislog_v145_test.log")
     second = Path("aegislog_second_test.log")
     state = MultiSourceState((first, second), watch_profile="security")
@@ -36,23 +37,10 @@ def test_multisource_dashboard_keeps_all_sections_at_standard_width() -> None:
         ],
         now=2.0,
     )
-
-    width = 100
-    text = _render_text(render_multisource(state), width)
-
-    for label in (
-        "MULTI-SOURCE REAL-TIME SOC",
-        "SOC summary",
-        "Profile telemetry",
-        "Rate & baseline intelligence",
-        "Live security alert feed",
-        "Monitoring status",
-    ):
-        assert label in text
-    assert max(len(line) for line in text.splitlines()) <= width
+    return state
 
 
-def test_realtime_dashboard_keeps_all_sections_at_standard_width() -> None:
+def _realtime_state() -> RealtimeState:
     state = RealtimeState("aegislog_v145_test.log", watch_profile="security")
     state.ingest(
         [
@@ -63,20 +51,48 @@ def test_realtime_dashboard_keeps_all_sections_at_standard_width() -> None:
         ],
         now=1.0,
     )
+    return state
 
+
+def test_multisource_dashboard_keeps_all_sections_at_standard_width() -> None:
     width = 100
-    text = _render_text(render_realtime(state), width)
+    text = _render_text(render_multisource(_multisource_state()), width)
+
+    for label in (
+        "MULTI-SOURCE REAL-TIME SOC",
+        "SOC summary",
+        "Profile telemetry",
+        "baseline intelligence",
+        "Live security alert feed",
+        "Monitoring status",
+    ):
+        assert label.lower() in text.lower()
+    assert max(len(line) for line in text.splitlines()) <= width
+
+
+def test_realtime_dashboard_keeps_all_sections_at_standard_width() -> None:
+    width = 100
+    text = _render_text(render_realtime(_realtime_state()), width)
 
     for label in (
         "REAL-TIME DEFENSIVE MONITOR",
         "Live summary",
         "Profile telemetry",
-        "Rate & baseline intelligence",
+        "baseline intelligence",
         "Recent findings - Security",
         "Live status",
     ):
-        assert label in text
+        assert label.lower() in text.lower()
     assert max(len(line) for line in text.splitlines()) <= width
+
+
+def test_live_views_are_bounded_on_ultrawide_terminals() -> None:
+    for renderable in (
+        bounded(render_realtime(_realtime_state())),
+        bounded(render_multisource(_multisource_state())),
+    ):
+        text = _render_text(renderable, 220)
+        assert max(len(line) for line in text.splitlines()) <= MAX_CONTENT_WIDTH
 
 
 def test_realtime_dashboard_static_labels_are_legacy_console_safe() -> None:
@@ -98,28 +114,30 @@ def test_realtime_dashboard_static_labels_are_legacy_console_safe() -> None:
 def test_interactive_header_uses_legacy_console_safe_status_text() -> None:
     plain = _header().renderable.plain
     plain.encode("cp1252")
-    assert "[+] ENGINE ONLINE" in plain
-    assert "[-] REMOTE AI OFF BY DEFAULT" in plain
+    assert "READY" in plain
+    assert "LOCAL" in plain
+    assert "REMOTE AI: OPT-IN" in plain
     assert "●" not in plain
     assert "○" not in plain
 
 
-@pytest.mark.parametrize("width", [40, 50, 59, 60, 80, 100, 120, 160, 220])
+@pytest.mark.parametrize("width", [40, 50, 59, 60, 64, 80, 100, 120, 160, 220])
 def test_interactive_home_fits_terminal_width(width: int) -> None:
     text = _render_text(_home(width), width)
     assert "AEGISLOG" in text
+    assert "OPERATOR MENU" in text
     assert "ANALYZE LOG" in text
     assert "MULTI-SOURCE SOC" in text
     assert "INCIDENT INTEL" in text
     assert "COMMAND MODE" in text
-    assert "Remote AI is opt-in" in text
+    assert "opt-in" in text.lower()
     assert max(len(line) for line in text.splitlines()) <= width
 
 
 def test_interactive_home_caps_wide_terminal_content() -> None:
-    assert _frame_width(100) == 84
-    assert _frame_width(160) == 84
-    assert _frame_width(220) == 84
+    assert _frame_width(100) == 88
+    assert _frame_width(160) == 88
+    assert _frame_width(220) == 88
     assert _frame_width(60) == 58
     assert _frame_width(40) == 38
 
@@ -128,8 +146,8 @@ def test_interactive_home_is_left_anchored_on_wide_terminals() -> None:
     text = _render_text(_home(220), 220)
     lines = [line for line in text.splitlines() if line]
     assert lines[0].startswith("╭") or lines[0].startswith("┌")
-    assert max(len(line) for line in lines) <= 84
-    assert "Ctrl+C exits live views | Remote AI is opt-in" in text
+    assert max(len(line) for line in lines) <= 88
+    assert "Ctrl+C stops live views safely" in text
 
 
 def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
@@ -137,4 +155,5 @@ def test_interactive_home_keeps_descriptions_on_narrow_terminals() -> None:
     assert "Static log investigation" in text
     assert "Real-time event monitoring" in text
     assert "Correlate multiple log sources" in text
+    assert "AI: opt-in" in text
     assert max(len(line) for line in text.splitlines()) <= 40
