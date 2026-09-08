@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+import hashlib
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -12,22 +12,24 @@ _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
 
 _REPORT_STYLE = """
 :root {
-  --ink: #172033;
+  --ink: #152033;
+  --ink-soft: #344054;
   --muted: #667085;
   --paper: #ffffff;
-  --page: #eef2f6;
-  --navy: #0c1b2d;
-  --navy-2: #13263d;
-  --line: #d8e0e8;
-  --line-strong: #c5d0dc;
-  --accent: #087d92;
-  --accent-soft: #e8f6f8;
-  --good: #137a50;
-  --good-bg: #e8f7ef;
+  --page: #edf1f5;
+  --navy: #0b1728;
+  --navy-2: #13243a;
+  --line: #d6dde6;
+  --line-soft: #e8edf2;
+  --accent: #0d7183;
+  --accent-soft: #e8f5f7;
+  --good: #15704a;
+  --good-bg: #e8f6ef;
   --warn: #8a5a00;
-  --warn-bg: #fff5d8;
-  --danger: #b4233a;
+  --warn-bg: #fff4d6;
+  --danger: #ad263c;
   --danger-bg: #fdecef;
+  --mono-bg: #f6f8fa;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -39,276 +41,282 @@ body {
 }
 a { color: inherit; }
 .report {
-  max-width: 1180px;
+  width: min(1180px, calc(100% - 36px));
   margin: 24px auto;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 18px 48px rgba(18, 38, 61, .10);
-  overflow: hidden;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, .08);
 }
 .masthead {
   background: var(--navy);
   color: #f8fbff;
-  padding: 28px 34px 24px;
+  padding: 26px 32px 24px;
   border-bottom: 4px solid var(--accent);
 }
-.brand-row {
+.brandline {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  gap: 18px;
   margin-bottom: 26px;
 }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .brand-mark {
-  width: 44px;
-  height: 48px;
+  width: 38px;
+  height: 42px;
   display: grid;
   place-items: center;
-  border: 2px solid #7fd8e5;
-  border-radius: 10px 10px 16px 16px;
-  color: #b9f2fa;
+  border: 1.5px solid #71c8d6;
+  border-radius: 7px 7px 12px 12px;
+  color: #a7e7ef;
+  font-size: 11px;
   font-weight: 900;
-  letter-spacing: .04em;
+  letter-spacing: .06em;
 }
 .brand-name {
-  font-size: 23px;
+  font-size: 21px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: .08em;
 }
 .brand-sub {
-  margin-top: 5px;
-  color: #9ec4d1;
-  font-size: 10px;
+  margin-top: 4px;
+  color: #9cb8c7;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: .13em;
+  letter-spacing: .12em;
   text-transform: uppercase;
 }
-.title-row {
+.classification {
+  color: #a9c1cf;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  text-align: right;
+}
+.title-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
   align-items: end;
+  gap: 28px;
 }
 .eyebrow {
-  color: #83d8e6;
-  font-size: 10px;
+  color: #7dd2df;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
 h1 {
   margin: 5px 0 8px;
-  font-size: clamp(30px, 4vw, 44px);
-  line-height: 1.05;
+  font-size: clamp(30px, 4vw, 43px);
+  line-height: 1.06;
   letter-spacing: -.025em;
 }
 .subtitle {
   max-width: 760px;
   margin: 0;
-  color: #c9d8e3;
-  font-size: 15px;
+  color: #c7d5df;
+  font-size: 14px;
 }
 .posture {
-  min-width: 132px;
+  min-width: 140px;
   padding: 12px 14px;
-  border: 1px solid rgba(255,255,255,.20);
-  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.045);
   text-align: right;
-  background: rgba(255,255,255,.05);
 }
 .posture small {
   display: block;
-  color: #9ec4d1;
+  color: #9cb8c7;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .10em;
   text-transform: uppercase;
-  letter-spacing: .09em;
-  font-size: 9px;
 }
 .posture strong { display: block; margin-top: 2px; font-size: 22px; }
-.posture.good strong { color: #82e0b4; }
-.posture.warning strong { color: #ffd978; }
-.posture.danger strong { color: #ff9aaa; }
+.posture.good strong { color: #83dcb2; }
+.posture.warning strong { color: #ffd479; }
+.posture.danger strong { color: #ff9bab; }
 
-.meta {
+.case-strip {
   display: grid;
-  grid-template-columns: 1.5fr .7fr 1fr 1fr;
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: 1.25fr .8fr .95fr 1fr;
   background: #f8fafc;
+  border-bottom: 1px solid var(--line);
 }
-.meta div {
+.case-strip > div {
   min-width: 0;
-  padding: 12px 18px;
+  padding: 11px 16px;
   border-right: 1px solid var(--line);
 }
-.meta div:last-child { border-right: 0; }
-.meta small {
+.case-strip > div:last-child { border-right: 0; }
+.case-strip small {
   display: block;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 8px;
+  font-weight: 800;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.meta strong {
+.case-strip strong {
   display: block;
   margin-top: 2px;
+  font-size: 11px;
   overflow-wrap: anywhere;
-  font-size: 12px;
 }
-
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 11px 18px;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--line);
   background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 .toolbar a {
-  color: #344054;
-  text-decoration: none;
   padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
+  border-radius: 5px;
+  color: #475467;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 750;
 }
 .toolbar a:hover { background: #f2f4f7; }
 .toolbar .spacer { flex: 1; }
-.toolbar button {
-  border: 1px solid #0b7183;
-  border-radius: 7px;
-  background: var(--accent);
-  color: white;
-  padding: 7px 10px;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.content { padding: 22px 26px 34px; }
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
-}
-.metric {
-  min-width: 0;
-  padding: 14px 15px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: #fff;
-}
-.metric span {
-  display: block;
+.toolbar .local-note {
+  margin-right: 8px;
   color: var(--muted);
   font-size: 9px;
   font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.toolbar button {
+  border: 1px solid #0b6878;
+  background: var(--accent);
+  color: #fff;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.content { padding: 22px 26px 32px; }
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.metric {
+  min-width: 0;
+  padding: 13px 14px;
+  border-right: 1px solid var(--line);
+}
+.metric:last-child { border-right: 0; }
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 850;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 .metric strong {
   display: block;
-  margin-top: 4px;
-  font-size: 23px;
+  margin-top: 3px;
+  font-size: 22px;
   line-height: 1.1;
-  overflow-wrap: anywhere;
 }
 .metric.good strong { color: var(--good); }
 .metric.warning strong { color: var(--warn); }
 .metric.danger strong { color: var(--danger); }
-
 .section {
-  padding: 20px 0;
+  padding: 21px 0;
   border-top: 1px solid var(--line);
 }
-.section:first-of-type { border-top: 0; }
+.section:first-of-type { border-top: 0; padding-top: 0; }
 .section-head {
   display: flex;
-  justify-content: space-between;
-  gap: 18px;
   align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
   margin-bottom: 12px;
 }
 .section-label {
   color: var(--accent);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
-  letter-spacing: .12em;
+  letter-spacing: .13em;
   text-transform: uppercase;
 }
 h2 {
   margin: 2px 0 0;
-  font-size: 21px;
+  font-size: 20px;
   letter-spacing: -.01em;
 }
 .section-note {
   max-width: 520px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   text-align: right;
 }
-.summary {
-  padding: 14px 16px;
-  border-left: 4px solid var(--accent);
-  background: #f7fafc;
-  color: #344054;
-}
-.overview {
+.executive-grid {
   display: grid;
-  grid-template-columns: 1.1fr .9fr;
+  grid-template-columns: 1.05fr .95fr;
   gap: 14px;
-  margin-top: 14px;
 }
-.severity-table,
-.triage {
+.assessment,
+.priority-box {
   border: 1px solid var(--line);
-  border-radius: 9px;
-  overflow: hidden;
+  min-height: 100%;
 }
-.severity-row {
-  display: grid;
-  grid-template-columns: 90px 52px 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 11px;
-  border-bottom: 1px solid var(--line);
+.assessment { border-left: 4px solid var(--accent); padding: 15px 16px; }
+.assessment h3,
+.priority-box h3 {
+  margin: 0 0 7px;
+  font-size: 13px;
 }
-.severity-row:last-child { border-bottom: 0; }
-.severity-row small {
-  color: var(--muted);
-  font-weight: 800;
-}
-.track {
-  height: 5px;
-  background: #edf1f5;
-  border-radius: 99px;
-  overflow: hidden;
-}
-.track i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  border-radius: inherit;
-}
+.assessment p { margin: 0; color: var(--ink-soft); }
+.assessment .caveat { margin-top: 10px; color: var(--muted); font-size: 10px; }
+.priority-box h3 { padding: 11px 12px 0; }
 .triage-item {
   display: grid;
-  grid-template-columns: 76px minmax(0,1fr);
-  gap: 10px;
-  padding: 10px 11px;
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 9px;
+  padding: 9px 11px;
+  border-top: 1px solid var(--line-soft);
 }
-.triage-item:last-child { border-bottom: 0; }
-.triage-item strong { font-size: 12px; }
-.triage-item p { margin: 2px 0 0; color: #475467; font-size: 11px; }
-
+.triage-item strong { display: block; font-size: 11px; }
+.triage-item p { margin: 2px 0 0; color: #475467; font-size: 10px; }
+.severity-block { margin-top: 14px; border: 1px solid var(--line); }
+.severity-row {
+  display: grid;
+  grid-template-columns: 86px 44px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.severity-row:last-child { border-bottom: 0; }
+.severity-row small { color: var(--muted); font-size: 9px; font-weight: 800; }
+.track { height: 4px; background: #edf1f5; overflow: hidden; }
+.track i { display: block; height: 100%; background: var(--accent); }
 .pill {
   display: inline-block;
   width: max-content;
   padding: 3px 7px;
   border-radius: 999px;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
   letter-spacing: .04em;
 }
@@ -316,109 +324,161 @@ h2 {
 .pill.warning { color: var(--warn); background: var(--warn-bg); }
 .pill.danger { color: var(--danger); background: var(--danger-bg); }
 .pill.neutral { color: #475467; background: #eef2f6; }
-
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
+.record-list { display: grid; gap: 10px; }
+.record {
   border: 1px solid var(--line);
-  border-radius: 9px;
+  background: #fff;
 }
+.record-head {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
+}
+.record-id {
+  color: var(--accent);
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+.record-title { min-width: 0; font-size: 12px; font-weight: 800; }
+.record-meta { color: var(--muted); font-size: 9px; text-align: right; }
+.record-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(220px, .75fr);
+}
+.record-cell { min-width: 0; padding: 11px 12px; }
+.record-cell + .record-cell { border-left: 1px solid var(--line-soft); }
+.cell-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+code {
+  color: #0a6474;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 10px;
+}
+.evidence {
+  display: block;
+  padding: 8px 9px;
+  background: var(--mono-bg);
+  border: 1px solid var(--line-soft);
+  color: #344054;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.evidence-list { margin: 0; padding: 0; list-style: none; }
+.evidence-list li + li { margin-top: 5px; }
+.action-text { margin: 0; color: #344054; font-size: 11px; }
+.table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); }
 table { width: 100%; border-collapse: collapse; }
 th, td {
   padding: 9px 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
   text-align: left;
   vertical-align: top;
 }
 tr:last-child th, tr:last-child td { border-bottom: 0; }
 thead th {
-  background: #f7f9fb;
+  background: #f8fafc;
   color: #475467;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
-  letter-spacing: .06em;
+  letter-spacing: .07em;
   text-transform: uppercase;
 }
 td { overflow-wrap: anywhere; }
-code {
-  color: #0a6474;
-  font-family: "Cascadia Mono", Consolas, monospace;
-  font-size: 11px;
-}
-code.evidence {
-  color: #344054;
-  white-space: pre-wrap;
-}
-.evidence-list { margin: 0; padding-left: 17px; }
-.evidence-list li + li { margin-top: 3px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .chip {
   border: 1px solid var(--line);
-  border-radius: 999px;
   background: #f8fafc;
   padding: 4px 7px;
   color: #475467;
-  font-size: 10px;
+  font-size: 9px;
 }
-.empty { color: var(--muted); text-align: center; padding: 18px 8px; }
-.note {
-  margin: 0;
-  color: #475467;
-  font-size: 12px;
+.method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.method-card { border: 1px solid var(--line); padding: 13px 14px; }
+.method-card h3 { margin: 0 0 6px; font-size: 12px; }
+.method-card p { margin: 0; color: #475467; font-size: 10px; }
+.empty {
+  padding: 18px 12px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  text-align: center;
+  font-size: 11px;
 }
 .footer {
   margin-top: 20px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   text-align: center;
 }
-
 @media (max-width: 900px) {
-  .meta { grid-template-columns: repeat(2, 1fr); }
-  .meta div:nth-child(2) { border-right: 0; }
-  .meta div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .case-strip { grid-template-columns: 1fr 1fr; }
+  .case-strip > div:nth-child(2) { border-right: 0; }
+  .case-strip > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
   .metrics { grid-template-columns: repeat(3, 1fr); }
-  .overview { grid-template-columns: 1fr; }
+  .metric:nth-child(3) { border-right: 0; }
+  .metric:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
+  .executive-grid, .method-grid { grid-template-columns: 1fr; }
 }
-@media (max-width: 620px) {
+@media (max-width: 680px) {
   body { background: #fff; }
-  .report { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .report { width: 100%; margin: 0; border: 0; box-shadow: none; }
   .masthead { padding: 22px 18px; }
-  .title-row { grid-template-columns: 1fr; align-items: start; }
-  .posture { text-align: left; min-width: 0; }
+  .brandline { align-items: flex-start; }
+  .title-grid { grid-template-columns: 1fr; align-items: start; }
+  .posture { min-width: 0; text-align: left; }
+  .toolbar { overflow-x: auto; }
+  .toolbar .local-note { display: none; }
   .content { padding: 16px; }
-  .metrics, .meta { grid-template-columns: 1fr 1fr; }
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .metric, .metric:nth-child(3) { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .metric:nth-child(even) { border-right: 0; }
+  .record-body { grid-template-columns: 1fr; }
+  .record-cell + .record-cell { border-left: 0; border-top: 1px solid var(--line-soft); }
   .section-head { display: block; }
-  .section-note { margin-top: 5px; text-align: left; }
-  .toolbar { overflow-x: auto; flex-wrap: nowrap; }
+  .section-note { margin-top: 4px; text-align: left; }
 }
-@media (max-width: 420px) {
-  .metrics, .meta { grid-template-columns: 1fr; }
-  .meta div { border-right: 0; border-bottom: 1px solid var(--line); }
-  .severity-row { grid-template-columns: 76px 40px 1fr; }
+@media (max-width: 430px) {
+  .case-strip, .metrics { grid-template-columns: 1fr; }
+  .case-strip > div, .metric { border-right: 0; border-bottom: 1px solid var(--line); }
+  .record-head { grid-template-columns: 1fr; }
+  .record-meta { text-align: left; }
   .triage-item { grid-template-columns: 1fr; }
+  .severity-row { grid-template-columns: 74px 36px 1fr; }
 }
 @media print {
   @page { margin: 11mm; }
-  body { background: #fff; color: #111827; font-size: 10px; }
-  .report { max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  body { background: #fff; color: #111827; font-size: 9.5px; }
+  .report { width: 100%; margin: 0; border: 0; box-shadow: none; }
   .masthead {
-    background: var(--navy);
     padding: 18px 20px;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .brand-row { margin-bottom: 14px; }
+  .brandline { margin-bottom: 16px; }
   .toolbar { display: none; }
   .content { padding: 14px 0 0; }
   .metrics { grid-template-columns: repeat(5, 1fr); }
-  .metric, .severity-table, .triage, .table-wrap { break-inside: avoid; }
-  .section { break-inside: auto; padding: 14px 0; }
+  .section { padding: 14px 0; }
+  .record, .assessment, .priority-box, .severity-block, .method-card, .table-wrap { break-inside: avoid; }
   thead { display: table-header-group; }
   tr { break-inside: avoid; }
-  a { text-decoration: none; }
 }
 """
 
@@ -426,12 +486,6 @@ code.evidence {
 def _safe_name(value: str) -> str:
     cleaned = "".join(char if char.isalnum() or char in {"-", "_"} else "-" for char in value)
     return cleaned.strip("-") or "analysis"
-
-
-def _rows(items: Iterable[tuple[str, str]]) -> str:
-    return "".join(
-        f"<tr><th>{escape(label)}</th><td>{escape(value)}</td></tr>" for label, value in items
-    )
 
 
 def _risk(data: DashboardData) -> str:
@@ -456,6 +510,34 @@ def _risk_class(value: str) -> str:
     }.get(value, "neutral")
 
 
+def _case_id(data: DashboardData) -> str:
+    material = f"{data.source}|{data.lines}|{len(data.findings)}|{len(data.incidents)}"
+    digest = hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()[:10].upper()
+    return f"AL-{digest}"
+
+
+def _assessment(data: DashboardData, risk: str) -> str:
+    if risk == "CRITICAL":
+        return (
+            "Critical rule-backed activity was retained. Prioritize the highest-severity findings and "
+            "correlated incident evidence, then validate against original telemetry and asset context."
+        )
+    if risk == "HIGH":
+        return (
+            "High-severity defensive signals were retained. Analyst review is recommended before normal "
+            "operational follow-up because the evidence may represent material security activity."
+        )
+    if risk == "REVIEW":
+        return (
+            "The investigation retained medium-severity findings that warrant review. Validate the "
+            "evidence in source, identity, host, and network context before escalation."
+        )
+    return (
+        "No critical, high, or medium rule-backed findings were retained in this analysis. This is not "
+        "proof that malicious activity is absent; review coverage and preserve original telemetry as needed."
+    )
+
+
 def _metric(label: str, value: str, modifier: str = "") -> str:
     suffix = f" {modifier}" if modifier else ""
     return (
@@ -466,7 +548,7 @@ def _metric(label: str, value: str, modifier: str = "") -> str:
 
 def _severity_overview(data: DashboardData) -> str:
     total = max(sum(data.severities.values()), 1)
-    rows = []
+    rows: list[str] = []
     for severity in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         count = data.severities.get(severity, 0)
         percent = min(100.0, (count / total) * 100.0)
@@ -494,16 +576,80 @@ def _triage_actions(data: DashboardData) -> str:
         actions.append(
             '<div class="triage-item">'
             f'<span class="pill {_risk_class(item.severity)}">{escape(item.severity)}</span>'
-            "<div>"
-            f"<strong>{escape(item.title)}</strong>"
-            f"<p>{escape(recommendation)}</p>"
-            "</div></div>"
+            f"<div><strong>{escape(item.title)}</strong><p>{escape(recommendation)}</p></div>"
+            "</div>"
         )
         if len(actions) == 5:
             break
     if not actions:
         return '<div class="empty">No immediate rule-backed remediation items were generated.</div>'
     return "".join(actions)
+
+
+def _incident_records(data: DashboardData) -> str:
+    records: list[str] = []
+    for item in data.incidents:
+        evidence = "".join(
+            f'<li><code class="evidence">{escape(value)}</code></li>' for value in item.evidence
+        )
+        records.append(
+            '<article class="record">'
+            '<div class="record-head">'
+            f'<span class="record-id">INC-{escape(item.id.upper()[:8])}</span>'
+            f'<span class="record-title">{escape(item.title)}</span>'
+            f'<span class="record-meta"><span class="pill {_risk_class(item.severity)}">{escape(item.severity)}</span>'
+            f" &nbsp; {escape(item.category)} &nbsp; {item.count} signal(s)</span>"
+            "</div>"
+            '<div class="record-body">'
+            '<div class="record-cell"><span class="cell-label">Evidence chain</span>'
+            f'<ul class="evidence-list">{evidence}</ul></div>'
+            '<div class="record-cell"><span class="cell-label">Analyst handling</span>'
+            '<p class="action-text">Review the grouped signals together, validate them against the original '
+            "telemetry and surrounding host or identity context, then determine whether escalation is warranted.</p>"
+            "</div></div></article>"
+        )
+    if not records:
+        return '<div class="empty">No correlated incidents were recorded.</div>'
+    return "".join(records)
+
+
+def _finding_records(data: DashboardData) -> str:
+    ordered = sorted(
+        data.findings,
+        key=lambda item: (-_SEVERITY_RANK.get(item.severity, 0), item.category, item.title),
+    )
+    records: list[str] = []
+    for index, item in enumerate(ordered, start=1):
+        records.append(
+            '<article class="record">'
+            '<div class="record-head">'
+            f'<span class="record-id">F-{index:03d}</span>'
+            f'<span class="record-title">{escape(item.title)}</span>'
+            f'<span class="record-meta"><span class="pill {_risk_class(item.severity)}">{escape(item.severity)}</span>'
+            f" &nbsp; {escape(item.category)}</span>"
+            "</div>"
+            '<div class="record-body">'
+            '<div class="record-cell"><span class="cell-label">Retained evidence</span>'
+            f'<code class="evidence">{escape(item.evidence)}</code></div>'
+            '<div class="record-cell"><span class="cell-label">Recommended action</span>'
+            f'<p class="action-text">{escape(item.recommendation)}</p></div>'
+            "</div></article>"
+        )
+    if not records:
+        return '<div class="empty">No rule-backed findings were recorded.</div>'
+    return "".join(records)
+
+
+def _anomaly_rows(data: DashboardData) -> str:
+    rows = "".join(
+        "<tr>"
+        f"<td><strong>{item.score:.1f}</strong></td>"
+        f"<td><code>{escape(item.key)}</code></td>"
+        f"<td>{escape(item.reason)}</td>"
+        "</tr>"
+        for item in data.anomalies
+    )
+    return rows or '<tr><td colspan="3" class="empty">No rare concerning event classes were recorded.</td></tr>'
 
 
 def _telemetry_chips(values: dict[str, int]) -> str:
@@ -516,46 +662,11 @@ def _telemetry_chips(values: dict[str, int]) -> str:
 
 
 def build_html_report(data: DashboardData) -> str:
-    """Return a self-contained, local HTML report using retained analysis evidence only."""
+    """Return a self-contained, local analyst report using retained evidence only."""
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    risk = _risk(data)
     source_name = Path(data.source).name
-
-    incidents = "".join(
-        "<tr>"
-        f"<td><code>INC-{escape(item.id.upper()[:8])}</code></td>"
-        f'<td><span class="pill {_risk_class(item.severity)}">{escape(item.severity)}</span></td>'
-        f"<td>{escape(item.category)}</td><td>{item.count}</td><td>{escape(item.title)}</td>"
-        '<td><ul class="evidence-list">'
-        + "".join(f'<li><code class="evidence">{escape(value)}</code></li>' for value in item.evidence)
-        + "</ul></td></tr>"
-        for item in data.incidents
-    ) or '<tr><td colspan="6" class="empty">No correlated incidents were recorded.</td></tr>'
-
-    findings = "".join(
-        "<tr>"
-        f'<td><span class="pill {_risk_class(item.severity)}">{escape(item.severity)}</span></td>'
-        f"<td>{escape(item.category)}</td><td>{escape(item.title)}</td>"
-        f'<td><code class="evidence">{escape(item.evidence)}</code></td>'
-        f"<td>{escape(item.recommendation)}</td>"
-        "</tr>"
-        for item in sorted(
-            data.findings,
-            key=lambda finding: (
-                -_SEVERITY_RANK.get(finding.severity, 0),
-                finding.category,
-                finding.title,
-            ),
-        )
-    ) or '<tr><td colspan="5" class="empty">No rule-backed findings were recorded.</td></tr>'
-
-    anomalies = "".join(
-        "<tr>"
-        f"<td><strong>{item.score:.1f}</strong></td>"
-        f"<td><code>{escape(item.key)}</code></td><td>{escape(item.reason)}</td>"
-        "</tr>"
-        for item in data.anomalies
-    ) or '<tr><td colspan="3" class="empty">No rare concerning event classes were recorded.</td></tr>'
+    risk = _risk(data)
+    case_id = _case_id(data)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -568,42 +679,34 @@ def build_html_report(data: DashboardData) -> str:
 <body>
 <main class="report">
 <header class="masthead" id="cover">
-  <div class="brand-row">
-    <div class="brand-mark" aria-hidden="true">AL</div>
-    <div>
-      <div class="brand-name">AEGISLOG</div>
-      <div class="brand-sub">Security operations / local-first</div>
+  <div class="brandline">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">AL</div>
+      <div><div class="brand-name">AEGISLOG</div><div class="brand-sub">Security operations / local-first</div></div>
     </div>
+    <div class="classification">Defensive analysis<br>Retained evidence report</div>
   </div>
-  <div class="title-row">
+  <div class="title-grid">
     <div>
-      <div class="eyebrow">Defensive investigation</div>
+      <div class="eyebrow">Investigation record / {escape(case_id)}</div>
       <h1>Security Investigation Report</h1>
-      <p class="subtitle">Analyst-ready summary of retained findings, incident correlation, anomaly signals, and recommended defensive actions for <strong>{escape(source_name)}</strong>.</p>
+      <p class="subtitle">Analyst-ready assessment of retained rule-backed findings, correlated incidents, anomaly signals, and defensive actions for <strong>{escape(source_name)}</strong>.</p>
     </div>
-    <div class="posture {_risk_class(risk)}">
-      <small>Current posture</small>
-      <strong>{escape(risk)}</strong>
-    </div>
+    <div class="posture {_risk_class(risk)}"><small>Current posture</small><strong>{escape(risk)}</strong></div>
   </div>
 </header>
 
-<section class="meta" aria-label="Report metadata">
+<section class="case-strip" aria-label="Case metadata">
   <div><small>Source</small><strong>{escape(source_name)}</strong></div>
-  <div><small>Version</small><strong>{escape(__version__)}</strong></div>
+  <div><small>Case reference</small><strong>{escape(case_id)}</strong></div>
   <div><small>Generated</small><strong>{generated}</strong></div>
   <div><small>Processing</small><strong>LOCAL / READ-ONLY</strong></div>
 </section>
 
 <nav class="toolbar" aria-label="Report sections">
-  <a href="#executive">Executive</a>
-  <a href="#triage">Triage</a>
-  <a href="#incidents">Incidents</a>
-  <a href="#findings">Findings</a>
-  <a href="#anomalies">Anomalies</a>
-  <a href="#telemetry">Telemetry</a>
-  <span class="spacer"></span>
-  <span class="brand-sub">REMOTE AI NOT REQUIRED</span>
+  <a href="#executive">Executive</a><a href="#incidents">Incidents</a><a href="#findings">Findings</a>
+  <a href="#anomalies">Anomalies</a><a href="#telemetry">Telemetry</a><a href="#method">Method</a>
+  <span class="spacer"></span><span class="local-note">REMOTE AI NOT REQUIRED</span>
   <button type="button" onclick="window.print()">Print / Save PDF</button>
 </nav>
 
@@ -619,17 +722,19 @@ def build_html_report(data: DashboardData) -> str:
 <section class="section" id="executive">
   <div class="section-head">
     <div><div class="section-label">Executive view</div><h2>Executive Summary</h2></div>
-    <div class="section-note">Findings are investigative evidence and should be validated in operational context.</div>
+    <div class="section-note">Evidence is investigative and should be validated against original telemetry and operational context.</div>
   </div>
-  <div class="summary">AegisLog analyzed <strong>{data.lines:,}</strong> event line(s) and retained <strong>{len(data.findings)}</strong> rule-backed finding(s), <strong>{len(data.incidents)}</strong> correlated incident(s), and <strong>{len(data.anomalies)}</strong> anomaly signal(s). Current defensive posture: <strong>{escape(risk)}</strong>.</div>
-  <div class="overview">
-    <div>
-      <div class="section-label" style="margin-bottom:7px">Severity distribution</div>
-      <div class="severity-table">{_severity_overview(data)}</div>
+  <div class="executive-grid">
+    <div class="assessment">
+      <h3>Assessment</h3>
+      <p>{escape(_assessment(data, risk))}</p>
+      <p class="caveat">AegisLog analyzed <strong>{data.lines:,}</strong> event line(s), retained <strong>{len(data.findings)}</strong> rule-backed finding(s), <strong>{len(data.incidents)}</strong> correlated incident(s), and <strong>{len(data.anomalies)}</strong> anomaly signal(s). Findings are not proof of compromise.</p>
+      <div class="section-label" style="margin-top:14px;margin-bottom:6px">Severity distribution</div>
+      <div class="severity-block">{_severity_overview(data)}</div>
     </div>
-    <div id="triage">
-      <div class="section-label" style="margin-bottom:7px">Recommended Triage</div>
-      <div class="triage">{_triage_actions(data)}</div>
+    <div class="priority-box" id="triage">
+      <h3>Recommended Triage</h3>
+      {_triage_actions(data)}
     </div>
   </div>
 </section>
@@ -637,40 +742,34 @@ def build_html_report(data: DashboardData) -> str:
 <section class="section" id="incidents">
   <div class="section-head">
     <div><div class="section-label">Correlation</div><h2>Incident Queue</h2></div>
-    <div class="section-note">Grouped signals that should be reviewed together.</div>
+    <div class="section-note">Signals grouped by the local correlation engine for joint analyst review.</div>
   </div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>ID</th><th>Severity</th><th>Category</th><th>Signals</th><th>Summary</th><th>Evidence chain</th></tr></thead>
-    <tbody>{incidents}</tbody>
-  </table></div>
+  <div class="record-list">{_incident_records(data)}</div>
 </section>
 
 <section class="section" id="findings">
   <div class="section-head">
     <div><div class="section-label">Detection</div><h2>Findings and Recommendations</h2></div>
-    <div class="section-note">Rule-backed detections ordered by severity.</div>
+    <div class="section-note">Rule-backed detections ordered by severity with retained evidence and handling guidance.</div>
   </div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Severity</th><th>Category</th><th>Detection</th><th>Evidence</th><th>Recommended action</th></tr></thead>
-    <tbody>{findings}</tbody>
-  </table></div>
+  <div class="record-list">{_finding_records(data)}</div>
 </section>
 
 <section class="section" id="anomalies">
   <div class="section-head">
     <div><div class="section-label">Behavior</div><h2>Anomaly Signals</h2></div>
-    <div class="section-note">Rare concerning event classes surfaced for analyst review.</div>
+    <div class="section-note">Rare concerning event classes surfaced for analyst review; anomaly scores are not standalone verdicts.</div>
   </div>
   <div class="table-wrap"><table>
     <thead><tr><th>Score</th><th>Event class</th><th>Reason</th></tr></thead>
-    <tbody>{anomalies}</tbody>
+    <tbody>{_anomaly_rows(data)}</tbody>
   </table></div>
 </section>
 
 <section class="section" id="telemetry">
   <div class="section-head">
     <div><div class="section-label">Telemetry</div><h2>Observed Distribution</h2></div>
-    <div class="section-note">High-level distribution of parsed telemetry retained by the analysis.</div>
+    <div class="section-note">High-level distribution of parsed telemetry retained by the analysis snapshot.</div>
   </div>
   <div class="table-wrap"><table>
     <tr><th>Categories</th><td><div class="chips">{_telemetry_chips(data.categories)}</div></td></tr>
@@ -679,25 +778,26 @@ def build_html_report(data: DashboardData) -> str:
   </table></div>
 </section>
 
-<section class="section">
+<section class="section" id="method">
   <div class="section-head">
-    <div><div class="section-label">Scope</div><h2>Analysis Profile</h2></div>
-    <div class="section-note">This report is generated locally from retained, derived evidence.</div>
+    <div><div class="section-label">Method and scope</div><h2>Analysis Profile</h2></div>
+    <div class="section-note">How this report was produced and how its evidence should be interpreted.</div>
   </div>
-  <div class="table-wrap"><table>{_rows((
-      ("Source path", data.source),
-      ("Source file", source_name),
-      ("Event lines", f"{data.lines:,}"),
-      ("AegisLog version", __version__),
-      ("Generated", generated),
-      ("Processing", "Local deterministic detection, correlation, and anomaly scoring"),
-      ("Source handling", "Read-only; source content is not modified"),
-      ("Remote AI", "Not required for this report"),
-  ))}</table></div>
-  <p class="note" style="margin-top:12px">The report intentionally does not reproduce the complete raw source log. Missing detections do not prove malicious activity is absent. Preserve original telemetry separately when evidence retention, chain-of-custody, or incident-response procedures require it.</p>
+  <div class="method-grid">
+    <div class="method-card"><h3>Processing model</h3><p>AegisLog v{escape(__version__)} performed local deterministic detection, incident correlation, and anomaly scoring. The source was handled read-only and remote AI was not required for this report.</p></div>
+    <div class="method-card"><h3>Evidence limitations</h3><p>The report contains retained derived evidence rather than a complete copy of the raw log. Missing detections do not prove malicious activity is absent. Preserve original telemetry separately when incident-response, retention, or chain-of-custody procedures require it.</p></div>
+  </div>
+  <div class="table-wrap" style="margin-top:12px"><table>
+    <tr><th>Source path</th><td>{escape(data.source)}</td></tr>
+    <tr><th>Source file</th><td>{escape(source_name)}</td></tr>
+    <tr><th>Event lines</th><td>{data.lines:,}</td></tr>
+    <tr><th>AegisLog version</th><td>{escape(__version__)}</td></tr>
+    <tr><th>Generated</th><td>{generated}</td></tr>
+    <tr><th>Remote AI</th><td>Not required for this report</td></tr>
+  </table></div>
 </section>
 
-<div class="footer">AEGISLOG v{escape(__version__)} / Defensive security analysis / Generated locally</div>
+<div class="footer">AEGISLOG v{escape(__version__)} / {escape(case_id)} / Defensive security analysis / Generated locally</div>
 </div>
 </main>
 </body>
