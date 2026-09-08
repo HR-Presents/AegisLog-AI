@@ -11,7 +11,9 @@
 
 **Stable release: v1.6.0**
 
-[Download AegisLog.exe](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0) · [Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Release Notes](docs/RELEASE_V1.6.0.md)
+[Download AegisLog.exe](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0) · [Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Leave a public review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) · [Release Notes](docs/RELEASE_V1.6.0.md)
+
+**Used AegisLog?** Star the repository if it helped you, and leave a public review so maintainers and future users can learn from your experience.
 
 </div>
 
@@ -248,6 +250,25 @@ See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for the provider model and da
 
 ---
 
+## Community feedback and public reviews
+
+AegisLog does **not** phone home or identify who runs the application. Local usage remains private unless a user deliberately chooses to interact with the project on GitHub.
+
+Public GitHub activity provides transparent community signals:
+
+- **Stars** show GitHub accounts that chose to star the repository.
+- **Forks** show public forks and experimentation.
+- **Issues and reviews** show feedback submitted by users.
+- **Pull requests and commits** record public contributions to the project.
+
+After trying AegisLog, please [leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml). The structured review asks for a rating, recommendation, version/environment, workflows used, what worked well, and what should improve.
+
+Please sanitize everything before posting. Never include credentials, tokens, real production logs, personal data, private hostnames, or customer information in a public review.
+
+If AegisLog was useful, starring the repository is also a simple way to support the project and make public interest visible on GitHub.
+
+---
+
 ## Security model
 
 AegisLog is defensive tooling.
@@ -327,6 +348,7 @@ See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific deta
 ## Contributing and support
 
 - Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
+- Used AegisLog? [Leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml).
 - Use the bug-report issue template with sanitized logs and reproducible steps.
 - Feature requests should stay within the defensive, local-first scope.
 - Check the FAQ and troubleshooting guide before opening a support issue.
