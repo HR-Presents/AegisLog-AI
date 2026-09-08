@@ -28,8 +28,8 @@ from .commands_v14 import live_multi
 from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
-_MAX_HOME_WIDTH = 84
-_NARROW_MENU_BREAKPOINT = 60
+_MAX_HOME_WIDTH = 88
+_NARROW_MENU_BREAKPOINT = 64
 
 
 def _frame_width(screen_width: int | None = None) -> int:
@@ -39,43 +39,55 @@ def _frame_width(screen_width: int | None = None) -> int:
 
 
 def _header(screen_width: int | None = None) -> Panel:
-    """Render a compact SOC header that wraps cleanly on narrow terminals."""
+    """Render a compact command-center identity and runtime posture."""
     frame_width = _frame_width(screen_width)
-    line = Text()
-    line.append("AEGISLOG", style=f"bold {ACCENT}")
-    line.append(" // SECURITY OPERATIONS CONSOLE", style="bold white")
-    line.append("  v1.6.1", style=MUTED)
+    title = Text()
+    title.append("AEGISLOG", style=f"bold {ACCENT}")
+    title.append(" // SECURITY OPERATIONS", style="bold white")
+    title.append("  v1.6.1", style=MUTED)
 
     status = Text()
-    separator = "   " if frame_width >= 72 else "\n"
-    status.append("[+] ENGINE ONLINE", style=f"bold {SUCCESS}")
+    separator = "   " if frame_width >= 76 else "\n"
+    status.append("READY", style=f"bold {SUCCESS}")
     status.append(separator)
-    status.append("[+] LOCAL MODE", style=f"bold {ACCENT_SOFT}")
+    status.append("LOCAL", style=f"bold {ACCENT_SOFT}")
     status.append(separator)
-    status.append("[-] REMOTE AI OFF BY DEFAULT", style=MUTED)
+    status.append("REMOTE AI: OPT-IN", style=MUTED)
 
-    body = Text.assemble(line, "\n", status)
-    return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1), width=frame_width)
+    return Panel(
+        Text.assemble(title, "\n", status),
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=frame_width,
+    )
 
 
 def _menu(screen_width: int | None = None) -> Table:
-    """Render an adaptive command matrix for narrow, standard, and wide terminals."""
+    """Render the command matrix with a deliberate narrow-screen fallback."""
     frame_width = _frame_width(screen_width)
     narrow = frame_width < _NARROW_MENU_BREAKPOINT
-    table = Table(show_header=False, box=None, padding=(0, 1), expand=False, width=frame_width)
-    table.add_column(max_width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
+    table = Table(
+        show_header=not narrow,
+        header_style=MUTED,
+        box=None,
+        padding=(0, 1),
+        expand=False,
+        width=frame_width,
+    )
+    table.add_column("KEY" if not narrow else "", max_width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
 
     if narrow:
         table.add_column(ratio=1, overflow="fold")
     else:
-        table.add_column(min_width=16, max_width=20, style="bold white", overflow="fold")
-        table.add_column(min_width=18, ratio=1, style=MUTED, overflow="fold")
+        table.add_column("ACTION", min_width=16, max_width=20, style="bold white", overflow="fold")
+        table.add_column("PURPOSE", min_width=20, ratio=1, style=MUTED, overflow="fold")
 
     def section(label: str) -> None:
+        heading = Text(f"-- {label}", style=f"bold {ACCENT_SOFT}")
         if narrow:
-            table.add_row("", Text(f"-- {label}", style=f"bold {ACCENT_SOFT}"))
+            table.add_row("", heading)
         else:
-            table.add_row("", Text(f"-- {label}", style=f"bold {ACCENT_SOFT}"), "")
+            table.add_row("", heading, "")
 
     def action(key: str, command: str | Text, description: str) -> None:
         if narrow:
@@ -108,9 +120,21 @@ def _menu(screen_width: int | None = None) -> Table:
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
-    """Render one compact, left-anchored console block at every terminal width."""
-    footer = Text("Ctrl+C exits live views | Remote AI is opt-in", style=MUTED)
-    return Group(_header(screen_width), _menu(screen_width), Text("  ").append_text(footer))
+    """Render one left-anchored SOC shell at every terminal width."""
+    frame_width = _frame_width(screen_width)
+    menu_panel = Panel(
+        _menu(screen_width),
+        title=Text("OPERATOR MENU", style=f"bold {ACCENT_SOFT}"),
+        title_align="left",
+        border_style=ACCENT_SOFT,
+        padding=(0, 0),
+        width=frame_width,
+    )
+    if frame_width < 48:
+        footer = Text("Ctrl+C: stop live | AI: opt-in", style=MUTED)
+    else:
+        footer = Text("Ctrl+C stops live views safely | Remote AI requires explicit opt-in", style=MUTED)
+    return Group(_header(screen_width), menu_panel, footer)
 
 
 def _pause_for_menu() -> None:
@@ -210,7 +234,8 @@ def start() -> None:
         console.print(_home(console.size.width))
         console.print()
         try:
-            choice = Prompt.ask(f"[bold {ACCENT}]aegis@console >[/bold {ACCENT}]", default="1").strip()
+            raw_choice = console.input(f"[bold {ACCENT}]aegis@console > [/bold {ACCENT}]")
+            choice = raw_choice.strip() or "1"
         except (KeyboardInterrupt, EOFError):
             console.print()
             console.print(Text("AegisLog closed safely.", style=SUCCESS))
