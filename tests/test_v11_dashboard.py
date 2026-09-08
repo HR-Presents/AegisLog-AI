@@ -81,6 +81,26 @@ def test_dashboard_orders_findings_by_severity_and_surfaces_primary_action() -> 
     assert "High action" in focus
 
 
+def test_dashboard_uses_bounded_evidence_preview() -> None:
+    evidence = "evidence-" + ("x" * 260)
+    data = DashboardData(
+        source="/tmp/long.log",
+        lines=1,
+        findings=(Finding("MEDIUM", "network", "Long evidence", evidence, "Review it"),),
+        anomalies=(),
+        incidents=(),
+        levels={"WARNING": 1},
+        services={"test": 1},
+        categories={"network": 1},
+        severities={"MEDIUM": 1},
+    )
+    output = _render(data, width=160)
+
+    assert "EVIDENCE PREVIEW" in output
+    assert "…" in output
+    assert evidence not in output
+
+
 def test_follow_up_uses_actual_source_instead_of_placeholder() -> None:
     data = DashboardData(
         source="/tmp/prod auth.log",
