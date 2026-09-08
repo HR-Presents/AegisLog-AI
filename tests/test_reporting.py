@@ -109,7 +109,8 @@ def test_empty_report_has_clear_empty_states() -> None:
     )
     html = build_html_report(data)
 
-    assert "POSTURE CLEAR" in html
+    assert "Current posture" in html
+    assert ">CLEAR<" in html
     assert "No immediate rule-backed remediation items were generated." in html
     assert "No correlated incidents were recorded." in html
     assert "No rule-backed findings were recorded." in html
