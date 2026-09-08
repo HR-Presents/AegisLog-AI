@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rich.align import Align
-from rich.columns import Columns
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
@@ -254,36 +253,53 @@ def _risk(severities: Counter[str]) -> str:
     return "CLEAR"
 
 
-def _metric(title: str, value: str, subtitle: str = "", *, value_style: str = "bold", border_style: str = ACCENT_SOFT) -> Panel:
-    text = Text(value, justify="center", style=value_style)
-    if subtitle:
-        text.append(f"\n{subtitle}", style=MUTED)
-    return Panel(Align.center(text), title=title, title_align="left", border_style=border_style, padding=(0, 1))
+def _summary_table(rows: list[tuple[str, str, str]]) -> Table:
+    table = Table(
+        title="Live summary",
+        title_style=f"bold {ACCENT}",
+        expand=True,
+        border_style=ACCENT_SOFT,
+    )
+    table.add_column("Metric", min_width=14, ratio=2)
+    table.add_column("Value", min_width=10, ratio=1, justify="right", style=ACCENT)
+    table.add_column("Context", min_width=18, ratio=4, overflow="fold")
+    for metric, value, context in rows:
+        table.add_row(metric, value, context)
+    return table
 
 
-def _counter_table(title: str, values: Counter[str], limit: int = 6) -> Table:
-    table = Table(title=title, title_style=f"bold {ACCENT}", expand=True, border_style=ACCENT_SOFT)
-    table.add_column("Name")
-    table.add_column("Count", justify="right", style=ACCENT)
-    for name, count in values.most_common(limit):
-        table.add_row(Text(str(name)), str(count))
-    if not values:
-        table.add_row(Text("None", style=MUTED), "0")
+def _telemetry_table(sections: list[tuple[str, Counter[str]]], limit: int = 6) -> Table:
+    table = Table(
+        title="Profile telemetry",
+        title_style=f"bold {ACCENT}",
+        expand=True,
+        border_style=ACCENT_SOFT,
+    )
+    table.add_column("Dimension", min_width=12, ratio=2)
+    table.add_column("Name", min_width=16, ratio=4, overflow="fold")
+    table.add_column("Count", min_width=6, max_width=8, justify="right", style=ACCENT)
+    for dimension, values in sections:
+        if values:
+            for name, count in values.most_common(limit):
+                table.add_row(dimension, str(name), str(count))
+                dimension = ""
+        else:
+            table.add_row(dimension, Text("None", style=MUTED), "0")
     return table
 
 
 def _recent_table(findings: list[Finding], profile: WatchProfile) -> Table:
     table = Table(
-        title=f"Recent findings — {profile.label}",
+        title=f"Recent findings - {profile.label}",
         title_style=f"bold {ACCENT}",
         expand=True,
         show_lines=True,
         border_style=ACCENT_SOFT,
     )
-    table.add_column("Severity", width=10)
-    table.add_column("Category", width=18)
-    table.add_column("Finding", width=34)
-    table.add_column("Evidence")
+    table.add_column("Severity", min_width=8, max_width=10, no_wrap=True)
+    table.add_column("Category", min_width=10, ratio=2, overflow="fold")
+    table.add_column("Finding", min_width=16, ratio=3, overflow="fold")
+    table.add_column("Evidence", min_width=20, ratio=5, overflow="fold")
     for finding in findings[:8]:
         table.add_row(severity_text(finding.severity), Text(finding.category), Text(finding.title), Text(finding.evidence))
     if not findings:
@@ -330,32 +346,28 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     header = Panel(
         Align.center(header_text),
         border_style=ACCENT,
-        subtitle=f"{profile.description} • Ctrl+C to stop",
+        subtitle=f"{profile.description} | Ctrl+C to stop",
         subtitle_align="right",
     )
 
     risk = _risk(severities)
-    metrics = Columns(
+    summary = _summary_table(
         [
-            _metric("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}", value_style=f"bold {ACCENT}"),
-            _metric("Average rate", f"{state.lines_per_second:.1f}/s", activity, value_style="bold white"),
-            _metric("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline", value_style="bold yellow" if focused_spikes else f"bold {SUCCESS}", border_style="yellow" if focused_spikes else SUCCESS),
-            _metric("Profile findings", str(len(findings)), f"{critical} critical • {high} high • {medium} medium", value_style="bold white"),
-            _metric("Incidents", str(len(incidents)), value_style=f"bold {INCIDENT}", border_style=INCIDENT),
-            _metric("Anomalies", str(len(anomalies)), value_style=f"bold {ANOMALY}", border_style=ANOMALY),
-            _metric("Risk", risk, value_style=f"bold {risk_style(risk)}", border_style=risk_style(risk)),
-        ],
-        equal=True,
-        expand=True,
+            ("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
+            ("Average rate", f"{state.lines_per_second:.1f}/s", activity),
+            ("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline"),
+            ("Profile findings", str(len(findings)), f"{critical} critical | {high} high | {medium} medium"),
+            ("Incidents", str(len(incidents)), "correlated findings"),
+            ("Anomalies", str(len(anomalies)), "event-level anomaly score"),
+            ("Risk", risk, "current profile-focused risk state"),
+        ]
     )
-    overview = Columns(
+    telemetry = _telemetry_table(
         [
-            _counter_table("Profile categories", categories),
-            _counter_table("Profile log levels", levels),
-            _counter_table("Profile services", services),
-        ],
-        equal=True,
-        expand=True,
+            ("Categories", categories),
+            ("Log levels", levels),
+            ("Services", services),
+        ]
     )
     if state.total_lines == 0:
         mode_note = "Waiting for NEW lines appended after monitoring started. Existing file contents are intentionally skipped unless --from-start is used. "
@@ -374,8 +386,8 @@ def render_realtime(state: RealtimeState) -> RenderableType:
     status = Panel(status_text, title="Live status", title_align="left", border_style=status_style)
     return Group(
         header,
-        metrics,
-        overview,
+        summary,
+        telemetry,
         render_trends(trend, profile.trend_metrics),
         _recent_table(list(state.recent_findings), profile),
         status,
