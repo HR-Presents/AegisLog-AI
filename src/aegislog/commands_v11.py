@@ -5,9 +5,12 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.text import Text
 
 from .dashboard import analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
+from .reporting import write_html_report
+from .theme import ACCENT, MUTED, SUCCESS, WARNING
 from .ui import bounded
 
 console = Console()
@@ -34,6 +37,17 @@ def dashboard(
         data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
         progress.update(task, description="Building terminal dashboard...")
     console.print(bounded(render_dashboard(data)))
+    try:
+        report_path = write_html_report(data)
+    except OSError as exc:
+        console.print(Text(f"Report could not be written: {exc}", style=WARNING))
+    else:
+        console.print()
+        report_line = Text()
+        report_line.append("REPORT READY  ", style=f"bold {SUCCESS}")
+        report_line.append(str(report_path), style=ACCENT)
+        report_line.append("\nOpen it in a browser to review, print, or save as PDF.", style=MUTED)
+        console.print(report_line)
 
 
 def analyze_dashboard_command(
