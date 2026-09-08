@@ -24,6 +24,14 @@ bandit -q -r src
 
 New detections should include tests and should avoid overstating certainty. Prefer evidence-backed labels such as "possible" or "suspicious" when a pattern is not conclusive. Never add real credentials or production logs to fixtures.
 
+## Community feedback and reviews
+
+Using AegisLog does not automatically identify you to the maintainers. The application is local-first and does not add telemetry simply to count users.
+
+If you have used AegisLog and want your experience to be visible publicly, use the repository's **User review** issue form. Reviews should include the version/environment, an honest rating, what worked, and what should improve. Remove credentials, tokens, production logs, personal data, private hostnames, and customer information before posting.
+
+Stars, forks, public issues, pull requests, and commits provide GitHub-native public signals of interest and contribution. A star is support, not proof that someone installed or used the application.
+
 ## Collaboration and co-authorship
 
 When two or more people genuinely work on the same change, record that collaboration in the commit history. GitHub-compatible co-authorship trailers may be added to the commit message using the contributor's GitHub-linked email.
@@ -36,7 +44,7 @@ feat: improve defensive log analysis
 Co-authored-by: Contributor Name <github-linked-email@example.com>
 ```
 
-Use co-authorship only when the named contributor materially participated in the work.
+Use co-authorship only when the named contributor materially participated in the work. Do not add contributors, reviewers, or co-authors merely because they downloaded, starred, or reviewed the application.
 
 ## Security expectations
 
