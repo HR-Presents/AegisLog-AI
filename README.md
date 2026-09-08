@@ -1,6 +1,6 @@
 <div align="center">
 
-# AegisLog AI
+<img src="docs/assets/aegislog-logo.svg" alt="AegisLog — local-first security log analysis" width="720" />
 
 ### Terminal-first defensive security for local log analysis, live monitoring, and incident investigation
 
