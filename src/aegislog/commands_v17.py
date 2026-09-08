@@ -46,7 +46,9 @@ def _dashboard_lines(lines: list[str], source: str) -> None:
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".log", prefix="aegislog-native-", delete=False) as handle:
             handle.writelines(lines)
             path = Path(handle.name)
-        dashboard(path)
+        # Direct Python calls to Typer-decorated commands must pass concrete
+        # defaults; otherwise Typer's OptionInfo object can leak into analysis.
+        dashboard(path, timestamp_year=None)
     finally:
         if path is not None:
             path.unlink(missing_ok=True)
