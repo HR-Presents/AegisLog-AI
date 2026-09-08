@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rich.align import Align
-from rich.columns import Columns
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
@@ -238,38 +237,47 @@ def _risk(counts: Counter[str]) -> str:
     return "CLEAR"
 
 
-def _metric(title: str, value: str, subtitle: str = "", value_style: str = "bold", border_style: str = ACCENT_SOFT) -> Panel:
-    body = Text(value, justify="center", style=value_style)
-    if subtitle:
-        body.append(f"\n{subtitle}", style=MUTED)
-    return Panel(Align.center(body), title=title, padding=(0, 1), border_style=border_style)
+def _summary_table(rows: list[tuple[str, str, str, str]]) -> Table:
+    """Render dashboard metrics vertically so ordinary terminals never squeeze cards off-screen."""
+    table = Table(title="SOC summary", expand=True, border_style=ACCENT_SOFT, show_header=True)
+    table.add_column("Metric", min_width=15, ratio=2, style=ACCENT)
+    table.add_column("Value", min_width=8, ratio=1, justify="right")
+    table.add_column("Context", min_width=18, ratio=4, style=MUTED)
+    for label, value, context, style in rows:
+        table.add_row(Text(label), Text(value, style=style), Text(context))
+    return table
 
 
-def _counter(title: str, values: Counter[str], limit: int = 6) -> Table:
-    table = Table(title=title, expand=True, border_style=ACCENT_SOFT)
-    table.add_column("Name")
-    table.add_column("Count", justify="right", style=ACCENT)
-    for name, count in values.most_common(limit):
-        table.add_row(Text(str(name)), str(count))
-    if not values:
-        table.add_row(Text("None", style=MUTED), Text("0", style=MUTED))
+def _telemetry_table(sections: tuple[tuple[str, Counter[str]], ...], limit: int = 6) -> Table:
+    """Keep telemetry readable at narrow and wide widths by using one wrapping table."""
+    table = Table(title="Profile telemetry", expand=True, border_style=ACCENT_SOFT, show_lines=False)
+    table.add_column("Dimension", min_width=14, ratio=2, style=ACCENT)
+    table.add_column("Name", min_width=12, ratio=4)
+    table.add_column("Count", min_width=5, ratio=1, justify="right", style=ACCENT)
+    for label, values in sections:
+        items = values.most_common(limit)
+        if not items:
+            table.add_row(label, Text("None", style=MUTED), Text("0", style=MUTED))
+            continue
+        for index, (name, count) in enumerate(items):
+            table.add_row(label if index == 0 else "", Text(str(name)), str(count))
     return table
 
 
 def _alerts_table(state: MultiSourceState) -> Table:
     profile = state.profile
     table = Table(
-        title=f"Live security alert feed — {profile.label}",
+        title=f"Live security alert feed - {profile.label}",
         expand=True,
         show_lines=True,
         border_style=INCIDENT,
     )
-    table.add_column("#", justify="right", width=5, style=ACCENT)
-    table.add_column("Severity", width=10)
-    table.add_column("Source", width=18)
-    table.add_column("Category", width=18)
-    table.add_column("Alert", width=34)
-    table.add_column("Evidence")
+    table.add_column("#", justify="right", min_width=3, max_width=5, style=ACCENT, no_wrap=True)
+    table.add_column("Severity", min_width=8, max_width=10, no_wrap=True)
+    table.add_column("Source", min_width=10, ratio=2, overflow="fold")
+    table.add_column("Category", min_width=10, ratio=2, overflow="fold")
+    table.add_column("Alert", min_width=16, ratio=3, overflow="fold")
+    table.add_column("Evidence", min_width=20, ratio=5, overflow="fold")
     for item in state.alerts[:10]:
         table.add_row(
             str(item.sequence),
@@ -313,38 +321,34 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     header_text.append(f"\nPROFILE: {profile.label.upper()}", style=INFO)
     header = Panel(
         Align.center(header_text),
-        subtitle=f"{profile.description} • local/read-only • Ctrl+C to stop",
+        subtitle=f"{profile.description} | local/read-only | Ctrl+C to stop",
         border_style=ACCENT,
     )
-    metrics = Columns(
+
+    summary = _summary_table(
         [
-            _metric("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines", f"bold {ACCENT}"),
-            _metric("Events", f"{state.total_lines:,}", value_style=f"bold {ACCENT}"),
-            _metric("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s", f"bold {INFO}"),
-            _metric(
+            ("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines", f"bold {ACCENT}"),
+            ("Events", f"{state.total_lines:,}", "events ingested", f"bold {ACCENT}"),
+            ("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s", f"bold {INFO}"),
+            (
                 "Rate spikes",
                 str(focused_spikes),
                 f"{trend.window_seconds}s profile baseline",
                 f"bold {WARNING}" if focused_spikes else f"bold {SUCCESS}",
-                WARNING if focused_spikes else SUCCESS,
             ),
-            _metric("Profile findings", str(len(findings)), value_style=f"bold {WARNING}" if findings else f"bold {SUCCESS}"),
-            _metric("Incidents", str(len(incidents)), value_style=f"bold {INCIDENT}" if incidents else f"bold {SUCCESS}", border_style=INCIDENT if incidents else SUCCESS),
-            _metric("Anomalies", str(len(anomalies)), value_style=f"bold {ANOMALY}" if anomalies else f"bold {SUCCESS}", border_style=ANOMALY if anomalies else SUCCESS),
-            _metric("Risk", risk, value_style=f"bold {risk_style(risk)}", border_style=risk_style(risk)),
-        ],
-        equal=True,
-        expand=True,
+            ("Profile findings", str(len(findings)), "focused detections", f"bold {WARNING}" if findings else f"bold {SUCCESS}"),
+            ("Incidents", str(len(incidents)), "correlated findings", f"bold {INCIDENT}" if incidents else f"bold {SUCCESS}"),
+            ("Anomalies", str(len(anomalies)), "behavioral deviations", f"bold {ANOMALY}" if anomalies else f"bold {SUCCESS}"),
+            ("Risk", risk, "current local assessment", f"bold {risk_style(risk)}"),
+        ]
     )
-    overview = Columns(
-        [
-            _counter("Events by source", state.source_counts),
-            _counter("Profile categories", categories),
-            _counter("Profile log levels", levels),
-            _counter("Profile services", services),
-        ],
-        equal=True,
-        expand=True,
+    telemetry = _telemetry_table(
+        (
+            ("Events by source", state.source_counts),
+            ("Categories", categories),
+            ("Log levels", levels),
+            ("Services", services),
+        )
     )
     status_text = Text()
     status_text.append(f"{state.total_bytes:,} bytes ingested. ", style=ACCENT)
@@ -354,4 +358,4 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
         style=MUTED,
     )
     status = Panel(status_text, title="Monitoring status", border_style=SUCCESS)
-    return Group(header, metrics, overview, render_trends(trend, profile.trend_metrics), _alerts_table(state), status)
+    return Group(header, summary, telemetry, render_trends(trend, profile.trend_metrics), _alerts_table(state), status)

@@ -37,9 +37,9 @@ def _header() -> Panel:
     line.append(" // SECURITY OPERATIONS CONSOLE", style="bold white")
     line.append("  v1.6.1", style=MUTED)
     status = Text()
-    status.append("● ENGINE ONLINE", style=f"bold {SUCCESS}")
-    status.append("    ● LOCAL MODE", style=f"bold {ACCENT_SOFT}")
-    status.append("    ○ REMOTE AI OFF BY DEFAULT", style=MUTED)
+    status.append("[+] ENGINE ONLINE", style=f"bold {SUCCESS}")
+    status.append("    [+] LOCAL MODE", style=f"bold {ACCENT_SOFT}")
+    status.append("    [-] REMOTE AI OFF BY DEFAULT", style=MUTED)
     body = Text.assemble(line, "\n", status)
     return Panel(body, border_style=ACCENT_SOFT, padding=(0, 1))
 
@@ -52,7 +52,7 @@ def _menu() -> Table:
     table.add_column(style=MUTED)
 
     def section(label: str) -> None:
-        table.add_row("", Text(f"── {label}", style=f"bold {ACCENT_SOFT}"), "")
+        table.add_row("", Text(f"-- {label}", style=f"bold {ACCENT_SOFT}"), "")
 
     section("OPERATIONS")
     table.add_row("01", "ANALYZE LOG", "Static log investigation")
@@ -115,7 +115,7 @@ def _launch_live_file(path: Path, profile: str) -> None:
     try:
         live_dashboard(path, from_start=True, refresh=1.0, window=500, profile=profile)
     except KeyboardInterrupt:
-        console.print(Text("Live monitoring stopped — returning to the AegisLog menu.", style=SUCCESS))
+        console.print(Text("Live monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
     except Exception as exc:
         _menu_action_error("Real-time file dashboard", exc)
 
@@ -131,7 +131,7 @@ def _launch_live_multi_current(paths: list[Path], profile: str) -> None:
             profile=profile,
         )
     except KeyboardInterrupt:
-        console.print(Text("Multi-source monitoring stopped — returning to the AegisLog menu.", style=SUCCESS))
+        console.print(Text("Multi-source monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
     except Exception as exc:
         _menu_action_error("Multi-source live SOC", exc)
 
@@ -156,7 +156,7 @@ def _native_live_current() -> None:
             profile=profile,
         )
     except KeyboardInterrupt:
-        console.print(Text("Native monitoring stopped — returning to the AegisLog menu.", style=SUCCESS))
+        console.print(Text("Native monitoring stopped - returning to the AegisLog menu.", style=SUCCESS))
     except Exception as exc:
         _menu_action_error("Native real-time monitor", exc)
 
@@ -170,7 +170,7 @@ def start() -> None:
         console.print()
         console.print(Text("Ctrl+C exits a live view and returns here. Remote AI remains opt-in.", style=MUTED))
         try:
-            choice = Prompt.ask(f"[bold {ACCENT}]aegis@console ›[/bold {ACCENT}]", default="1").strip()
+            choice = Prompt.ask(f"[bold {ACCENT}]aegis@console >[/bold {ACCENT}]", default="1").strip()
         except (KeyboardInterrupt, EOFError):
             console.print()
             console.print(Text("AegisLog closed safely.", style=SUCCESS))
@@ -224,7 +224,7 @@ def start() -> None:
                 _run_inline_command(choice)
         except KeyboardInterrupt:
             console.print()
-            console.print(Text("Stopped — returning to the AegisLog menu.", style=WARNING))
+            console.print(Text("Stopped - returning to the AegisLog menu.", style=WARNING))
             continue
 
         _pause_for_menu()
