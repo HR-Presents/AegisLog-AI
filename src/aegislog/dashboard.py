@@ -87,7 +87,7 @@ def _header(data: DashboardData) -> Panel:
     metadata.append("\nEVENTS  ", style=MUTED)
     metadata.append(f"{data.lines:,}", style=ACCENT)
     metadata.append("    STATE  ", style=MUTED)
-    metadata.append(f"● {risk}", style=f"bold {risk_style(risk)}")
+    metadata.append(f"[{risk}]", style=f"bold {risk_style(risk)}")
     return Panel(Text.assemble(title, "\n", metadata), border_style=ACCENT_SOFT, padding=(0, 1))
 
 
@@ -109,7 +109,7 @@ def _posture_table(data: DashboardData) -> Table:
     table.add_column("INCIDENTS", justify="center")
     table.add_column("ANOMALIES", justify="center")
     table.add_row(
-        severity_text(str(data.severities.get("CRITICAL", 0))),
+        Text(str(data.severities.get("CRITICAL", 0)), style="bold bright_red"),
         Text(str(data.severities.get("HIGH", 0)), style="bold bright_red"),
         Text(str(data.severities.get("MEDIUM", 0)), style=f"bold {WARNING}"),
         Text(str(data.severities.get("LOW", 0)), style=f"bold {INFO}"),
@@ -221,7 +221,7 @@ def _telemetry_table(data: DashboardData) -> Table:
 def _next_steps(data: DashboardData) -> Panel:
     command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
     text = Text()
-    text.append("analyst › ", style=f"bold {ACCENT}")
+    text.append("analyst > ", style=f"bold {ACCENT}")
     text.append(f"{command} incidents <file>", style=ACCENT)
     if data.incidents:
         incident_id = f"INC-{data.incidents[0].id.upper()[:8]}"
