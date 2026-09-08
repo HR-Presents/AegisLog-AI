@@ -2,34 +2,52 @@
 
 This guide defines how to capture **real product screenshots** for the AegisLog README from a verified Windows build. It exists to prevent mocked, stale, or misleading screenshots from being published.
 
-## Verified source build
+## Build provenance model
 
-Use the exact Windows artifact produced from commit:
+AegisLog uses two different kinds of Windows build output, and they must not be confused.
 
-```text
-cbbc194490482c1c7c81140ac2fce67ed955c60e
-```
+### PR preview build — temporary CI evidence
 
-Validated GitHub Actions artifact:
+For the current Draft PR, the latest exact-head Windows build validated at the time this guide was updated is:
 
 ```text
-Name: AegisLog-Windows-Single-EXE
-Artifact ID: 10063724053
-Artifact digest: sha256:2982d85450093b7c48f29c44ca9f476c6a93392bfb13e03d7991250d0e5fee49
+Commit: 74e55590da56305056cf984887da3ebd1e799e61
+Workflow: Windows single executable #412
+Artifact name: AegisLog-Windows-Single-EXE
+Artifact ID: 10070978629
+Artifact digest: sha256:e8c1642e30de1b004d774cbb84af273758b6a840fc745e62eb3e008c08d5df8e
 ```
 
-Do not label screenshots from another commit as representing this build.
+This GitHub Actions artifact is **temporary CI evidence**. It expires according to GitHub Actions retention policy and is not the permanent customer download.
+
+Screenshots captured from it may be used only as **validated PR-build previews**. Do not label them as stable-release screenshots.
+
+### Stable release build — permanent customer distribution
+
+After an approved change is merged and a guarded release is published, the canonical customer download is the Windows executable attached to the corresponding **GitHub Release**, together with its SHA-256 checksum.
+
+Release assets are the long-term distribution source. GitHub Actions artifacts are not.
+
+For a stable-release screenshot:
+
+1. Download `AegisLog.exe` from the exact published GitHub Release being represented.
+2. Download its published `AegisLog.exe.sha256` file.
+3. Verify the executable checksum before capture.
+4. Record the release tag and executable SHA-256 with the screenshot commit.
+5. Label the screenshot as a stable-release screenshot only after those checks succeed.
+
+Never imply that a PR artifact is the permanent download source, and never imply that an unreleased PR build is already a stable release.
 
 ## Capture rules
 
-- Use the actual `AegisLog.exe` from the artifact above.
+- Use the actual `AegisLog.exe` from the exact build being represented.
 - Capture on Windows, using a normal terminal window at a readable size.
 - Do not crop away warnings, status lines, source paths, or evidence context in a way that changes meaning.
 - Do not use production logs, credentials, real customer data, private hostnames, private IP addressing, tokens, or personal information.
 - Prefer repository-provided example logs or deliberately synthetic data.
 - Do not manually edit findings, counts, risk state, incidents, evidence, or report text after capture.
 - UI-only cropping is acceptable for framing, but never alter the product output.
-- Record the commit SHA used for each screenshot in the pull request or commit message that adds it.
+- Record the exact commit SHA for PR previews, or the exact release tag and executable SHA-256 for stable-release screenshots.
 
 ## Required screenshot set
 
@@ -140,4 +158,4 @@ Suggested order:
 3. Incident investigation
 4. Executive report
 
-The README should never imply that a screenshot comes from the stable `v1.6.0` release unless it was actually captured from the published `v1.6.0` executable. For PR screenshots, identify them as a preview of the validated PR build until that build is released.
+For PR screenshots, identify them as previews of the validated PR build. For stable-release screenshots, identify the exact release represented. Never relabel a PR preview as a stable-release screenshot merely because the PR was later merged; recapture or verify against the published release asset when release fidelity matters.
