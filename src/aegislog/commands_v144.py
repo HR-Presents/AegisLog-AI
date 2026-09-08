@@ -27,7 +27,7 @@ from .console_pages import commands_reference, system_check
 from .theme import ACCENT, ACCENT_SOFT, HIGH, MUTED, SUCCESS, WARNING
 
 console = Console()
-_NARROW_MENU_BREAKPOINT = 64
+_NARROW_MENU_BREAKPOINT = 72
 
 
 def _frame_width(screen_width: int | None = None) -> int:
@@ -41,16 +41,18 @@ def _header(screen_width: int | None = None) -> Panel:
     frame_width = _frame_width(screen_width)
     title = Text()
     title.append("AEGISLOG", style=f"bold {ACCENT}")
-    title.append(" // SECURITY OPERATIONS CONSOLE", style="bold white")
-    title.append("  v1.6.1", style=MUTED)
+    title.append("  /  SECURITY OPERATIONS", style="bold white")
+    title.append("  /  v1.6.1", style=MUTED)
 
     status = Text()
-    separator = "    " if frame_width >= 76 else "\n"
-    status.append("ENGINE READY", style=f"bold {SUCCESS}")
+    separator = "     " if frame_width >= 84 else "\n"
+    status.append("[ READY ]", style=f"bold {SUCCESS}")
     status.append(separator)
-    status.append("LOCAL ANALYSIS", style=f"bold {ACCENT_SOFT}")
+    status.append("LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
     status.append(separator)
-    status.append("REMOTE AI: EXPLICIT OPT-IN", style=MUTED)
+    status.append("READ-ONLY MONITORING", style=MUTED)
+    status.append(separator)
+    status.append("REMOTE AI: OPT-IN", style=MUTED)
 
     return Panel(
         Text.assemble(title, "\n", status),
@@ -61,7 +63,7 @@ def _header(screen_width: int | None = None) -> Panel:
 
 
 def _menu(screen_width: int | None = None) -> Table:
-    """Render a full-width operator command deck with responsive density."""
+    """Render a full-width command deck without fragile right-edge columns."""
     frame_width = _frame_width(screen_width)
     narrow = frame_width < _NARROW_MENU_BREAKPOINT
     table = Table(
@@ -72,23 +74,22 @@ def _menu(screen_width: int | None = None) -> Table:
         expand=True,
         width=frame_width,
     )
-    table.add_column("KEY" if not narrow else "", max_width=4, justify="right", style=f"bold {ACCENT}", no_wrap=True)
+    table.add_column("KEY" if not narrow else "", width=5, justify="center", style=f"bold {ACCENT}", no_wrap=True)
 
     if narrow:
         table.add_column(ratio=1, overflow="fold")
     else:
-        table.add_column("ACTION", min_width=18, max_width=24, style="bold white", overflow="fold")
-        table.add_column("MISSION", min_width=28, ratio=2, style=MUTED, overflow="fold")
-        table.add_column("MODE", min_width=10, max_width=16, justify="right", style=ACCENT_SOFT, no_wrap=True)
+        table.add_column("ACTION", width=22, style="bold white", no_wrap=True)
+        table.add_column("CAPABILITY", ratio=1, style=MUTED, overflow="fold")
 
     def section(label: str) -> None:
-        heading = Text(f"{label}", style=f"bold {ACCENT_SOFT}")
+        heading = Text(label, style=f"bold {ACCENT_SOFT}")
         if narrow:
             table.add_row("", heading)
         else:
-            table.add_row("", heading, "", "")
+            table.add_row("", heading, "")
 
-    def action(key: str, command: str | Text, description: str, mode: str) -> None:
+    def action(key: str, command: str | Text, description: str) -> None:
         if narrow:
             body = Text()
             if isinstance(command, Text):
@@ -97,25 +98,24 @@ def _menu(screen_width: int | None = None) -> Table:
                 body.append(command, style="bold white")
             body.append("\n")
             body.append(description, style=MUTED)
-            body.append(f"  [{mode}]", style=ACCENT_SOFT)
             table.add_row(key, body)
         else:
-            table.add_row(key, command, description, mode)
+            table.add_row(key, command, description)
 
-    section("OPERATIONS")
-    action("01", "ANALYZE LOG", "Investigate one log with the full defensive dashboard", "STATIC")
-    action("02", "LIVE MONITOR", "Follow a log in real time with profile-focused detections", "LIVE")
-    action("03", "MULTI-SOURCE SOC", "Correlate multiple sources in one live security view", "LIVE SOC")
-    section("INVESTIGATION")
-    action("04", "NATIVE LOGS", "Analyze operating-system or container telemetry", "LOCAL")
-    action("05", "NATIVE MONITOR", "Continuously watch native telemetry read-only", "LIVE")
-    action("06", "INCIDENT INTEL", "Explain a correlated incident and supporting evidence", "LOCAL")
-    section("TOOLS")
-    action("07", "DEMO", "Open the built-in demonstration investigation", "DEMO")
-    action("08", "HEALTH", "Inspect runtime, collectors, profiles, and engine readiness", "STATUS")
-    action("09", "COMMANDS", "Open the complete command reference", "REFERENCE")
-    action("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Run a direct AegisLog CLI command", "ADVANCED")
-    action("Q", Text("EXIT", style=f"bold {HIGH}"), "Close the console safely", "EXIT")
+    section("CORE OPERATIONS")
+    action("01", "ANALYZE LOG", "Deep static investigation of a log file with defensive findings and evidence")
+    action("02", "LIVE MONITOR", "Stream one log source with continuous profile-aware detection")
+    action("03", "MULTI-SOURCE SOC", "Correlate multiple live sources into a unified SOC view")
+    section("INVESTIGATION & TELEMETRY")
+    action("04", "NATIVE LOGS", "Inspect Windows, Linux, or container telemetry using local analysis")
+    action("05", "NATIVE MONITOR", "Continuously watch supported native telemetry in read-only mode")
+    action("06", "INCIDENT INTEL", "Reconstruct a correlated incident, evidence chain, and investigation context")
+    section("SYSTEM & TOOLS")
+    action("07", "DEMO", "Launch the built-in investigation dataset and explore the analysis workflow")
+    action("08", "HEALTH", "Inspect engine readiness, collectors, profiles, runtime, and local capabilities")
+    action("09", "COMMANDS", "Browse the complete AegisLog command surface and usage reference")
+    action("C", Text("COMMAND MODE", style=f"bold {ACCENT}"), "Enter the advanced direct-command interface")
+    action("Q", Text("EXIT", style=f"bold {HIGH}"), "Close AegisLog safely")
     return table
 
 
@@ -124,7 +124,7 @@ def _home(screen_width: int | None = None) -> RenderableType:
     frame_width = _frame_width(screen_width)
     menu_panel = Panel(
         _menu(screen_width),
-        title=Text("OPERATOR COMMAND DECK", style=f"bold {ACCENT}"),
+        title=Text("MISSION CONTROL", style=f"bold {ACCENT}"),
         title_align="left",
         border_style=ACCENT_SOFT,
         padding=(1, 1),
@@ -132,11 +132,11 @@ def _home(screen_width: int | None = None) -> RenderableType:
     )
     footer = Text()
     footer.append("CTRL+C", style=f"bold {ACCENT_SOFT}")
-    footer.append(" stop live view   ", style=MUTED)
-    footer.append("LOCAL-FIRST", style=f"bold {SUCCESS}")
-    footer.append(" analysis   ", style=MUTED)
-    footer.append("REMOTE AI", style=f"bold {ACCENT_SOFT}")
-    footer.append(" explicit opt-in", style=MUTED)
+    footer.append("  stop live view     ", style=MUTED)
+    footer.append("LOCAL", style=f"bold {SUCCESS}")
+    footer.append("  analysis default     ", style=MUTED)
+    footer.append("AI", style=f"bold {ACCENT_SOFT}")
+    footer.append("  explicit opt-in only", style=MUTED)
     return Group(_header(screen_width), Text(""), menu_panel, Text(""), footer)
 
 
