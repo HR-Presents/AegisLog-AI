@@ -35,7 +35,7 @@ def incident_triage_panel(incident: InvestigationIncident) -> RenderableType:
     metrics.add_row("Associated entities", str(len(incident.entities)))
 
     if incident.entities:
-        next_step = "Validate associated entities against nearby identity, host, network, or application telemetry."
+        next_step = "Validate the associated entities against nearby identity, host, network, or application telemetry."
     elif incident.timeline:
         next_step = "Validate the reconstructed event sequence against surrounding source telemetry."
     else:
