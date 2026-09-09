@@ -22,7 +22,7 @@ def incident_triage_panel(incident: InvestigationIncident) -> RenderableType:
     """Summarize triage with a flat evidence-first layout."""
     priority, style = triage_priority(incident)
 
-    heading = Text("TRIAGE", style=f"bold {MUTED}")
+    heading = Text("Analyst triage", style=f"bold {MUTED}")
     priority_line = Text()
     priority_line.append(priority, style=f"bold {style}")
     priority_line.append(f"   confidence {incident.confidence}%", style=MUTED)
