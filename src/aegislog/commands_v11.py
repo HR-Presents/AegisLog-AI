@@ -17,6 +17,25 @@ from .ui import bounded
 console = Console()
 
 
+def _report_ready_panel(report_path: Path) -> Panel:
+    """Render a concise, operator-focused handoff after report generation."""
+    body = Text()
+    body.append("LOCATION  ", style=MUTED)
+    body.append(str(report_path), style=f"bold {ACCENT}")
+    body.append("\nSTATUS    ", style=MUTED)
+    body.append("Generated locally / source unchanged", style=SUCCESS)
+    body.append("\nNEXT      ", style=MUTED)
+    body.append("Open in a browser to review, print, or save as PDF.", style="white")
+    return Panel(
+        body,
+        title=Text(" REPORT READY ", style=f"bold {SUCCESS}"),
+        title_align="left",
+        border_style=SUCCESS,
+        padding=(1, 2),
+        expand=True,
+    )
+
+
 def dashboard(
     path: Path = typer.Argument(..., exists=True, dir_okay=False),
     timestamp_year: int | None = typer.Option(
@@ -44,21 +63,7 @@ def dashboard(
         console.print(Text(f"Report could not be written: {exc}", style=WARNING))
     else:
         console.print()
-        report_body = Text()
-        report_body.append("HTML REPORT", style=f"bold {SUCCESS}")
-        report_body.append("  generated locally\n", style=MUTED)
-        report_body.append(str(report_path), style=ACCENT)
-        report_body.append("\n\nOpen it in a browser to review, print, or save as PDF.", style=MUTED)
-        console.print(
-            Panel(
-                report_body,
-                title=Text(" REPORT READY ", style=f"bold {SUCCESS}"),
-                title_align="left",
-                border_style=SUCCESS,
-                padding=(1, 2),
-                expand=True,
-            )
-        )
+        console.print(_report_ready_panel(report_path))
 
 
 def analyze_dashboard_command(
