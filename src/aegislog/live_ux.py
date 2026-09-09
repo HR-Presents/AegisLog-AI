@@ -3,11 +3,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from rich.console import Group, RenderableType
-from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
+from .theme import ACCENT, MUTED, NEUTRAL, SUCCESS, WARNING
 from .ui import bounded
 
 
@@ -21,18 +20,19 @@ def live_startup_panel(
     refresh: float,
     extra: str = "",
 ) -> RenderableType:
-    """Render one compact operator card before a live monitor takes over the terminal."""
+    """Render a calm live-session summary before monitoring takes over."""
     source_list = tuple(str(source) for source in sources)
 
     heading = Text()
-    heading.append("AEGISLOG", style=f"bold {ACCENT}")
-    heading.append(" // ", style=MUTED)
-    heading.append(title, style="bold white")
-    heading.append("\nREAD-ONLY LIVE SESSION", style=f"bold {SUCCESS}")
+    heading.append("AEGISLOG", style=f"bold {NEUTRAL}")
+    heading.append(" / ", style=MUTED)
+    heading.append(title.upper(), style=f"bold {ACCENT}")
+    status = Text("● LIVE", style=f"bold {SUCCESS}")
+    status.append("   READ-ONLY SESSION", style=MUTED)
 
-    summary = Table.grid(expand=True, padding=(0, 1))
+    summary = Table.grid(expand=True, padding=(0, 2))
     summary.add_column(style=MUTED, min_width=10, max_width=16)
-    summary.add_column(style="white", ratio=1, overflow="fold")
+    summary.add_column(style=NEUTRAL, ratio=1, overflow="fold")
     summary.add_row("Profile", Text(profile, style=f"bold {ACCENT}"))
     summary.add_row("Mode", mode)
     summary.add_row("Window", f"{window:,} lines")
@@ -40,44 +40,46 @@ def live_startup_panel(
     if extra:
         summary.add_row("Collector", extra)
 
-    targets = Table(show_header=False, box=None, padding=(0, 1), expand=True)
+    targets = Table(show_header=False, box=None, padding=(0, 2), expand=True)
     targets.add_column("#", justify="right", min_width=2, max_width=4, style=ACCENT)
     targets.add_column("Target", ratio=1, overflow="fold")
     for index, source in enumerate(source_list, start=1):
-        targets.add_row(str(index), Text(source))
+        targets.add_row(str(index), Text(source, style=NEUTRAL))
 
-    guidance = Text("Live analysis is read-only. ", style=f"bold {SUCCESS}")
-    guidance.append("Ctrl+C stops safely; no source data or host configuration is modified.", style=MUTED)
+    guidance = Text("Ctrl+C stops safely. ", style=MUTED)
+    guidance.append("Source data and host configuration are never modified.", style=MUTED)
 
-    body = Group(
-        heading,
-        Text(""),
-        summary,
-        Text("\nMONITORING TARGETS", style=f"bold {ACCENT_SOFT}"),
-        targets,
-        Text(""),
-        guidance,
+    return bounded(
+        Group(
+            heading,
+            Text("─" * 48, style="grey35"),
+            status,
+            Text(""),
+            summary,
+            Text("\nMONITORING TARGETS", style=f"bold {MUTED}"),
+            targets,
+            Text(""),
+            guidance,
+        )
     )
-    return bounded(Panel(body, border_style=ACCENT, padding=(1, 1)))
 
 
 def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
     message = prefix or f"Initial {kind} scan complete."
     status = Text(f"{message} ", style=f"bold {SUCCESS}")
-    status.append("Live monitoring remains active and will refresh when new telemetry arrives.", style=MUTED)
+    status.append("Monitoring remains active and refreshes when new telemetry arrives.", style=MUTED)
     return status
 
 
 def live_source_status(source: str, *, available: bool) -> Text:
-    """Render a one-line source transition without implying host modification."""
     if available:
-        status = Text("Source recovered: ", style=f"bold {SUCCESS}")
-        status.append(source, style="white")
-        status.append(". Monitoring resumed automatically from the safe cursor.", style=MUTED)
+        status = Text("● Source recovered  ", style=f"bold {SUCCESS}")
+        status.append(source, style=NEUTRAL)
+        status.append("  monitoring resumed from the safe cursor", style=MUTED)
         return status
-    status = Text("Source temporarily unavailable: ", style=f"bold {WARNING}")
-    status.append(source, style="white")
-    status.append(". Retaining the current dashboard; retry read-only polling.", style=MUTED)
+    status = Text("● Source unavailable  ", style=f"bold {WARNING}")
+    status.append(source, style=NEUTRAL)
+    status.append("  retaining dashboard and retrying read-only polling", style=MUTED)
     return status
 
 
