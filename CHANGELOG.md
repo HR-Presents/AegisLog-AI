@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added the optional AI Analyst workflow to Mission Control and the CLI with `local`, Ollama, and explicitly opted-in OpenAI-compatible provider modes while keeping deterministic local detection authoritative.
 - Refined the terminal UI across Mission Control, source selection, analysis completion, report handoff, System Health, Command Reference, and responsive narrow-terminal layouts.
 - Standardized shared console hierarchy and restrained the terminal color palette so elevated severity states carry more visual weight than structural chrome.
 - Added focused regression coverage for terminal layout resilience, source-input hierarchy, analysis completion state, shared page chrome, and responsive system pages.
