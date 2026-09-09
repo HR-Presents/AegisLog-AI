@@ -55,17 +55,16 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
     for text in (
         "Security Investigation Report",
         "Investigation record",
-        "Case reference",
-        "Executive brief / page 1",
-        "Executive Summary",
+        "Case ID",
+        "Executive summary",
+        "What needs attention",
         "Assessment",
         "Disposition",
         "IMMEDIATE REVIEW",
         "Repeated &lt;script&gt;alert(1)&lt;/script&gt; failures",
-        "Primary analyst decision",
-        "Recommended Triage",
+        "Recommended triage",
         "Incident Queue",
-        "Findings and Recommendations",
+        "Findings",
         "Anomaly Signals",
         "Observed Distribution",
         "Analysis Profile",
@@ -86,9 +85,9 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
     ):
         assert anchor in html
 
-    assert 'id="triage"' in html
+    assert 'class="telemetry-grid"' in html
     assert "@media print" in html
-    assert "#executive { break-after: page; }" in html
+    assert "break-inside:avoid" in html
     assert "window.print()" in html
     assert 'src="http://' not in html
     assert 'src="https://' not in html
@@ -164,7 +163,7 @@ def test_incident_only_report_keeps_high_posture_and_primary_incident() -> None:
     assert "IMMEDIATE REVIEW" in html
     assert "INC-DEADBEEF" in html
     assert "Correlated authentication activity" in html
-    assert "Review INC-DEADBEEF" in html
+    assert "Validate the grouped evidence" in html
     assert "No elevated rule-backed finding requires immediate action" not in html
 
 
