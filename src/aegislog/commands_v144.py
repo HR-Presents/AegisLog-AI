@@ -107,13 +107,20 @@ def _input_panel(
     accent: str = ACCENT,
     *,
     screen_width: int | None = None,
+    primary_label: str | None = None,
 ) -> Panel:
     frame_width = _frame_width(screen_width)
     grid = Table.grid(expand=True, padding=(0, 1))
     grid.add_column(width=11 if frame_width < 60 else 14, no_wrap=True)
     grid.add_column(ratio=1, overflow="fold")
     for label, value in lines:
-        grid.add_row(Text(label, style=f"bold {accent}"), Text(value, style=MUTED))
+        if primary_label is not None and label == primary_label:
+            grid.add_row(
+                Text(f"▶ {label}", style=f"bold {accent}"),
+                Text(value, style="bold white"),
+            )
+        else:
+            grid.add_row(Text(label, style=MUTED), Text(value, style=MUTED))
     return Panel(
         grid,
         title=Text(f" {title} ", style=f"bold {accent}"),
@@ -267,6 +274,7 @@ def _choose_single_file_workspace(
                     ("OUTPUT", output_note),
                 ],
                 accent,
+                primary_label="INPUT",
             )
         )
         console.print()
@@ -305,6 +313,7 @@ def _choose_multisource_files() -> list[Path]:
                     ("BACK", "Type back to cancel"),
                 ],
                 INCIDENT,
+                primary_label="INPUT",
             )
         )
         console.print()
