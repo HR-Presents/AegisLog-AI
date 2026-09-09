@@ -38,9 +38,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Fail-closed release preflight
-        env:
-          SIGNING_CERT_THUMBPRINT: ${{ secrets.WINDOWS_SIGNING_CERT_THUMBPRINT }}
-          SIGNING_TIMESTAMP_URL: ${{ vars.WINDOWS_SIGNING_TIMESTAMP_URL }}
         shell: bash
         run: |
           set -euo pipefail
@@ -51,8 +48,6 @@ jobs:
             --release-tag "$RELEASE_TAG" \
             --release-version "$RELEASE_VERSION" \
             --confirmation "${{ inputs.confirmation }}" \
-            --signing-thumbprint "$SIGNING_CERT_THUMBPRINT" \
-            --timestamp-url "$SIGNING_TIMESTAMP_URL" \
             --external-evidence evaluation/external-release-evidence.json
       - name: Verify version metadata
         shell: bash
@@ -131,46 +126,7 @@ jobs:
           .\dist\AegisLog.exe explain --help
           .\dist\AegisLog.exe mitre --help
           .\dist\AegisLog.exe intel-entities --help
-      - name: Sign executable with approved release identity
-        env:
-          SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
-          SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
-          SIGNING_CERT_THUMBPRINT: ${{ secrets.WINDOWS_SIGNING_CERT_THUMBPRINT }}
-          SIGNING_TIMESTAMP_URL: ${{ vars.WINDOWS_SIGNING_TIMESTAMP_URL }}
-        shell: pwsh
-        run: |
-          $required = @{
-            WINDOWS_SIGNING_PFX_BASE64 = $env:SIGNING_PFX_BASE64
-            WINDOWS_SIGNING_PFX_PASSWORD = $env:SIGNING_PFX_PASSWORD
-            WINDOWS_SIGNING_CERT_THUMBPRINT = $env:SIGNING_CERT_THUMBPRINT
-            WINDOWS_SIGNING_TIMESTAMP_URL = $env:SIGNING_TIMESTAMP_URL
-          }
-          foreach ($item in $required.GetEnumerator()) {
-            if ([string]::IsNullOrWhiteSpace($item.Value)) {
-              throw "Required release signing configuration is missing: $($item.Key)"
-            }
-          }
-
-          $pfxPath = Join-Path $env:RUNNER_TEMP "aegislog-release-signing.pfx"
-          try {
-            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
-            ./packaging/sign_windows.ps1 `
-              -Path "dist\AegisLog.exe" `
-              -PfxPath $pfxPath `
-              -PfxPassword $env:SIGNING_PFX_PASSWORD `
-              -ExpectedThumbprint $env:SIGNING_CERT_THUMBPRINT `
-              -TimestampUrl $env:SIGNING_TIMESTAMP_URL
-            ./packaging/verify_authenticode.ps1 `
-              -Path "dist\AegisLog.exe" `
-              -ExpectedThumbprint $env:SIGNING_CERT_THUMBPRINT `
-              -RequireTimestamp
-          }
-          finally {
-            if (Test-Path -LiteralPath $pfxPath) {
-              Remove-Item -LiteralPath $pfxPath -Force
-            }
-          }
-      - name: Stage release assets
+      - name: Stage unsigned release assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "release-assets" | Out-Null
