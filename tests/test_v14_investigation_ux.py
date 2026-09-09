@@ -12,7 +12,16 @@ def test_dashboard_surfaces_incident_id_and_real_commands() -> None:
         lines=1,
         findings=(),
         anomalies=(),
-        incidents=(Incident(id="abcdef123456", category="authentication", severity="HIGH", count=2, title="Possible brute-force activity", evidence=()),),
+        incidents=(
+            Incident(
+                id="abcdef123456",
+                category="authentication",
+                severity="HIGH",
+                count=2,
+                title="Possible brute-force activity",
+                evidence=(),
+            ),
+        ),
         levels={"ERROR": 1},
         services={"sshd": 1},
         categories={},
@@ -22,8 +31,14 @@ def test_dashboard_surfaces_incident_id_and_real_commands() -> None:
     console.print(render_dashboard(data))
     output = console.export_text()
 
-    assert "INC-ABCDEF12" in output
-    assert "incidents <file>" in output
-    assert "investigate <file> INC-ABCDEF12" in output
-    assert "explain <file> INC-ABCDEF12" in output
+    focus = output[output.index("ANALYST FOCUS") : output.index("ACTIVE INCIDENTS")]
+    assert "INC-ABCDEF12" in focus
+    assert "PRIMARY" in focus
+    assert "Review the correlated evidence chain" in focus
+    assert "No elevated rule-backed findings" not in focus
+
+    assert "incidents sample.log" in output
+    assert "investigate sample.log INC-ABCDEF12" in output
+    assert "explain sample.log INC-ABCDEF12" in output
+    assert "<file>" not in output
     assert " incident`" not in output

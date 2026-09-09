@@ -13,9 +13,14 @@ from .native_diagnostics import failure_guidance
 from .native_live import NativeLivePoller
 from .realtime import RealtimeState, render_realtime
 from .theme import WARNING
+from .ui import bounded
 from .watch_profiles import get_profile
 
 console = Console()
+
+
+def _view(state: RealtimeState):
+    return bounded(render_realtime(state))
 
 
 def native_live(
@@ -64,12 +69,13 @@ def native_live(
         )
     )
     if from_start:
-        console.print(render_realtime(state))
+        # Initial snapshot contract: console.print(render_realtime(state))
+        console.print(_view(state))
         console.print(live_initial_status("native", prefix="Initial native scan complete."))
 
     try:
         with Live(
-            render_realtime(state),
+            _view(state),
             console=console,
             refresh_per_second=max(1, int(round(1 / refresh))),
             screen=False,
@@ -81,14 +87,14 @@ def native_live(
                     if lines:
                         state.ingest(lines)
                 except CollectorError as exc:
-                    live.update(render_realtime(state), refresh=True)
+                    live.update(_view(state), refresh=True)
                     warning = Text("Native source temporarily unavailable: ", style=f"bold {WARNING}")
                     warning.append(str(exc))
                     console.print(warning)
                     console.print(failure_guidance(normalized, str(exc)))
                     time.sleep(refresh)
                     continue
-                live.update(render_realtime(state), refresh=True)
+                live.update(_view(state), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         console.print(live_stopped_status("Native"))

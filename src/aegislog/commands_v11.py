@@ -4,10 +4,15 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.text import Text
 
 from .dashboard import analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
+from .reporting import write_html_report
+from .theme import ACCENT, MUTED, SUCCESS, WARNING
+from .ui import bounded
 
 console = Console()
 
@@ -32,7 +37,28 @@ def dashboard(
         task = progress.add_task(f"Analyzing {path.name}...", total=None)
         data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
         progress.update(task, description="Building terminal dashboard...")
-    console.print(render_dashboard(data))
+    console.print(bounded(render_dashboard(data)))
+    try:
+        report_path = write_html_report(data)
+    except OSError as exc:
+        console.print(Text(f"Report could not be written: {exc}", style=WARNING))
+    else:
+        console.print()
+        report_body = Text()
+        report_body.append("HTML REPORT", style=f"bold {SUCCESS}")
+        report_body.append("  generated locally\n", style=MUTED)
+        report_body.append(str(report_path), style=ACCENT)
+        report_body.append("\n\nOpen it in a browser to review, print, or save as PDF.", style=MUTED)
+        console.print(
+            Panel(
+                report_body,
+                title=Text(" REPORT READY ", style=f"bold {SUCCESS}"),
+                title_align="left",
+                border_style=SUCCESS,
+                padding=(1, 2),
+                expand=True,
+            )
+        )
 
 
 def analyze_dashboard_command(
@@ -57,7 +83,10 @@ def analyze_dashboard_command(
         if errors:
             console.print(f"Rule-pack warnings: {len(errors)}. Run `aegislog plugins` for details.")
         if custom:
-            console.print(f"Additional local rule-pack findings: {len(custom)}. Run `aegislog plugins` to inspect installed packs.")
+            console.print(
+                f"Additional local rule-pack findings: {len(custom)}. "
+                "Run `aegislog plugins` to inspect installed packs."
+            )
 
 
 def replace_analyze_command(app: typer.Typer) -> None:

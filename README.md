@@ -1,17 +1,26 @@
 <div align="center">
 
-# AegisLog AI
+<img src="docs/assets/aegislog-logo.svg" alt="AegisLog — local-first security log analysis" width="720" />
 
 ### Terminal-first defensive security for local log analysis, live monitoring, and incident investigation
 
 [![CI](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/ci.yml)
 [![Security](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml)
 [![Latest release](https://img.shields.io/github/v/release/HR-Presents/AegisLog-AI?display_name=tag&style=flat-square)](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/HR-Presents/AegisLog-AI?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/HR-Presents/AegisLog-AI?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/forks)
+[![Release downloads](https://img.shields.io/github/downloads/HR-Presents/AegisLog-AI/total?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 **Stable release: v1.6.0**
 
-[Download AegisLog.exe](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0) · [Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Release Notes](docs/RELEASE_V1.6.0.md)
+### [Download AegisLog for Windows](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0)
+
+**One standalone EXE · Local-first · Read-only · No Python required for normal Windows use**
+
+[Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Community Reviews](docs/COMMUNITY_REVIEWS.md) · [Leave a Review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) · [Release Notes](docs/RELEASE_V1.6.0.md)
+
+**Used AegisLog?** Star the repository if it helped you, and leave a public review so maintainers and future users can learn from your experience.
 
 </div>
 
@@ -26,6 +35,26 @@ It turns authentication, Linux, Windows Event Log, web, Docker, system, and appl
 The core workflow is deterministic and read-only. AegisLog does not automatically remediate hosts, change firewall rules, modify accounts or services, deploy persistence, evade controls, or perform exploitation.
 
 > **Windows users:** the recommended distribution is a standalone `AegisLog.exe`. Normal use does not require Python, a virtual environment, a requirements file, an installer, or a support folder.
+
+---
+
+## Product at a glance
+
+| | |
+|---|---|
+| **Primary use** | Defensive log analysis and incident investigation |
+| **Windows delivery** | Single standalone `AegisLog.exe` |
+| **Core processing** | Local-first and deterministic |
+| **Host behavior** | Read-only analysis; no automatic remediation |
+| **Reports** | Analyst-oriented HTML / Save-to-PDF investigation report |
+| **Remote AI** | Optional; not required for the core workflow |
+| **Public feedback** | GitHub User Review form with optional README testimonial permission |
+
+### See AegisLog in action
+
+AegisLog's current UI is a terminal-first SOC investigation experience with **Mission Control**, **Analyst Focus**, correlated incident prioritization, bounded evidence previews, copy-ready follow-up commands, and an executive-first investigation report.
+
+> **Verified screenshots in progress:** PR preview screenshots will be captured from the CI-validated Windows build at commit `7b5269e8990fcd3743f28bfaea720dfd00828060`, not from mockups. Its GitHub Actions artifact is temporary validation evidence, not the permanent customer download. Stable customer downloads remain the GitHub Release assets linked above. The reproducible capture, provenance, release-channel, and sanitization contract is documented in [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md). Until real captures are committed, this README intentionally does not display simulated product images.
 
 ---
 
@@ -74,7 +103,7 @@ The executable is currently unsigned, so Windows SmartScreen or endpoint-securit
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 pip install -e .
 aegislog doctor
 aegislog dashboard examples/auth.log
@@ -95,17 +124,17 @@ From there you can move into file analysis, live dashboards, multi-source monito
 Useful Windows commands:
 
 ```text
-AegisLog.exe dashboard C:\path\to\auth.log
-AegisLog.exe live C:\path\to\auth.log --profile security
-AegisLog.exe live-multi C:\logs\auth.log C:\logs\web.log --profile authentication
+AegisLog.exe dashboard C:\\path\\to\\auth.log
+AegisLog.exe live C:\\path\\to\\auth.log --profile security
+AegisLog.exe live-multi C:\\logs\\auth.log C:\\logs\\web.log --profile authentication
 AegisLog.exe native-sources
 AegisLog.exe native-analyze windows --channel Security
 AegisLog.exe native-live windows --channel Security --profile security
-AegisLog.exe incidents C:\path\to\auth.log
-AegisLog.exe investigate C:\path\to\auth.log <incident-id>
-AegisLog.exe explain C:\path\to\auth.log <incident-id>
-AegisLog.exe intel-entities C:\path\to\auth.log
-AegisLog.exe mitre C:\path\to\auth.log
+AegisLog.exe incidents C:\\path\\to\\auth.log
+AegisLog.exe investigate C:\\path\\to\\auth.log <incident-id>
+AegisLog.exe explain C:\\path\\to\\auth.log <incident-id>
+AegisLog.exe intel-entities C:\\path\\to\\auth.log
+AegisLog.exe mitre C:\\path\\to\\auth.log
 AegisLog.exe case-history
 ```
 
@@ -248,6 +277,33 @@ See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for the provider model and da
 
 ---
 
+## Community feedback and public reviews
+
+AegisLog does **not** phone home or identify who runs the application. Local usage remains private unless a user deliberately chooses to interact with the project on GitHub.
+
+Public GitHub activity provides transparent community signals:
+
+- **Stars** show GitHub accounts that chose to star the repository.
+- **Forks** show public forks and experimentation.
+- **Issues and reviews** show feedback submitted by users.
+- **Pull requests and commits** record public contributions to the project.
+
+After trying AegisLog, please [leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml). The structured review asks for a rating, recommendation, version/environment, workflows used, what worked well, what should improve, and an optional short testimonial.
+
+Read the [Community Reviews policy and index](docs/COMMUNITY_REVIEWS.md) for how public testimonials are handled. Testimonials are only featured with explicit permission and are attributed to the reviewer's public GitHub username. AegisLog does not fabricate reviews or hide legitimate criticism.
+
+Please sanitize everything before posting. Never include credentials, tokens, real production logs, personal data, private hostnames, or customer information in a public review.
+
+If AegisLog was useful, starring the repository is also a simple way to support the project and make public interest visible on GitHub.
+
+### Featured community reviews
+
+_No testimonials have been featured yet. This section will only contain quotes from real public reviews whose authors explicitly allowed README attribution._
+
+[Leave the first public review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) · [Review policy](docs/COMMUNITY_REVIEWS.md)
+
+---
+
 ## Security model
 
 AegisLog is defensive tooling.
@@ -273,7 +329,7 @@ To report a vulnerability, use the private reporting path described in `SECURITY
 git clone https://github.com/HR-Presents/AegisLog-AI.git
 cd AegisLog-AI
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 pip install -e '.[dev]'
 
 aegislog doctor
@@ -320,6 +376,8 @@ See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific deta
 - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — performance and bounded-state notes
 - [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) — current project status
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — maintenance and future-direction notes
+- [`docs/COMMUNITY_REVIEWS.md`](docs/COMMUNITY_REVIEWS.md) — public review and testimonial policy
+- [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md) — verified Windows screenshot capture and sanitization contract
 - [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) — stable release notes
 
 ---
@@ -327,6 +385,8 @@ See [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md) for release-specific deta
 ## Contributing and support
 
 - Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
+- Read [`SUPPORT.md`](SUPPORT.md) for the public support and reporting paths.
+- Used AegisLog? [Leave a public user review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml).
 - Use the bug-report issue template with sanitized logs and reproducible steps.
 - Feature requests should stay within the defensive, local-first scope.
 - Check the FAQ and troubleshooting guide before opening a support issue.

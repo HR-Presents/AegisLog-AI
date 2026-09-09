@@ -86,19 +86,10 @@ class TrendTracker:
             return
         if self._events and self._events[-1][0] == stamp:
             previous = self._events.pop()
-            self._events.append(
-                (
-                    stamp,
-                    previous[1] + failed,
-                    previous[2] + errors,
-                    previous[3] + firewall,
-                )
-            )
+            self._events.append((stamp, previous[1] + failed, previous[2] + errors, previous[3] + firewall))
         else:
             self._events.append((stamp, failed, errors, firewall))
 
-        # Under normal live polling this stays near window_seconds / refresh.
-        # The hard ceiling protects callers that ingest at unusually high frequency.
         while len(self._events) > self.max_buckets:
             oldest = self._events.popleft()
             if not self._events:
@@ -186,13 +177,13 @@ def _state_style(state: str) -> str:
 
 
 def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None = None) -> Table:
-    title = f"Rate & baseline intelligence ({snapshot.window_seconds}s window)"
-    table = Table(title=title, expand=True, border_style=ACCENT)
-    table.add_column("Signal", width=20, style=ACCENT)
-    table.add_column("Current/min", justify="right", width=12, style=INFO)
-    table.add_column("Baseline/min", justify="right", width=12)
-    table.add_column("Deviation", justify="right", width=11)
-    table.add_column("State", width=10)
+    title = f"RATE & BASELINE INTELLIGENCE  [{snapshot.window_seconds}s]"
+    table = Table(title=title, expand=True, border_style=ACCENT, padding=(0, 1))
+    table.add_column("Signal", min_width=10, ratio=3, style=ACCENT, overflow="fold")
+    table.add_column("Current", min_width=7, max_width=10, justify="right", style=INFO, no_wrap=True)
+    table.add_column("Baseline", min_width=7, max_width=10, justify="right", no_wrap=True)
+    table.add_column("Delta", min_width=6, max_width=8, justify="right", no_wrap=True)
+    table.add_column("State", min_width=7, max_width=9, no_wrap=True)
     allowed = set(metric_names or ())
     metrics = [metric for metric in snapshot.metrics if not allowed or metric.name in allowed]
     for metric in metrics:
@@ -200,11 +191,11 @@ def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None 
         state_style = _state_style(metric.state)
         table.add_row(
             Text(metric.name),
-            Text(f"{metric.current_per_minute:.1f}", style=state_style if metric.state != "NORMAL" else INFO),
-            f"{metric.baseline_per_minute:.1f}",
+            Text(f"{metric.current_per_minute:.1f}/m", style=state_style if metric.state != "NORMAL" else INFO),
+            f"{metric.baseline_per_minute:.1f}/m",
             Text(ratio, style=state_style if metric.state != "NORMAL" else "dim"),
             Text(metric.state, style=state_style),
         )
     if not metrics:
-        table.add_row("No profile metrics", "0.0", "0.0", "1.0x", Text("NORMAL", style=SUCCESS))
+        table.add_row("No profile metrics", "0.0/m", "0.0/m", "1.0x", Text("NORMAL", style=SUCCESS))
     return table

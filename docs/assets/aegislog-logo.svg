@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-labelledby="title desc">
+  <title id="title">AegisLog</title>
+  <desc id="desc">AegisLog shield mark and wordmark</desc>
+  <rect width="720" height="180" rx="24" fill="#0b1220"/>
+  <g transform="translate(42 25)">
+    <path d="M65 2 118 22v38c0 35-21 57-53 70C33 117 12 95 12 60V22L65 2Z" fill="#111c30" stroke="#38bdf8" stroke-width="6"/>
+    <path d="M65 25 96 99H82L74 79H55l-8 20H33L65 25Zm0 25-6 16h12l-6-16Z" fill="#e6f6ff"/>
+    <circle cx="65" cy="112" r="5" fill="#38bdf8"/>
+  </g>
+  <text x="190" y="92" fill="#f8fafc" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="700" letter-spacing="2">AEGIS<tspan fill="#38bdf8">LOG</tspan></text>
+  <text x="194" y="126" fill="#94a3b8" font-family="Arial, Helvetica, sans-serif" font-size="17" letter-spacing="4">LOCAL-FIRST SECURITY LOG ANALYSIS</text>
+</svg>

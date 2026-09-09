@@ -87,7 +87,7 @@ def test_generator_derives_metrics_hash_and_preflight_compatible_schema(tmp_path
 
     evidence_path = tmp_path / "evidence.json"
     evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
-    assert validate_external_evidence(evidence_path, COMMIT)["dataset_sha256"] == evidence["dataset_sha256"]
+    assert validate_external_evidence(evidence_path)["dataset_sha256"] == evidence["dataset_sha256"]
 
 
 def test_generator_requires_explicit_independent_labeling_and_sanitization(tmp_path):
