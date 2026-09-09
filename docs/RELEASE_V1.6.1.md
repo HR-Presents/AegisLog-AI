@@ -1,57 +1,105 @@
 # AegisLog AI v1.6.1
 
-AegisLog AI v1.6.1 is the hardened follow-up to the existing public v1.6.0 release. It preserves the local-first, read-only defensive model while adding production hardening, privacy controls, deterministic release gates, external-evidence requirements, and the polished terminal experience now present on `main`.
+AegisLog AI v1.6.1 is a production-hardening release focused on reliable defensive log analysis, safer investigation workflows, privacy, deterministic validation, and a polished terminal-first experience.
 
-> **Release status:** v1.6.1 is not published yet. The current public stable release remains v1.6.0.
+AegisLog remains **local-first, read-only, and defensive by design**.
+
+> **Release status:** v1.6.1 was published on September 9, 2026 from commit `f5a2eaf23893cf3cb40f93c55f642e8caab446f0`.
 
 ## Highlights
 
-- Conservative analyst triage based on existing severity, confidence, timeline, and entity evidence.
-- Improved Windows Event Log, journald, and Docker diagnostics with clearer unsupported-versus-unavailable states.
-- Safer single-file and multi-source live monitoring during temporary source loss and recovery.
-- Bounded long-running multi-source state for sustained monitoring workloads.
-- Responsive, full-width terminal UX with clearer Mission Control, source input, analysis-completion, report-handoff, health, command-reference, and narrow-terminal presentation.
-- Deterministic local analysis remains the primary workflow. Findings, anomalies, incident priorities, confidence values, and ATT&CK mappings are investigative signals rather than proof of compromise or attribution.
-- Remote AI remains optional and explicitly opt-in; core analysis does not require an external AI service.
-- External release evidence must come from a real, authorized, sanitized, independently labeled dataset and be bound to the exact code commit evaluated for the release.
+- Improved authentication-event analysis and correlation.
+- More reliable streaming analysis with bounded long-running state.
+- Improved Windows Event Log, journald, Docker, and multi-source diagnostics.
+- Conservative analyst triage based on severity, confidence, timeline, and entity evidence.
+- Responsive terminal experience with improved Mission Control, source input, investigation dashboards, system pages, and report handoff.
+- Deterministic local analysis remains the primary detection workflow.
+- Optional AI Analyst assistance for investigation context and explanation.
+- Remote AI remains explicitly opt-in; core analysis does not require an external AI provider.
+- Stronger automated release validation, dependency lock auditing, security checks, packaging checks, and Windows executable smoke testing.
 
-## Distribution
+## Windows download
 
-The intended GitHub Release contains exactly:
+The v1.6.1 GitHub Release contains exactly:
 
 ```text
 AegisLog.exe
 AegisLog.exe.sha256
 ```
 
-The Windows executable is built as a standalone one-file application. Normal customer use does not require a separate Python installation or virtual environment.
+`AegisLog.exe` is a standalone one-file Windows application. Normal use does not require a separate Python installation or virtual environment.
 
-The current v1.6.1 release workflow stages an **unsigned** executable, verifies the published SHA-256 checksum, creates build provenance attestation, and refuses to reuse an existing `v1.6.1` tag or GitHub Release. Windows SmartScreen or endpoint-security reputation warnings may therefore occur.
+Published executable SHA-256:
 
-Windows Authenticode signing is **not a mandatory v1.6.1 publication gate**. Signing may be introduced separately in the future, but release readiness must not be represented as blocked merely because signing material is absent.
+```text
+ceca4893de78271514d3ea07c7b2d6709b95d53ff2834c24e49e0e1ebda16546
+```
+
+Verify the executable against the accompanying `AegisLog.exe.sha256` file before running it.
+
+## Release verification
+
+The v1.6.1 release pipeline successfully completed:
+
+- release preflight validation;
+- version and release-state validation;
+- automated tests and linting;
+- security checks and dependency auditing;
+- runtime, build, and validation toolchain lock audits;
+- synthetic detection regression evaluation;
+- package build validation;
+- Windows one-file executable build;
+- Windows release smoke tests;
+- SHA-256 generation and verification;
+- build provenance attestation; and
+- final release collision/immutability checks before publication.
+
+The release targets commit:
+
+```text
+f5a2eaf23893cf3cb40f93c55f642e8caab446f0
+```
+
+## Detection evidence
+
+AegisLog includes automated and synthetic regression testing designed to prevent known detection behavior from silently regressing.
+
+These tests are **engineering regression evidence, not a claim of universal real-world detection accuracy**.
+
+Real-world effectiveness depends on telemetry quality, environment, configuration, attack behavior, and other deployment-specific conditions. AegisLog has not been independently benchmarked to establish a universal real-world detection percentage.
+
+The repository retains tooling and documentation for future authorized external benchmarking. Genuine external evidence can be validated when supplied, but independent external benchmarking is not a v1.6.1 publication requirement.
+
+## AI Analyst
+
+AI assistance is optional and does not replace AegisLog's deterministic detection and correlation pipeline.
+
+```text
+Logs
+  ↓
+Deterministic detection & correlation
+  ↓
+Investigation findings
+  ↓
+Optional AI Analyst
+```
+
+Remote AI requires explicit opt-in. Provider context is bounded and redacted before transmission. Local-provider workflows can be used without intentionally sending investigation context to a remote AI service.
 
 ## Safety model
 
-AegisLog remains defensive and read-only. It does not automatically remediate hosts, modify source telemetry, change host security policy, deploy persistence, steal credentials, evade controls, or provide exploitation workflows.
+AegisLog is designed for defensive investigation. It does not automatically remediate hosts, modify source telemetry, change host security policies, deploy persistence, steal credentials, evade security controls, or perform exploitation workflows.
 
-## Release operator checklist
+Findings, anomalies, incident priorities, confidence values, and ATT&CK mappings should be treated as **investigative signals rather than proof of compromise or attribution**.
 
-Before an authorized release:
+## Windows security notice
 
-1. Freeze the exact `main` code commit intended for v1.6.1 and ensure the required CI, security, package, Windows-build, and lock-audit workflows are acceptable for that candidate.
-2. Prepare a real, authorized, minimized, sanitized, independently labeled external evaluation dataset.
-3. Generate `evaluation/external-release-evidence.json` with `tools/build_external_evidence.py`, recording the exact evaluated code commit plus truthful provenance, labeling procedure, reviewer metadata, metrics, uncertainty, and limitations.
-4. Commit **only** `evaluation/external-release-evidence.json` as the immediate direct single-parent child of the evaluated code commit.
-5. Run `tools/release_preflight.py` through the guarded release workflow. The preflight must validate the release ref/version/confirmation, evidence binding, parentage, and allowed changed path.
-6. Confirm no `v1.6.1` tag or GitHub Release already exists.
-7. Dispatch `.github/workflows/release-v1.6.1.yml` from the exact evidence-only release commit on `main` using the required confirmation `RELEASE-v1.6.1`.
-8. Allow the workflow to run quality/security checks, build and smoke-test the Windows executable, generate and verify its checksum, create provenance attestation, and publish the release assets.
-9. After publication, download the public GitHub Release assets, verify the checksum, and perform a clean-machine smoke test using the published executable rather than a temporary Actions artifact.
+The v1.6.1 Windows executable is distributed without Authenticode signing. Windows SmartScreen or endpoint-security reputation warnings may therefore occur, particularly for a newly published executable.
 
-Do not release if external evidence is fabricated, synthetic-only, unauthorized, circularly labeled, stale, or bound to the wrong commit; if the evidence-only commit contains unrelated changes; if preflight or required validation fails; or if post-build checksum/smoke verification fails.
+Authenticode signing was not a mandatory v1.6.1 publication gate. Verify the SHA-256 checksum before running the application.
 
-## Verification
+## Contributing and feedback
 
-After publication, verify `AegisLog.exe` against `AegisLog.exe.sha256` and confirm the release/tag targets the intended evidence-only release commit.
+AegisLog AI is an open-source defensive security project focused on practical, transparent, local-first investigation workflows.
 
-GitHub Actions artifacts are temporary validation evidence. Permanent customer downloads must come from the published GitHub Release.
+Bug reports, reproducible test cases, defensive detection improvements, documentation contributions, and responsible security feedback are welcome.
