@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Refined the terminal UI across Mission Control, source selection, analysis completion, report handoff, System Health, Command Reference, and responsive narrow-terminal layouts.
+- Standardized shared console hierarchy and restrained the terminal color palette so elevated severity states carry more visual weight than structural chrome.
+- Added focused regression coverage for terminal layout resilience, source-input hierarchy, analysis completion state, shared page chrome, and responsive system pages.
+- Refreshed the public GitHub experience with a clearer README, documentation index, contribution guide, support routing, and pull-request template.
+- Clarified public release wording: v1.6.0 remains the published stable release, while newer reviewed work on `main` remains unreleased until an explicit release is completed.
+- Preserved the defensive, local-first, read-only security model; no offensive behavior or automatic remediation was introduced by these UI/documentation changes.
+
 ## 1.6.0 - 2026-09-02
 
 - Added analyst triage summaries to investigation workflows using existing severity and confidence signals, with explicit non-attribution guidance.
