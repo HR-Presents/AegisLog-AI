@@ -41,15 +41,15 @@ def _health_table(rows: list[tuple[str, Text, str]], screen_width: int) -> Table
     compact = screen_width < _NARROW_PAGE_BREAKPOINT
     table = Table(box=None, expand=True, padding=(0, 1), header_style="bold grey70")
     if compact:
-        table.add_column("COMPONENT", min_width=12, ratio=2, style="white", overflow="fold")
-        table.add_column("STATUS / DETAILS", min_width=18, ratio=4, overflow="fold")
+        table.add_column("Component", min_width=12, ratio=2, style="white", overflow="fold")
+        table.add_column("Status / Details", min_width=18, ratio=4, overflow="fold")
         for component, state, detail in rows:
             body = Text(); body.append_text(state); body.append("\n"); body.append(detail, style=MUTED)
             table.add_row(component, body)
     else:
-        table.add_column("COMPONENT", min_width=14, ratio=2, style="white", overflow="fold")
-        table.add_column("STATE", min_width=10, max_width=18, no_wrap=True)
-        table.add_column("DETAILS", min_width=18, ratio=4, style=MUTED, overflow="fold")
+        table.add_column("Component", min_width=14, ratio=2, style="white", overflow="fold")
+        table.add_column("State", min_width=10, max_width=18, no_wrap=True)
+        table.add_column("Details", min_width=18, ratio=4, style=MUTED, overflow="fold")
         for component, state, detail in rows:
             table.add_row(component, state, detail)
     return table
@@ -59,12 +59,12 @@ def _command_table(rows: tuple[tuple[str, str], ...], screen_width: int) -> Tabl
     compact = screen_width < _NARROW_PAGE_BREAKPOINT
     table = Table(box=None, expand=True, padding=(0, 1), header_style="bold grey70")
     if compact:
-        table.add_column("COMMAND / PURPOSE", ratio=1, overflow="fold")
+        table.add_column("Command / Purpose", ratio=1, overflow="fold")
         for command, purpose in rows:
             body = Text(command, style=f"bold {ACCENT}"); body.append("\n"); body.append(purpose, style=MUTED); table.add_row(body)
     else:
-        table.add_column("COMMAND", min_width=18, ratio=4, style=ACCENT, overflow="fold")
-        table.add_column("PURPOSE", min_width=18, ratio=3, style=MUTED, overflow="fold")
+        table.add_column("Command", min_width=18, ratio=4, style=ACCENT, overflow="fold")
+        table.add_column("Purpose", min_width=18, ratio=3, style=MUTED, overflow="fold")
         for command, purpose in rows:
             table.add_row(command, purpose)
     return table
