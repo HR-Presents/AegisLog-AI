@@ -47,8 +47,7 @@ jobs:
             --sha "$GITHUB_SHA" \
             --release-tag "$RELEASE_TAG" \
             --release-version "$RELEASE_VERSION" \
-            --confirmation "${{ inputs.confirmation }}" \
-            --external-evidence evaluation/external-release-evidence.json
+            --confirmation "${{ inputs.confirmation }}"
       - name: Verify version metadata
         shell: bash
         run: |
