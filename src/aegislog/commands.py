@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from typer import Typer
 
-# Legacy command modules retain their historical filenames for compatibility. Keep those
-# imports behind this stable registry so the public entrypoint no longer depends on release-
-# numbered module names and future migrations can happen one command group at a time.
-from .commands_ai import ai_analyst
+# Legacy command modules retain historical filenames for compatibility. Keep imports behind
+# this stable registry so the public entrypoint remains independent of release-numbered modules.
 from .commands_v07 import behavior, entities, stream
 from .commands_v08 import entity, entity_top, index_entities
 from .commands_v11 import dashboard, replace_analyze_command
@@ -20,7 +18,7 @@ from .commands_v145 import start
 
 
 def register_commands(app: Typer) -> None:
-    """Register the supported CLI command surface on ``app``."""
+    """Register the supported deterministic CLI command surface on ``app``."""
     replace_analyze_command(app)
     app.command("start")(start)
     app.command("dashboard")(dashboard)
@@ -32,7 +30,6 @@ def register_commands(app: Typer) -> None:
     app.command("incidents")(incidents)
     app.command("investigate")(investigate)
     app.command("explain")(explain)
-    app.command("ai-analyst")(ai_analyst)
     app.command("mitre")(mitre)
     app.command("intel-entities")(intel_entities)
     app.command("save-investigation")(save_investigation)
