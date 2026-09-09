@@ -5,9 +5,9 @@ title: "[bug] "
 labels: bug
 ---
 
-## AegisLog version
+## AegisLog version or build
 
-Example: `v1.4.2`
+Examples: `v1.6.0` or a commit SHA from `main`.
 
 ## Installation type
 
@@ -21,7 +21,7 @@ Example: `v1.4.2`
 - Python version, if applicable:
 - Terminal / shell:
 
-## Command or control-center action
+## Command or Mission Control action
 
 ```text
 Paste the command or describe the menu option used. Remove secrets and private data.
@@ -43,10 +43,10 @@ What happened instead? Include the exact error message when safe to share.
 
 ## Sanitized evidence
 
-Add a minimal sanitized log sample, screenshot, or output if it helps reproduce the problem.
+Add a minimal sanitized log sample, genuine screenshot, or terminal output if it materially helps reproduce the problem.
 
-Do not include credentials, API keys, tokens, private production logs, customer data, or personal information.
+Do not include credentials, API keys, tokens, private production logs, customer data, proprietary incident evidence, or personal information.
 
 ## Security-sensitive issue?
 
-If the report involves an exploitable vulnerability or sensitive security details, do not post them publicly. Follow `SECURITY.md` and contact the maintainers privately instead.
+If the report involves an exploitable vulnerability or sensitive security details, do not post them publicly. Follow `SECURITY.md` and use the private reporting route instead.
