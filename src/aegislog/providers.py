@@ -26,6 +26,9 @@ class ProviderError(RuntimeError):
 
 MAX_RESPONSE_BYTES = 2_000_000
 REMOTE_AI_OPT_IN_ENV = "AEGISLOG_ALLOW_REMOTE_AI"
+OLLAMA_TIMEOUT_ENV = "AEGISLOG_OLLAMA_TIMEOUT_SECONDS"
+DEFAULT_OLLAMA_TIMEOUT_SECONDS = 120
+MAX_OLLAMA_TIMEOUT_SECONDS = 600
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -40,6 +43,21 @@ def _require_remote_ai_opt_in() -> None:
             f"Set {REMOTE_AI_OPT_IN_ENV}=1 only if you explicitly consent to sending redacted analysis context "
             "to a remote provider."
         )
+
+
+def _ollama_timeout_seconds() -> int:
+    raw = os.environ.get(OLLAMA_TIMEOUT_ENV, "").strip()
+    if not raw:
+        return DEFAULT_OLLAMA_TIMEOUT_SECONDS
+    try:
+        timeout = int(raw)
+    except ValueError as exc:
+        raise ProviderError(f"{OLLAMA_TIMEOUT_ENV} must be an integer number of seconds") from exc
+    if not 1 <= timeout <= MAX_OLLAMA_TIMEOUT_SECONDS:
+        raise ProviderError(
+            f"{OLLAMA_TIMEOUT_ENV} must be between 1 and {MAX_OLLAMA_TIMEOUT_SECONDS} seconds"
+        )
+    return timeout
 
 
 def _resolved_addresses(hostname: str, port: int) -> set[ipaddress.IPv4Address | ipaddress.IPv6Address]:
@@ -289,12 +307,23 @@ def openai_compatible(prompt: str, model: str, base_url: str | None = None) -> A
 
 def ollama(prompt: str, model: str, base_url: str | None = None) -> AIResponse:
     root = (base_url or os.environ.get("AEGISLOG_OLLAMA_URL") or "http://127.0.0.1:11434").rstrip("/")
-    data = _post_json(
-        f"{root}/api/generate",
-        {"model": model, "prompt": redact_sensitive(prompt), "stream": False},
-        {},
-        allow_local=True,
-    )
+    timeout = _ollama_timeout_seconds()
+    try:
+        data = _post_json(
+            f"{root}/api/generate",
+            {"model": model, "prompt": redact_sensitive(prompt), "stream": False},
+            {},
+            timeout=timeout,
+            allow_local=True,
+        )
+    except ProviderError as exc:
+        if "timed out" in str(exc).lower():
+            raise ProviderError(
+                f"Ollama is reachable, but the model did not respond within {timeout} seconds. "
+                "The model may still be loading or running slowly on CPU. "
+                f"You can increase {OLLAMA_TIMEOUT_ENV} up to {MAX_OLLAMA_TIMEOUT_SECONDS} seconds."
+            ) from exc
+        raise
     text = data.get("response")
     if not isinstance(text, str):
         raise ProviderError("Ollama returned an unexpected response shape")
