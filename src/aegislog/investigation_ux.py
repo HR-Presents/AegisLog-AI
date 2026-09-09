@@ -25,7 +25,7 @@ def incident_triage_panel(incident: InvestigationIncident) -> RenderableType:
     heading = Text("Analyst triage", style=f"bold {MUTED}")
     priority_line = Text("Priority: ", style=MUTED)
     priority_line.append(priority, style=f"bold {style}")
-    priority_line.append(f"   confidence {incident.confidence}%", style=MUTED)
+    priority_line.append(f"   Confidence: {incident.confidence}%", style=MUTED)
 
     metrics = Table.grid(padding=(0, 2))
     metrics.add_column(style=MUTED)
