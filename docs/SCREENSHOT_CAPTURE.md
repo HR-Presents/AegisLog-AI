@@ -11,11 +11,11 @@ AegisLog uses two different kinds of Windows build output, and they must not be 
 For the current Draft PR, the latest exact-head Windows build validated at the time this guide was updated is:
 
 ```text
-Commit: 74e55590da56305056cf984887da3ebd1e799e61
-Workflow: Windows single executable #412
+Commit: 7b5269e8990fcd3743f28bfaea720dfd00828060
+Workflow: Windows single executable #434
 Artifact name: AegisLog-Windows-Single-EXE
-Artifact ID: 10070978629
-Artifact digest: sha256:e8c1642e30de1b004d774cbb84af273758b6a840fc745e62eb3e008c08d5df8e
+Artifact ID: 10074199022
+Artifact digest: sha256:2514932a6687f045fa6877de20c42c70db892a1dd20808f013a43a4dbb819720
 ```
 
 This GitHub Actions artifact is **temporary CI evidence**. It expires according to GitHub Actions retention policy and is not the permanent customer download.
