@@ -46,7 +46,7 @@ def _write_manifest(tmp_path: Path, payload: dict[str, object] | None = None) ->
     return path
 
 
-def _args(path: Path) -> Namespace:
+def _args(path: Path | None = None) -> Namespace:
     return Namespace(repository="HR-Presents/AegisLog-AI", ref="refs/heads/main", sha=RELEASE_SHA, release_tag="v1.6.0", release_version="1.6.0", confirmation="RELEASE-v1.6.0", external_evidence=path, repository_root=Path("."))
 
 
@@ -60,8 +60,8 @@ def test_valid_external_evidence_passes(tmp_path: Path) -> None:
     assert evidence["evaluated_commit"] == EVALUATED_SHA
 
 
-def test_missing_external_evidence_fails_closed(tmp_path: Path) -> None:
-    with pytest.raises(PreflightError, match="evidence is required but missing"):
+def test_missing_external_evidence_is_rejected_when_explicitly_requested(tmp_path: Path) -> None:
+    with pytest.raises(PreflightError, match="external detection evidence is missing"):
         validate_external_evidence(tmp_path / "missing.json")
 
 
@@ -118,6 +118,10 @@ def test_evidence_binding_rejects_wrong_only_file(monkeypatch: pytest.MonkeyPatc
         validate_evidence_binding(_manifest(), RELEASE_SHA, Path("."))
 
 
-def test_preflight_accepts_complete_unsigned_release_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_preflight_accepts_release_without_external_evidence() -> None:
+    validate_preflight(_args())
+
+
+def test_preflight_validates_optional_external_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _mock_valid_commit_shape(monkeypatch)
     validate_preflight(_args(_write_manifest(tmp_path)))

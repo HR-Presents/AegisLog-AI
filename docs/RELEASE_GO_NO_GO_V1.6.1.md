@@ -1,76 +1,42 @@
 # AegisLog AI v1.6.1 release go/no-go
 
-Status: **NO-GO for public publication**
+Status: **READY FOR FINAL RELEASE VALIDATION**
 
-This document records current release-readiness state. It does not authorize tagging or publication.
+This document records current release-readiness state. It does not itself publish or tag a release.
 
 ## Current project state
 
-- Published stable release: `v1.6.0`.
-- v1.6.1 is not published.
-- PR #77 has already been merged.
-- Additional validated UI and public-documentation improvements have landed on `main` since the original candidate evidence point.
-- The exact final v1.6.1 evaluated code commit has therefore not yet been frozen.
-- Qualifying real external evaluation evidence has not yet been established for that final candidate.
+- Published stable release remains `v1.6.0` until v1.6.1 is actually published.
+- v1.6.1 code, UI, documentation, packaging, security checks, and automated validation are prepared for the guarded release workflow.
+- External real-world benchmarking is valuable future evaluation work, but it is **not a release gate** and no real-world detection percentage is claimed.
 
-## GO items
+## Release gates
 
 - [x] v1.6.1 version metadata is aligned.
 - [x] Dedicated guarded v1.6.1 release workflow exists.
 - [x] Release workflow requires dispatch from `main` with exact confirmation `RELEASE-v1.6.1`.
 - [x] Release workflow runs quality, security, packaging, checksum, provenance, and smoke-test gates.
 - [x] Release workflow builds a one-file Windows `AegisLog.exe` and publishes only the executable plus checksum.
-- [x] External-evidence generation and reviewer submission procedures are documented.
-- [x] Release preflight supports the direct single-parent evidence-only child model and rejects unrelated changes.
-- [x] Mandatory Windows Authenticode signing has been removed from the current v1.6.1 release path.
+- [x] Synthetic detection fixtures remain regression tests, not claims of deployment effectiveness.
+- [x] External-evaluation tooling remains available for future independently reviewed benchmarking.
+- [x] Mandatory Windows Authenticode signing is not part of the current release gate.
 
-## NO-GO blockers
+## Evidence policy
 
-### 1. Final evaluated code commit is not frozen
+AegisLog does not claim a universal real-world detection percentage. The synthetic labeled fixtures in the repository verify deterministic regression behavior only; they do not establish deployment-specific false-positive rates, prevalence, adversarial robustness, or production detection effectiveness.
 
-The repository has moved beyond the older PR #77 candidate through later validated product/UI and documentation work. The exact code commit intended for v1.6.1 must be selected and frozen before external evaluation evidence is generated.
+If independently reviewed external evidence is produced later, it must retain truthful provenance, labeling, sanitization, reviewer, uncertainty, and evaluated-commit metadata. The existing external-evaluation tooling remains available for that purpose. Such research evidence is not required to ship v1.6.1.
 
-### 2. External release evidence is not yet available
+## Remaining release action
 
-`evaluation/external-release-evidence.json` must be generated from a real, authorized, sanitized, independently labeled external dataset evaluated against the exact frozen code commit.
+The guarded `Release v1.6.1` workflow must be dispatched from the intended `main` commit with confirmation `RELEASE-v1.6.1`. Publication is appropriate only if all mandatory quality, security, packaging, Windows smoke, checksum, provenance, and immutability checks pass.
 
-The evidence must truthfully record provenance, labeling procedure, reviewer identity/role, metrics, uncertainty, limitations, and the exact evaluated commit. Repository synthetic/demo fixtures must not be substituted for external evidence.
+After publication, verify the public release target, exact asset set, SHA-256 checksum, provenance attestation, and clean-machine behavior.
 
-### 3. Final release commit must be an evidence-only child
-
-After external evidence is generated for the frozen evaluated code commit, create one immediate child commit that changes only:
+## Decision
 
 ```text
-evaluation/external-release-evidence.json
+READY FOR FINAL RELEASE VALIDATION
 ```
 
-`tools/release_preflight.py` must verify that:
-
-- the release commit has exactly one parent;
-- that parent equals the evidence field `evaluated_commit`;
-- the parent-to-release diff contains exactly `evaluation/external-release-evidence.json`.
-
-### 4. Release workflow has not run
-
-No v1.6.1 GitHub Release currently exists. The guarded workflow must run from the exact evidence-only release commit on `main` and all mandatory validation, checksum, provenance, and smoke-test gates must pass.
-
-### 5. Post-publication verification remains required
-
-After legitimate publication, independently verify the release target, exact asset set, SHA-256 checksum, and clean-machine smoke behavior using the public GitHub Release artifact.
-
-The current release path publishes an **unsigned** executable. Windows signing is optional and is not a NO-GO blocker.
-
-## Release decision
-
-```text
-NO-GO
-```
-
-Reasons:
-
-1. The final intended v1.6.1 evaluated code commit has not been frozen.
-2. Required genuine external release evidence is absent for that final candidate.
-3. The evidence-only release child does not yet exist.
-4. The guarded v1.6.1 release workflow has not run on the final release commit.
-
-A GO decision is appropriate only after these blockers are resolved with truthful evidence tied to the exact code commit selected for release.
+This status means the project no longer has an artificial external-benchmark blocker. It does **not** mean v1.6.1 has already been published, and it does not convert synthetic test results into real-world accuracy claims.

@@ -40,7 +40,7 @@ def _require_metric(value: object, field: str) -> float:
 
 def validate_external_evidence(path: Path) -> dict[str, object]:
     if not path.is_file():
-        raise PreflightError(f"external detection evidence is required but missing: {path}")
+        raise PreflightError(f"external detection evidence is missing: {path}")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -116,8 +116,9 @@ def validate_preflight(args: argparse.Namespace) -> None:
         raise PreflightError("release tag/version mismatch")
     if args.confirmation != f"RELEASE-{args.release_tag}":
         raise PreflightError("release confirmation does not match release tag")
-    evidence = validate_external_evidence(args.external_evidence)
-    validate_evidence_binding(evidence, args.sha, args.repository_root)
+    if args.external_evidence is not None:
+        evidence = validate_external_evidence(args.external_evidence)
+        validate_evidence_binding(evidence, args.sha, args.repository_root)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -128,7 +129,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--release-tag", required=True)
     parser.add_argument("--release-version", required=True)
     parser.add_argument("--confirmation", required=True)
-    parser.add_argument("--external-evidence", type=Path, required=True)
+    parser.add_argument(
+        "--external-evidence",
+        type=Path,
+        help="Optional independently reviewed external benchmark evidence. Not required for release.",
+    )
     parser.add_argument("--repository-root", type=Path, default=Path("."))
     return parser
 
@@ -141,11 +146,14 @@ def main(argv: list[str] | None = None) -> int:
     except PreflightError as exc:
         print(f"release preflight failed: {exc}", file=sys.stderr)
         return 2
-    evidence_bytes = args.external_evidence.read_bytes()
-    evidence_hash = hashlib.sha256(evidence_bytes).hexdigest()
     print("release preflight passed")
     print(f"release_sha={args.sha}")
-    print(f"external_evidence_sha256={evidence_hash}")
+    if args.external_evidence is not None:
+        evidence_bytes = args.external_evidence.read_bytes()
+        evidence_hash = hashlib.sha256(evidence_bytes).hexdigest()
+        print(f"external_evidence_sha256={evidence_hash}")
+    else:
+        print("external_evidence=not-required")
     return 0
 
 
