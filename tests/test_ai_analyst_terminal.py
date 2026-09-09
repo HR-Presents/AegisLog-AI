@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from aegislog.commands_ai import answer_with_provider, build_analysis_context
+from aegislog.commands_ai import _provider_panel, answer_with_provider, build_analysis_context
 from aegislog.commands_v145 import _home
 from aegislog.providers import ProviderError
 
@@ -33,6 +33,21 @@ def test_ai_analyst_is_visible_in_mission_control() -> None:
     assert "AI ANALYST" in output
     assert "A" in output
     assert "opt-in remote AI" in output
+
+
+def test_ai_provider_workspace_explains_privacy_and_detection(tmp_path: Path) -> None:
+    path = _sample_log(tmp_path)
+    console = Console(record=True, force_terminal=False, width=100)
+    console.print(_provider_panel(path))
+    output = console.export_text()
+
+    assert "auth.log" in output
+    assert "LOCAL" in output
+    assert "OLLAMA" in output
+    assert "REMOTE" in output
+    assert "redacted context only" in output
+    assert "explicit consent required" in output
+    assert "Always deterministic and unchanged by AI output" in output
 
 
 def test_local_ai_analyst_uses_deterministic_findings(tmp_path: Path) -> None:
