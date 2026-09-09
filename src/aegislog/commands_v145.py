@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rich.console import Group, RenderableType
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 from . import commands_v144 as legacy
@@ -9,6 +10,42 @@ from .commands_ai import interactive_ai_analyst
 from .theme import ACCENT, HIGH, INCIDENT, INFO, MUTED, WARNING
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
+
+
+def _input_panel(
+    title: str,
+    lines: list[tuple[str, str]],
+    accent: str = ACCENT,
+    *,
+    screen_width: int | None = None,
+    primary_label: str | None = None,
+) -> Panel:
+    """Render readable generic panels while reserving stronger emphasis for primary input."""
+    frame_width = legacy._frame_width(screen_width)
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(width=11 if frame_width < 60 else 14, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
+    for label, value in lines:
+        if primary_label is not None and label == primary_label:
+            grid.add_row(
+                Text(f"▶ {label}", style=f"bold {accent}"),
+                Text(value, style="bold white"),
+            )
+        elif primary_label is None:
+            grid.add_row(
+                Text(label, style=f"bold {accent}"),
+                Text(value, style="white"),
+            )
+        else:
+            grid.add_row(Text(label, style=MUTED), Text(value, style=MUTED))
+    return Panel(
+        grid,
+        title=Text(f" {title} ", style=f"bold {accent}"),
+        title_align="left",
+        border_style=legacy.ACCENT_SOFT,
+        padding=(0, 1),
+        width=frame_width,
+    )
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
@@ -50,8 +87,6 @@ def _menu(screen_width: int | None = None) -> RenderableType:
             compact=True,
         )
     elif frame_width >= legacy._WIDE_MENU_BREAKPOINT:
-        from rich.table import Table
-
         layout = Table.grid(expand=True, padding=(0, 2))
         layout.add_column(ratio=1)
         layout.add_column(ratio=1)
@@ -119,13 +154,16 @@ def start() -> None:
     """Run the polished control center with the AI analyst extension enabled."""
     original_home = legacy._home
     original_inline = legacy._run_inline_command
+    original_input_panel = legacy._input_panel
     try:
         legacy._home = _home
         legacy._run_inline_command = _run_inline_command
+        legacy._input_panel = _input_panel
         legacy.start()
     finally:
         legacy._home = original_home
         legacy._run_inline_command = original_inline
+        legacy._input_panel = original_input_panel
 
 
 __all__ = ["start"]
