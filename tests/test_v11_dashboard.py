@@ -2,6 +2,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from aegislog.commands_v11 import _report_ready_panel
 from aegislog.dashboard import DashboardData, analyze_dashboard, render_dashboard
 from aegislog.engine import Finding
 from aegislog.entry import app
@@ -166,6 +167,18 @@ def test_follow_up_uses_actual_source_instead_of_placeholder() -> None:
     assert "<file>" not in output
     assert "prod auth.log" in output
     assert "aegislog incidents" in output
+
+
+def test_report_ready_panel_is_clear_and_operator_focused() -> None:
+    console = Console(record=True, force_terminal=False, width=100)
+    console.print(_report_ready_panel(Path("aegislog-reports/auth-aegislog-report.html")))
+    output = console.export_text()
+
+    assert "REPORT READY" in output
+    assert "LOCATION" in output
+    assert "aegislog-reports/auth-aegislog-report.html" in output
+    assert "Generated locally / source unchanged" in output
+    assert "Open in a browser to review, print, or save as PDF." in output
 
 
 def test_dashboard_command_is_registered_and_analyze_is_replaced():
