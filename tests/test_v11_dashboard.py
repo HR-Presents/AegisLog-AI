@@ -27,7 +27,7 @@ def _write_log(path: Path) -> None:
 
 def _render(data: DashboardData, width: int = 120) -> str:
     console = Console(record=True, force_terminal=False, width=width)
-    console.print(render_dashboard(data))
+    console.print(render_dashboard(data, screen_width=width))
     return console.export_text()
 
 
@@ -53,7 +53,7 @@ def test_dashboard_render_is_terminal_safe(tmp_path: Path):
     assert "INVESTIGATION SUMMARY" in output
     assert "FOLLOW-UP / COPY-READY" in output
     assert "not markup" in output
-    assert "Detected findings" in output
+    assert "DETECTED FINDINGS" in output
     assert "Signals are investigative evidence, not proof of compromise." in output
 
 
@@ -75,7 +75,7 @@ def test_dashboard_orders_findings_by_severity_and_surfaces_primary_action() -> 
     output = _render(data)
 
     assert output.index("High finding") < output.index("Medium finding")
-    focus = output[output.index("ANALYST FOCUS") : output.index("Detected findings")]
+    focus = output[output.index("ANALYST FOCUS") : output.index("DETECTED FINDINGS")]
     assert "PRIMARY" in focus
     assert "High finding" in focus
     assert "High action" in focus
@@ -99,6 +99,54 @@ def test_dashboard_uses_bounded_evidence_preview() -> None:
     assert "EVIDENCE PREVIEW" in output
     assert "…" in output
     assert evidence not in output
+
+
+def test_dashboard_compacts_tables_on_narrow_terminals() -> None:
+    data = DashboardData(
+        source="C:/logs/security-authentication-events.log",
+        lines=4,
+        findings=(
+            Finding(
+                "HIGH",
+                "authentication",
+                "Repeated authentication failures from one source",
+                "four failures from 203.0.113.8 within the configured window",
+                "Review identity and source context",
+            ),
+        ),
+        anomalies=(),
+        incidents=(),
+        levels={"ERROR": 4},
+        services={"sshd": 4},
+        categories={"authentication": 1},
+        severities={"HIGH": 1},
+    )
+    width = 50
+    output = _render(data, width=width)
+
+    assert "DETECTION / EVIDENCE" in output
+    assert "CATEGORY" not in output
+    assert "Repeated authentication" in output
+    assert max(len(line) for line in output.splitlines()) <= width
+
+
+def test_dashboard_uses_readable_spacing_between_major_sections() -> None:
+    data = DashboardData(
+        source="/tmp/spacing.log",
+        lines=0,
+        findings=(),
+        anomalies=(),
+        incidents=(),
+        levels={},
+        services={},
+        categories={},
+        severities={},
+    )
+    output = _render(data)
+    lines = output.splitlines()
+
+    summary_end = next(index for index, line in enumerate(lines) if "LOCAL / READ-ONLY" in line)
+    assert any(not line.strip() for line in lines[summary_end + 1 : summary_end + 4])
 
 
 def test_follow_up_uses_actual_source_instead_of_placeholder() -> None:

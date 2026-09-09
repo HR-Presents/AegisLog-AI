@@ -29,6 +29,7 @@ from .theme import (
 )
 
 _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
+_NARROW_DASHBOARD_BREAKPOINT = 72
 
 
 @dataclass(frozen=True)
@@ -217,7 +218,7 @@ def _analyst_focus(data: DashboardData) -> Panel:
     )
 
 
-def _incident_table(data: DashboardData, limit: int = 8) -> Table:
+def _incident_table(data: DashboardData, limit: int = 8, *, compact: bool = False) -> Table:
     ordered = _ordered_incidents(data)
     table = Table(
         title=f"ACTIVE INCIDENTS  [{min(len(ordered), limit)}/{len(ordered)}]",
@@ -228,17 +229,27 @@ def _incident_table(data: DashboardData, limit: int = 8) -> Table:
     )
     table.add_column("ID", width=15, style=INCIDENT, no_wrap=True)
     table.add_column("SEV", width=9)
-    table.add_column("SIGNALS", width=8, justify="right", style=ACCENT)
-    table.add_column("CATEGORY", width=18)
-    table.add_column("SUMMARY", ratio=1, overflow="fold")
+    if compact:
+        table.add_column("INCIDENT", ratio=1, overflow="fold")
+    else:
+        table.add_column("SIGNALS", width=8, justify="right", style=ACCENT)
+        table.add_column("CATEGORY", width=18)
+        table.add_column("SUMMARY", ratio=1, overflow="fold")
     for item in ordered[:limit]:
-        table.add_row(
-            f"INC-{item.id.upper()[:8]}",
-            severity_text(item.severity),
-            str(item.count),
-            Text(item.category),
-            Text(item.title),
-        )
+        incident_id = f"INC-{item.id.upper()[:8]}"
+        if compact:
+            detail = Text(item.title)
+            detail.append("\n")
+            detail.append(f"{item.count} signals  /  {item.category}", style=MUTED)
+            table.add_row(incident_id, severity_text(item.severity), detail)
+        else:
+            table.add_row(
+                incident_id,
+                severity_text(item.severity),
+                str(item.count),
+                Text(item.category),
+                Text(item.title),
+            )
     return table
 
 
@@ -249,37 +260,55 @@ def _evidence_preview(value: str, limit: int = 180) -> str:
     return normalized[: limit - 1].rstrip() + "…"
 
 
-def _finding_table(data: DashboardData, limit: int = 12) -> Table:
+def _finding_table(data: DashboardData, limit: int = 12, *, compact: bool = False) -> Table:
     ordered = _ordered_findings(data)
     table = Table(
-        title=f"Detected findings  [{min(len(ordered), limit)}/{len(ordered)}]",
+        title=f"DETECTED FINDINGS  [{min(len(ordered), limit)}/{len(ordered)}]",
         title_style=f"bold {ACCENT}",
         expand=True,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
     table.add_column("SEV", width=9)
-    table.add_column("CATEGORY", width=17)
-    table.add_column("DETECTION", width=32)
-    table.add_column("EVIDENCE PREVIEW", ratio=1, overflow="fold")
+    if compact:
+        table.add_column("DETECTION / EVIDENCE", ratio=1, overflow="fold")
+    else:
+        table.add_column("CATEGORY", width=17)
+        table.add_column("DETECTION", width=32)
+        table.add_column("EVIDENCE PREVIEW", ratio=1, overflow="fold")
     for item in ordered[:limit]:
-        table.add_row(
-            severity_text(item.severity),
-            Text(item.category),
-            Text(item.title),
-            Text(_evidence_preview(item.evidence)),
-        )
+        if compact:
+            detail = Text()
+            detail.append(item.category.upper(), style=MUTED)
+            detail.append("  ")
+            detail.append(item.title, style="bold white")
+            detail.append("\n")
+            detail.append(_evidence_preview(item.evidence, limit=120), style=MUTED)
+            table.add_row(severity_text(item.severity), detail)
+        else:
+            table.add_row(
+                severity_text(item.severity),
+                Text(item.category),
+                Text(item.title),
+                Text(_evidence_preview(item.evidence)),
+            )
     if not ordered:
-        table.add_row(
-            "-",
-            "-",
-            Text("No rule-backed findings", style=SUCCESS),
-            Text("No matching local detection rules", style=MUTED),
-        )
+        if compact:
+            table.add_row(
+                "-",
+                Text("No rule-backed findings\nNo matching local detection rules", style=SUCCESS),
+            )
+        else:
+            table.add_row(
+                "-",
+                "-",
+                Text("No rule-backed findings", style=SUCCESS),
+                Text("No matching local detection rules", style=MUTED),
+            )
     return table
 
 
-def _anomaly_table(data: DashboardData, limit: int = 6) -> Table:
+def _anomaly_table(data: DashboardData, limit: int = 6, *, compact: bool = False) -> Table:
     table = Table(
         title=f"ANOMALY SIGNALS  [{min(len(data.anomalies), limit)}/{len(data.anomalies)}]",
         title_style=f"bold {ANOMALY}",
@@ -288,10 +317,19 @@ def _anomaly_table(data: DashboardData, limit: int = 6) -> Table:
         padding=(0, 1),
     )
     table.add_column("SCORE", justify="right", width=8, style=ANOMALY)
-    table.add_column("EVENT CLASS", width=28)
-    table.add_column("REASON", ratio=1, overflow="fold")
+    if compact:
+        table.add_column("SIGNAL", ratio=1, overflow="fold")
+    else:
+        table.add_column("EVENT CLASS", width=28)
+        table.add_column("REASON", ratio=1, overflow="fold")
     for item in data.anomalies[:limit]:
-        table.add_row(f"{item.score:.1f}", Text(item.key), Text(item.reason))
+        if compact:
+            detail = Text(item.key)
+            detail.append("\n")
+            detail.append(item.reason, style=MUTED)
+            table.add_row(f"{item.score:.1f}", detail)
+        else:
+            table.add_row(f"{item.score:.1f}", Text(item.key), Text(item.reason))
     return table
 
 
@@ -357,13 +395,21 @@ def _next_steps(data: DashboardData) -> Panel:
     )
 
 
-def render_dashboard(data: DashboardData) -> RenderableType:
-    """Return a prioritized SOC-style investigation dashboard."""
-    sections: list[RenderableType] = [_header(data), _analyst_focus(data)]
+def render_dashboard(data: DashboardData, *, screen_width: int | None = None) -> RenderableType:
+    """Return a prioritized, responsive SOC-style investigation dashboard."""
+    compact = screen_width is not None and screen_width < _NARROW_DASHBOARD_BREAKPOINT
+    sections: list[RenderableType] = [_header(data), Text(""), _analyst_focus(data)]
     if data.incidents:
-        sections.append(_incident_table(data))
-    sections.append(_finding_table(data))
+        sections.extend((Text(""), _incident_table(data, compact=compact)))
+    sections.extend((Text(""), _finding_table(data, compact=compact)))
     if data.anomalies:
-        sections.append(_anomaly_table(data))
-    sections.extend((_telemetry_table(data), _next_steps(data)))
+        sections.extend((Text(""), _anomaly_table(data, compact=compact)))
+    sections.extend(
+        (
+            Text(""),
+            _telemetry_table(data),
+            Text(""),
+            _next_steps(data),
+        )
+    )
     return Group(*sections)
