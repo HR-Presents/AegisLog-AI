@@ -62,6 +62,7 @@ Public screenshots should come from a verified build and sanitized or synthetic 
 - [Versioning](VERSIONING.md)
 - [Maintainer guide](MAINTAINERS.md)
 - [Release checklist](RELEASE_CHECKLIST.md)
+- [External evaluation runbook](EXTERNAL_EVALUATION.md) — prepare authorized, independently labeled evidence without overstating results
 
 ## Release status
 
