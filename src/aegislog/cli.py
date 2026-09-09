@@ -25,7 +25,7 @@ from .incidents import correlate
 from .live import RollingAnalyzer
 from .parsers import parse_line
 from .plugins import apply_rules, load_rules, plugin_dir
-from .theme import ACCENT, MUTED, NEUTRAL, SUCCESS, severity_text
+from .theme import ACCENT, MUTED, NEUTRAL, severity_text
 
 app = typer.Typer(help="AegisLog AI — deterministic defensive log intelligence in your terminal.", no_args_is_help=True)
 console = Console()
