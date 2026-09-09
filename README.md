@@ -32,6 +32,7 @@ It is built for analysts, defenders, students, homelabs, and security teams that
 - native Windows, Linux, and Docker telemetry where supported;
 - correlated incident review;
 - evidence-led explanations and MITRE ATT&CK context;
+- optional AI-assisted investigation using Local, Ollama, or explicitly opted-in OpenAI-compatible providers;
 - analyst-oriented HTML reports that can be printed or saved as PDF.
 
 AegisLog does **not** automatically remediate hosts, change firewall rules, modify accounts or services, deploy persistence, steal credentials, or perform exploitation. Findings and scores are investigation signals, not proof of compromise or attribution.
@@ -47,7 +48,7 @@ AegisLog does **not** automatically remediate hosts, change firewall rules, modi
 | **Primary UI** | Terminal-first Security Operations Console |
 | **Windows delivery** | Standalone `AegisLog.exe` |
 | **Reports** | Self-contained analyst HTML report / Save-to-PDF |
-| **Remote AI** | Optional; not required for core analysis |
+| **AI Analyst** | Local default; Ollama local; remote OpenAI-compatible optional and explicit |
 | **Telemetry** | File logs plus supported Windows Event Log, journald, and Docker sources |
 | **Security model** | Defensive, evidence-led, non-attributive |
 | **License** | MIT |
@@ -58,7 +59,7 @@ The project intentionally favors clear analyst workflows over flashy dashboards 
 
 ## Current interface
 
-The current `main` branch includes the latest terminal UI refinements beyond the published v1.6.0 release. The public console now uses a consistent product hierarchy across Mission Control, source selection, analysis completion, health pages, command reference, and investigation output.
+The current `main` branch includes the latest terminal UI refinements beyond the published v1.6.0 release. The public console now uses a consistent product hierarchy across Mission Control, source selection, analysis completion, health pages, command reference, investigation output, and the optional AI Analyst workspace.
 
 Key UI behaviors include:
 
@@ -69,6 +70,7 @@ Key UI behaviors include:
 - explicit `ANALYSIS COMPLETE` transition before investigation results;
 - compact report handoff messaging;
 - responsive System Health and Command Reference pages;
+- discoverable `A — AI ANALYST` provider-assisted investigation;
 - narrow-terminal fallbacks that preserve readability instead of squeezing dense tables.
 
 ### Screenshots
@@ -119,6 +121,7 @@ The terminal control center provides direct entry points for:
 04  NATIVE LOGS
 05  NATIVE MONITOR
 06  INCIDENT INTEL
+A   AI ANALYST
 07  DEMO
 08  HEALTH
 09  COMMANDS
@@ -140,6 +143,21 @@ AegisLog.exe incidents C:\path\to\auth.log
 AegisLog.exe explain C:\path\to\auth.log <incident-id>
 AegisLog.exe mitre C:\path\to\auth.log
 ```
+
+### AI Analyst
+
+```text
+# Deterministic local answer; no model or network required
+AegisLog.exe ai-analyst C:\path\to\auth.log --provider local
+
+# Local Ollama
+AegisLog.exe ai-analyst C:\path\to\auth.log --provider ollama --model llama3.2
+
+# Remote OpenAI-compatible provider: explicit consent required
+AegisLog.exe ai-analyst C:\path\to\auth.log --provider openai-compatible --model YOUR_MODEL --allow-remote
+```
+
+Remote AI also requires an API key through `AEGISLOG_API_KEY` or `OPENAI_API_KEY`. Detection is completed locally before the optional AI provider is invoked.
 
 ### Live monitoring
 
@@ -185,14 +203,16 @@ Correlation + anomaly context
    ↓
 Incident queue
    ↓
-Evidence-led explanation
+Evidence-led local explanation
+   ↓
+Optional AI Analyst (Local / Ollama / opt-in remote)
    ↓
 Analyst review / HTML report
 ```
 
 The output can include severity, confidence, retained evidence, categories, anomaly signals, correlated incidents, source/service distributions, MITRE ATT&CK context, and recommended defensive follow-up.
 
-AegisLog deliberately separates **signal** from **verdict**. A high-severity finding or confidence score means “review this evidence carefully,” not “this system is definitely compromised.”
+AegisLog deliberately separates **signal** from **verdict**. A high-severity finding or confidence score means “review this evidence carefully,” not “this system is definitely compromised.” AI-provider output is assistance and does not replace retained evidence or deterministic findings.
 
 ---
 
@@ -217,9 +237,17 @@ The report is local, read-only, and does not require remote AI. Use the browser 
 
 ## Optional AI providers
 
-Remote AI is not required for the core product.
+AegisLog's **AI Analyst** is an optional post-detection investigation layer. The deterministic engine runs first and remains authoritative for findings.
 
-Where optional providers are supported, AegisLog keeps them secondary to deterministic local analysis and applies explicit data-handling boundaries. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md), [`docs/AI_SAFETY.md`](docs/AI_SAFETY.md), and [`docs/REMOTE_AI.md`](docs/REMOTE_AI.md).
+Supported modes:
+
+- **Local** — deterministic rule-backed summary; no model or network required.
+- **Ollama** — local model through the loopback Ollama endpoint.
+- **OpenAI-compatible** — remote HTTPS provider; explicit consent is required for each Mission Control request or via `--allow-remote` on the CLI.
+
+Before provider execution, AegisLog builds a bounded investigation prompt, redacts recognized sensitive values, and labels log content as untrusted telemetry. Remote provider transport is disabled by default.
+
+See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md), [`docs/AI_SAFETY.md`](docs/AI_SAFETY.md), and [`docs/REMOTE_AI.md`](docs/REMOTE_AI.md).
 
 ---
 
@@ -233,7 +261,7 @@ Core principles:
 - no automatic remediation;
 - no exploitation or persistence behavior;
 - no user-tracking telemetry added simply to count installations;
-- remote AI remains optional;
+- remote AI remains optional and explicitly consented;
 - evidence and uncertainty are kept visible to the analyst;
 - public bug reports and reviews must use sanitized or synthetic data.
 
