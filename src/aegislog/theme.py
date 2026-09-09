@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from rich.text import Text
 
-ACCENT = "bright_cyan"
+# Restrained operator palette: keep structural chrome calm and reserve brighter
+# colors for elevated severity states that genuinely need attention.
+ACCENT = "cyan"
 ACCENT_SOFT = "cyan"
 MUTED = "dim"
-SUCCESS = "bright_green"
-INFO = "bright_blue"
+SUCCESS = "green"
+INFO = "blue"
 WARNING = "yellow"
 HIGH = "bright_red"
 CRITICAL = "bold bright_red"
-INCIDENT = "bright_magenta"
-ANOMALY = "bright_blue"
+INCIDENT = "magenta"
+ANOMALY = "blue"
 NEUTRAL = "white"
 
 SEVERITY_STYLES = {
