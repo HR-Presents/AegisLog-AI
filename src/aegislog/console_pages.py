@@ -15,8 +15,37 @@ from .ui import bounded, compact_footer
 console = Console()
 
 
+def _health_summary(available_native: int, total_native: int) -> Text:
+    """Render a compact capability summary before the detailed health table."""
+    line = Text()
+    line.append("CORE CAPABILITIES", style=MUTED)
+    line.append("  READY", style=f"bold {SUCCESS}")
+    line.append("  /  ", style=MUTED)
+    line.append("NATIVE SOURCES", style=MUTED)
+    line.append(f"  {available_native}/{total_native}", style=f"bold {ACCENT}")
+    line.append("  /  HOST CHECK  READ-ONLY", style=MUTED)
+    return line
+
+
+def _command_summary(executable: str) -> Text:
+    """Render the three highest-value command entry points before the full reference."""
+    line = Text()
+    line.append("START", style=MUTED)
+    line.append(f"  {executable}", style=f"bold {ACCENT}")
+    line.append("  /  ANALYZE", style=MUTED)
+    line.append(f"  {executable} dashboard <file>", style=f"bold {ACCENT}")
+    line.append("  /  HELP", style=MUTED)
+    line.append(f"  {executable} --help", style=f"bold {ACCENT}")
+    return line
+
+
 def system_check() -> None:
     """Render a compact operator-facing health overview."""
+    sources = tuple(source_status())
+    available_native = sum(1 for item in sources if item.available)
+    console.print(_health_summary(available_native, len(sources)))
+    console.print()
+
     table = Table(
         title="SYSTEM HEALTH",
         title_style=f"bold {ACCENT}",
@@ -39,7 +68,7 @@ def system_check() -> None:
     table.add_row("Multi-source SOC", Text("READY", style=SUCCESS), "Local cross-source correlation")
     table.add_row("Command mode", Text("READY", style=SUCCESS), "Menu shortcuts and direct CLI commands")
 
-    for item in source_status():
+    for item in sources:
         state = Text("READY", style=SUCCESS) if item.available else Text("NOT ON THIS OS", style=MUTED)
         table.add_row(item.label, state, item.detail)
 
@@ -50,6 +79,9 @@ def system_check() -> None:
 def commands_reference() -> None:
     """Render a readable command reference that folds cleanly on narrow screens."""
     executable = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
+    console.print(_command_summary(executable))
+    console.print()
+
     table = Table(
         title="COMMAND REFERENCE",
         title_style=f"bold {ACCENT}",
