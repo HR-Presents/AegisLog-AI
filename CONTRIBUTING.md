@@ -1,42 +1,100 @@
-# Contributing to AegisLog AI
+# Contributing to AegisLog
 
-Use Python 3.10+ and keep changes defensive, testable, and local-first.
+Thanks for helping improve AegisLog. Contributions are welcome when they keep the project **defensive, local-first, evidence-led, and testable**.
+
+## Before you start
+
+Please review:
+
+- [README](README.md) — product scope and current workflows
+- [Documentation](docs/README.md) — technical and operator guides
+- [Security policy](SECURITY.md) — private vulnerability reporting
+- [Support guide](SUPPORT.md) — public support and issue boundaries
+
+Use Python 3.10+ for source development.
 
 ## Development workflow
 
 1. Create a focused branch from `main`.
 2. Keep each pull request limited to one clear improvement or fix.
 3. Add or update tests when behavior changes.
-4. Run the relevant validation before requesting merge.
-5. Open a pull request with a short summary, verification notes, and any user-facing impact.
-6. Merge only after the change is ready and the repository checks are satisfied.
+4. Run the relevant validation locally.
+5. Open a pull request with a concise summary, validation notes, and user-facing impact.
+6. Merge only after repository checks are satisfied.
 
-For Python changes, run the relevant checks where applicable:
+Typical validation:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e '.[dev]'
 pytest
 ruff check .
 bandit -q -r src
 ```
 
-New detections should include tests and should avoid overstating certainty. Prefer evidence-backed labels such as "possible" or "suspicious" when a pattern is not conclusive. Never add real credentials or production logs to fixtures.
+Use the exact checks relevant to your change; CI remains the final shared verification surface.
 
-## Community feedback and reviews
+## What makes a good contribution?
 
-Using AegisLog does not automatically identify you to the maintainers. The application is local-first and does not add telemetry simply to count users.
+Good AegisLog changes usually improve one or more of these areas:
 
-If you have used AegisLog and want your experience to be visible publicly, use the repository's **User review** issue form. Reviews should include the version/environment, an honest rating, what worked, and what should improve. Remove credentials, tokens, production logs, personal data, private hostnames, and customer information before posting.
+- analyst clarity and terminal usability;
+- defensive detections with evidence-backed wording;
+- parser or collector correctness;
+- bounded live-monitoring behavior;
+- incident correlation and explanation quality;
+- reporting and investigation workflow quality;
+- tests, documentation, diagnostics, or portability;
+- safe local-first integrations.
 
-Stars, forks, public issues, pull requests, and commits provide GitHub-native public signals of interest and contribution. A star is support, not proof that someone installed or used the application.
+New detections should avoid overstating certainty. Prefer wording such as **possible**, **suspicious**, or **requires review** unless the underlying evidence genuinely supports a stronger statement.
+
+## Security expectations
+
+Contributions must preserve AegisLog’s defensive model.
+
+Do not add functionality whose purpose is:
+
+- exploitation;
+- credential theft;
+- persistence;
+- privilege escalation;
+- stealth or evasion;
+- destructive host changes;
+- automatic offensive action;
+- silent external transmission of telemetry.
+
+AegisLog should continue to fail safely, keep external AI optional, and treat log-derived text as untrusted input.
+
+## Test data and privacy
+
+Never commit:
+
+- passwords, tokens, API keys, or cookies;
+- real customer logs;
+- private production hostnames;
+- sensitive internal IP/addressing information;
+- personal data;
+- proprietary incident evidence.
+
+Use synthetic or clearly sanitized fixtures. Documentation screenshots must follow the verified capture and sanitization requirements in [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md).
+
+## Pull requests
+
+A useful pull request explains:
+
+- **What changed**
+- **Why it is needed**
+- **How it was verified**
+- **User-facing impact**
+- **Security/privacy impact**, if any
+
+Small, reviewable PRs are preferred over large unrelated change sets.
 
 ## Collaboration and co-authorship
 
-When two or more people genuinely work on the same change, record that collaboration in the commit history. GitHub-compatible co-authorship trailers may be added to the commit message using the contributor's GitHub-linked email.
-
-Example:
+When multiple people materially contribute to the same change, GitHub-compatible co-authorship trailers may be used with the contributor’s GitHub-linked email.
 
 ```text
 feat: improve defensive log analysis
@@ -44,12 +102,18 @@ feat: improve defensive log analysis
 Co-authored-by: Contributor Name <github-linked-email@example.com>
 ```
 
-Use co-authorship only when the named contributor materially participated in the work. Do not add contributors, reviewers, or co-authors merely because they downloaded, starred, or reviewed the application.
+Only use co-authorship when the named person genuinely participated in the work.
 
-## Security expectations
+## Community feedback
 
-Contributions should preserve AegisLog's defensive security model. Avoid automatic remediation, destructive system changes, privilege escalation, exploitation behavior, or unsafe handling of untrusted log content. New functionality should remain understandable from the terminal, fail safely, and keep external AI services optional.
+If you used AegisLog but are not contributing code, you can still help by:
 
-## Pull request notes
+- opening a sanitized bug report;
+- suggesting a defensive feature;
+- improving documentation;
+- submitting an honest [User Review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml);
+- starring or forking the repository if you find it useful.
 
-A useful pull request description should explain what changed, why it is needed, how it was verified, and whether it changes the customer-facing terminal experience, packaging, release behavior, or security assumptions.
+A star is a public signal of interest or support, not proof of installation or usage.
+
+Thank you for helping keep AegisLog practical, transparent, and analyst-controlled.
