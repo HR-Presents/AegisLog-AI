@@ -46,8 +46,8 @@ def live_startup_panel(
     for index, source in enumerate(source_list, start=1):
         targets.add_row(str(index), Text(source, style=NEUTRAL))
 
-    guidance = Text("Ctrl+C stops safely. ", style=MUTED)
-    guidance.append("Source data and host configuration are never modified.", style=MUTED)
+    guidance = Text("Live analysis is read-only. ", style=MUTED)
+    guidance.append("Ctrl+C stops safely; source data and host configuration are never modified.", style=MUTED)
 
     return bounded(
         Group(
@@ -73,13 +73,13 @@ def live_initial_status(kind: str, *, prefix: str | None = None) -> Text:
 
 def live_source_status(source: str, *, available: bool) -> Text:
     if available:
-        status = Text("● Source recovered  ", style=f"bold {SUCCESS}")
+        status = Text("● Source recovered: ", style=f"bold {SUCCESS}")
         status.append(source, style=NEUTRAL)
-        status.append("  monitoring resumed from the safe cursor", style=MUTED)
+        status.append(". Monitoring resumed automatically from the safe cursor.", style=MUTED)
         return status
-    status = Text("● Source unavailable  ", style=f"bold {WARNING}")
+    status = Text("● Source temporarily unavailable: ", style=f"bold {WARNING}")
     status.append(source, style=NEUTRAL)
-    status.append("  retaining dashboard and retrying read-only polling", style=MUTED)
+    status.append(". Retaining the current dashboard; retry read-only polling.", style=MUTED)
     return status
 
 
