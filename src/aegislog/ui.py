@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from rich.align import Align
-from rich.console import RenderableType
+from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.text import Text
 
-from .theme import ACCENT, ACCENT_SOFT, MUTED
+from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS
 
 # Kept for compatibility with older callers/tests. The V3 terminal design no
 # longer caps content to a narrow fixed column on wide terminals.
@@ -30,19 +30,35 @@ def console_title(
     max_width: int = MAX_CONTENT_WIDTH,
     border_style: str = ACCENT_SOFT,
 ) -> RenderableType:
-    """Render the shared AegisLog page header using the full terminal width."""
-    text = Text()
-    text.append("AEGISLOG", style=f"bold {ACCENT}")
-    text.append(" // ", style=MUTED)
-    text.append(title.upper(), style="bold white")
+    """Render shared AegisLog page chrome with clear product and page hierarchy."""
+    heading = Text()
+    heading.append("AEGIS", style=f"bold {ACCENT}")
+    heading.append("LOG", style="bold white")
+    heading.append("  //  ", style=MUTED)
+    heading.append(title.upper(), style="bold white")
     if version:
-        text.append(f"  v{version}", style=MUTED)
+        heading.append(f"  v{version}", style=MUTED)
+
+    status = Text()
+    status.append("READY", style=f"bold {SUCCESS}")
+    status.append("  LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
+    status.append("  READ-ONLY", style=MUTED)
+
+    body: list[RenderableType] = [heading, status]
     if subtitle:
-        text.append("\n")
-        text.append(subtitle, style=MUTED)
-    return Panel(text, border_style=border_style, padding=(0, 1), expand=True)
+        body.insert(1, Text(subtitle, style=MUTED))
+
+    return Panel(
+        Group(*body),
+        border_style=border_style,
+        padding=(0, 1),
+        expand=True,
+    )
 
 
 def compact_footer(text: str, *, max_width: int = MAX_CONTENT_WIDTH) -> RenderableType:
     """Render operator guidance across the active terminal viewport."""
-    return Align.left(Text(text, style=MUTED))
+    footer = Text()
+    footer.append("NEXT  ", style=f"bold {ACCENT_SOFT}")
+    footer.append(text, style=MUTED)
+    return Align.left(footer)
