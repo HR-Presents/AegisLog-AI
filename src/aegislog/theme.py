@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from rich.text import Text
 
-# AegisLog terminal palette. Structural UI stays quiet; semantic colors are
-# reserved for state and severity so operators can scan screens quickly.
-ACCENT = "bright_cyan"
-ACCENT_SOFT = "cyan"
-MUTED = "grey62"
-SUCCESS = "green"
-INFO = "bright_blue"
-WARNING = "yellow"
-HIGH = "red"
-CRITICAL = "bold bright_red"
-INCIDENT = "bright_cyan"
-ANOMALY = "bright_blue"
-NEUTRAL = "white"
+# Restrained terminal palette. Navigation stays neutral; color is reserved for
+# selection, state, and security severity so it carries meaning instead of
+# becoming decoration.
+ACCENT = "#5fb3a6"
+ACCENT_SOFT = "#3f7f78"
+MUTED = "#8b949e"
+SUCCESS = "#56a36c"
+INFO = "#6f93b5"
+WARNING = "#d4a72c"
+HIGH = "#d96767"
+CRITICAL = "bold #ff6b6b"
+INCIDENT = "#8fa6c9"
+ANOMALY = "#8497b0"
+NEUTRAL = "#e6edf3"
 
 SEVERITY_STYLES = {
     "CRITICAL": CRITICAL,
