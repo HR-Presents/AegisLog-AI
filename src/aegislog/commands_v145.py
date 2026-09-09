@@ -5,11 +5,35 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from . import __version__
 from . import commands_v144 as legacy
 from .commands_ai import interactive_ai_analyst
-from .theme import ACCENT, HIGH, INCIDENT, INFO, MUTED, WARNING
+from .theme import ACCENT, ACCENT_SOFT, HIGH, INCIDENT, INFO, MUTED, SUCCESS, WARNING
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
+
+
+def _header(screen_width: int | None = None) -> Panel:
+    """Render the current product version from package metadata."""
+    frame_width = legacy._frame_width(screen_width)
+    banner = Text()
+    banner.append_text(legacy._brand_mark())
+    if frame_width >= 82:
+        banner.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
+    else:
+        banner.append("  SECURITY OPERATIONS", style="bold white")
+    banner.append(f"  v{__version__}", style=MUTED)
+    banner.append("\n")
+    banner.append("READY", style=f"bold {SUCCESS}")
+    banner.append("  LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
+    banner.append("  READ-ONLY MONITORING", style=MUTED)
+    banner.append("  REMOTE AI / OPT-IN", style=MUTED)
+    return Panel(
+        banner,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=frame_width,
+    )
 
 
 def _input_panel(
@@ -118,7 +142,7 @@ def _home(screen_width: int | None = None) -> RenderableType:
     footer.append(" command mode   ", style=MUTED)
     footer.append("Q", style=f"bold {HIGH}")
     footer.append(" exit   |   reports automatic   |   Ctrl+C stops live views", style=MUTED)
-    return Group(legacy._header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
+    return Group(_header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
 
 
 def _ai_workspace() -> None:
