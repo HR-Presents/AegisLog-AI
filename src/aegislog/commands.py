@@ -5,6 +5,7 @@ from typer import Typer
 # Legacy command modules retain their historical filenames for compatibility. Keep those
 # imports behind this stable registry so the public entrypoint no longer depends on release-
 # numbered module names and future migrations can happen one command group at a time.
+from .commands_ai import ai_analyst
 from .commands_v07 import behavior, entities, stream
 from .commands_v08 import entity, entity_top, index_entities
 from .commands_v11 import dashboard, replace_analyze_command
@@ -15,7 +16,7 @@ from .commands_v16 import case_history, case_show, save_investigation
 from .commands_v17 import native_analyze, native_sources
 from .commands_v18 import native_live
 from .commands_v19 import explain
-from .commands_v144 import start
+from .commands_v145 import start
 
 
 def register_commands(app: Typer) -> None:
@@ -31,6 +32,7 @@ def register_commands(app: Typer) -> None:
     app.command("incidents")(incidents)
     app.command("investigate")(investigate)
     app.command("explain")(explain)
+    app.command("ai-analyst")(ai_analyst)
     app.command("mitre")(mitre)
     app.command("intel-entities")(intel_entities)
     app.command("save-investigation")(save_investigation)
