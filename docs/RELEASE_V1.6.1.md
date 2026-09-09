@@ -1,52 +1,57 @@
 # AegisLog AI v1.6.1
 
-AegisLog AI v1.6.1 is the hardened follow-up to the existing public v1.6.0 release. It preserves the local-first, read-only defensive model while adding the production hardening, privacy controls, deterministic build gates, signing verification, and external-evidence requirements developed in this branch.
+AegisLog AI v1.6.1 is the hardened follow-up to the existing public v1.6.0 release. It preserves the local-first, read-only defensive model while adding production hardening, privacy controls, deterministic release gates, external-evidence requirements, and the polished terminal experience now present on `main`.
+
+> **Release status:** v1.6.1 is not published yet. The current public stable release remains v1.6.0.
 
 ## Highlights
 
-- Added an analyst triage summary to investigations using existing severity and confidence signals, with explicit non-attribution guidance.
-- Improved Windows Event Log, journald, and Docker diagnostics by distinguishing unsupported sources from temporarily unavailable sources and providing source-specific read-only troubleshooting guidance.
-- Hardened single-file and multi-source live monitoring so temporary source loss is reported clearly, the current dashboard stays visible, recovery is recognized, and monitoring resumes safely.
-- Improved long-running multi-source memory behavior by aggregating arrival history, bounding arrival buckets, and bounding alert fingerprint state.
-- Added focused regression coverage for investigation triage, native diagnostics, source loss/recovery, bounded runtime state, authentication correlation, streaming, provider transport, release evidence, and privacy boundaries.
-- Preserved deterministic local analysis as the primary workflow. Findings, anomaly scores, incident priorities, and ATT&CK mappings are investigative signals and are not proof of compromise, attribution, or attacker intent.
-- Remote AI is disabled by default. Core analysis and local Ollama workflows do not require remote-network consent; remote providers require explicit `AEGISLOG_ALLOW_REMOTE_AI` opt-in.
-- Outbound application networking is centralized in `providers.py` and enforced by regression tests so alternate application modules cannot silently introduce a second remote-egress path.
-- Release evidence must be based on a real sanitized, independently labeled external dataset and bound to the exact release commit.
-- Windows publication is fail-closed unless the executable passes the approved Authenticode signer and timestamp verification gates.
+- Conservative analyst triage based on existing severity, confidence, timeline, and entity evidence.
+- Improved Windows Event Log, journald, and Docker diagnostics with clearer unsupported-versus-unavailable states.
+- Safer single-file and multi-source live monitoring during temporary source loss and recovery.
+- Bounded long-running multi-source state for sustained monitoring workloads.
+- Responsive, full-width terminal UX with clearer Mission Control, source input, analysis-completion, report-handoff, health, command-reference, and narrow-terminal presentation.
+- Deterministic local analysis remains the primary workflow. Findings, anomalies, incident priorities, confidence values, and ATT&CK mappings are investigative signals rather than proof of compromise or attribution.
+- Remote AI remains optional and explicitly opt-in; core analysis does not require an external AI service.
+- External release evidence must come from a real, authorized, sanitized, independently labeled dataset and be bound to the exact code commit evaluated for the release.
 
 ## Distribution
 
-The hardened GitHub release is intended to publish the standalone Windows `AegisLog.exe` plus `AegisLog.exe.sha256`. The executable does not require a separate Python installation or virtual environment for normal customer use.
+The intended GitHub Release contains exactly:
 
-The already-published v1.6.0 release remains historical and unchanged. Its release notes state that its executable was unsigned. v1.6.1 must not be published unless the repository's current signing, checksum, provenance, CI, and external-evidence gates pass.
+```text
+AegisLog.exe
+AegisLog.exe.sha256
+```
+
+The Windows executable is built as a standalone one-file application. Normal customer use does not require a separate Python installation or virtual environment.
+
+The current v1.6.1 release workflow stages an **unsigned** executable, verifies the published SHA-256 checksum, creates build provenance attestation, and refuses to reuse an existing `v1.6.1` tag or GitHub Release. Windows SmartScreen or endpoint-security reputation warnings may therefore occur.
+
+Windows Authenticode signing is **not a mandatory v1.6.1 publication gate**. Signing may be introduced separately in the future, but release readiness must not be represented as blocked merely because signing material is absent.
 
 ## Safety model
 
-AegisLog remains defensive and read-only. It does not automatically remediate hosts, modify source telemetry, change host security policy, deploy persistence, steal credentials, evade security controls, or provide exploitation tooling.
+AegisLog remains defensive and read-only. It does not automatically remediate hosts, modify source telemetry, change host security policy, deploy persistence, steal credentials, evade controls, or provide exploitation workflows.
 
 ## Release operator checklist
 
-The hardened release path is fail-closed. Do not substitute placeholder credentials, fabricated reviewer metadata, synthetic telemetry, or a manual checkbox for the required evidence.
-
 Before an authorized release:
 
-1. Confirm the candidate commit is the exact reviewed commit intended for release and that it is on `main`.
-2. Confirm all required CI, security, package, Windows-build, runtime-lock, build-lock, and validation-lock workflows are green for the release candidate.
-3. Have an organization administrator provision the real Windows signing material outside the repository and chat systems:
-   - `WINDOWS_SIGNING_PFX_BASE64`
-   - `WINDOWS_SIGNING_PFX_PASSWORD`
-   - `WINDOWS_SIGNING_CERT_THUMBPRINT`
-   - `WINDOWS_SIGNING_TIMESTAMP_URL`
-4. Prepare an authorized, minimized, sanitized, independently labeled external JSONL evaluation dataset. Do not commit the underlying production/customer telemetry merely to run the evaluation.
-5. Generate the release evidence from the actual dataset and exact candidate commit using `tools/build_external_evidence.py` with real provenance, labeling procedure, reviewer metadata, `--independent-labeling`, and `--sanitized`.
-6. Review `evaluation/external-release-evidence.json` for accuracy and ensure it identifies the exact release commit.
-7. Run the release preflight. It must validate repository/ref, release tag/version/confirmation, signing thumbprint, HTTPS timestamp URL, and external evidence.
-8. Authorize the release only after the preflight is green. The workflow must build, sign, verify, checksum, attest, and then publish.
-9. After publication, perform a clean-install smoke test using the published artifact and verify its signature and checksum.
+1. Freeze the exact `main` code commit intended for v1.6.1 and ensure the required CI, security, package, Windows-build, and lock-audit workflows are acceptable for that candidate.
+2. Prepare a real, authorized, minimized, sanitized, independently labeled external evaluation dataset.
+3. Generate `evaluation/external-release-evidence.json` with `tools/build_external_evidence.py`, recording the exact evaluated code commit plus truthful provenance, labeling procedure, reviewer metadata, metrics, uncertainty, and limitations.
+4. Commit **only** `evaluation/external-release-evidence.json` as the immediate direct single-parent child of the evaluated code commit.
+5. Run `tools/release_preflight.py` through the guarded release workflow. The preflight must validate the release ref/version/confirmation, evidence binding, parentage, and allowed changed path.
+6. Confirm no `v1.6.1` tag or GitHub Release already exists.
+7. Dispatch `.github/workflows/release-v1.6.1.yml` from the exact evidence-only release commit on `main` using the required confirmation `RELEASE-v1.6.1`.
+8. Allow the workflow to run quality/security checks, build and smoke-test the Windows executable, generate and verify its checksum, create provenance attestation, and publish the release assets.
+9. After publication, download the public GitHub Release assets, verify the checksum, and perform a clean-machine smoke test using the published executable rather than a temporary Actions artifact.
 
-Do not release if signing, external evidence, CI, preflight, checksum verification, provenance, or post-build smoke testing fails.
+Do not release if external evidence is fabricated, synthetic-only, unauthorized, circularly labeled, stale, or bound to the wrong commit; if the evidence-only commit contains unrelated changes; if preflight or required validation fails; or if post-build checksum/smoke verification fails.
 
 ## Verification
 
-Verify the downloaded executable against the accompanying SHA-256 file and verify the Authenticode signature and approved signer identity. The v1.6.1 release workflow refuses to overwrite or reuse an existing `v1.6.1` tag or GitHub release.
+After publication, verify `AegisLog.exe` against `AegisLog.exe.sha256` and confirm the release/tag targets the intended evidence-only release commit.
+
+GitHub Actions artifacts are temporary validation evidence. Permanent customer downloads must come from the published GitHub Release.
