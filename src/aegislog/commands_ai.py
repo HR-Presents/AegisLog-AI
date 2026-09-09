@@ -68,6 +68,27 @@ def answer_with_provider(
         return run_provider(selected, prompt, model, base_url)
 
 
+def _provider_panel(path: Path) -> Panel:
+    body = Text()
+    body.append("SOURCE       ", style=MUTED)
+    body.append(path.name, style="bold white")
+    body.append("\n\nLOCAL        ", style=f"bold {ACCENT}")
+    body.append("Deterministic findings only / no model / no network", style="white")
+    body.append("\nOLLAMA       ", style=f"bold {ACCENT}")
+    body.append("Local model on this machine / default llama3.2", style="white")
+    body.append("\nREMOTE       ", style=f"bold {WARNING}")
+    body.append("OpenAI-compatible / redacted context only / explicit consent required", style="white")
+    body.append("\n\nDETECTION    ", style=MUTED)
+    body.append("Always deterministic and unchanged by AI output", style=ACCENT_SOFT)
+    return Panel(
+        body,
+        title=Text(" AI PROVIDER ", style=f"bold {ACCENT}"),
+        title_align="left",
+        border_style=ACCENT_SOFT,
+        padding=(1, 2),
+    )
+
+
 def _result_panel(response: AIResponse) -> Panel:
     body = Text()
     body.append(response.text.strip() or "No response text was returned.", style="white")
@@ -87,20 +108,7 @@ def _result_panel(response: AIResponse) -> Panel:
 
 def interactive_ai_analyst(path: Path) -> None:
     """Run the provider-backed analyst workflow inside Mission Control."""
-    console.print(
-        bounded(
-            Panel(
-                Text.from_markup(
-                    "[bold]Choose how AegisLog should answer.[/bold]\n"
-                    "Local uses deterministic findings only. Ollama stays on this machine. "
-                    "OpenAI-compatible sends only redacted investigation context and requires explicit consent."
-                ),
-                title=Text(" AI PROVIDER ", style=f"bold {ACCENT}"),
-                title_align="left",
-                border_style=ACCENT_SOFT,
-            )
-        )
-    )
+    console.print(bounded(_provider_panel(path)))
     provider = Prompt.ask(
         "Provider",
         choices=["local", "ollama", "openai-compatible", "back"],
@@ -123,7 +131,7 @@ def interactive_ai_analyst(path: Path) -> None:
     elif provider == "openai-compatible":
         model = Prompt.ask("Model", default="gpt-4.1-mini").strip()
         consent = Prompt.ask(
-            "Send redacted investigation context to the configured remote provider?",
+            "Send bounded, redacted investigation context to the configured remote provider?",
             choices=["no", "yes"],
             default="no",
         )
