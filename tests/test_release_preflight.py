@@ -20,7 +20,6 @@ validate_preflight = release_preflight.validate_preflight
 
 EVALUATED_SHA = "a" * 40
 RELEASE_SHA = "b" * 40
-THUMBPRINT = "B" * 40
 EVIDENCE_PATH = "evaluation/external-release-evidence.json"
 
 
@@ -37,13 +36,7 @@ def _manifest() -> dict[str, object]:
         "dataset_sha256": "c" * 64,
         "evaluated_commit": EVALUATED_SHA,
         "sample_count": 100,
-        "metrics": {
-            "precision": 0.91,
-            "recall": 0.88,
-            "case_accuracy": 0.89,
-            "false_positives": 4,
-            "false_negatives": 6,
-        },
+        "metrics": {"precision": 0.91, "recall": 0.88, "case_accuracy": 0.89, "false_positives": 4, "false_negatives": 6},
     }
 
 
@@ -54,31 +47,15 @@ def _write_manifest(tmp_path: Path, payload: dict[str, object] | None = None) ->
 
 
 def _args(path: Path) -> Namespace:
-    return Namespace(
-        repository="HR-Presents/AegisLog-AI",
-        ref="refs/heads/main",
-        sha=RELEASE_SHA,
-        release_tag="v1.6.0",
-        release_version="1.6.0",
-        confirmation="RELEASE-v1.6.0",
-        signing_thumbprint=THUMBPRINT,
-        timestamp_url="https://timestamp.example.test/rfc3161",
-        external_evidence=path,
-        repository_root=Path("."),
-    )
+    return Namespace(repository="HR-Presents/AegisLog-AI", ref="refs/heads/main", sha=RELEASE_SHA, release_tag="v1.6.0", release_version="1.6.0", confirmation="RELEASE-v1.6.0", external_evidence=path, repository_root=Path("."))
 
 
 def _mock_valid_commit_shape(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        release_preflight,
-        "_release_commit_shape",
-        lambda release_commit, repository_root: ([EVALUATED_SHA], {EVIDENCE_PATH}),
-    )
+    monkeypatch.setattr(release_preflight, "_release_commit_shape", lambda release_commit, repository_root: ([EVALUATED_SHA], {EVIDENCE_PATH}))
 
 
 def test_valid_external_evidence_passes(tmp_path: Path) -> None:
-    path = _write_manifest(tmp_path)
-    evidence = validate_external_evidence(path)
+    evidence = validate_external_evidence(_write_manifest(tmp_path))
     assert evidence["dataset_kind"] == "external"
     assert evidence["evaluated_commit"] == EVALUATED_SHA
 
@@ -89,119 +66,58 @@ def test_missing_external_evidence_fails_closed(tmp_path: Path) -> None:
 
 
 def test_synthetic_evidence_is_rejected(tmp_path: Path) -> None:
-    payload = _manifest()
-    payload["dataset_kind"] = "synthetic"
+    payload = _manifest(); payload["dataset_kind"] = "synthetic"
     with pytest.raises(PreflightError, match="dataset_kind"):
         validate_external_evidence(_write_manifest(tmp_path, payload))
 
 
 def test_malformed_evaluated_commit_is_rejected(tmp_path: Path) -> None:
-    payload = _manifest()
-    payload["evaluated_commit"] = "not-a-sha"
+    payload = _manifest(); payload["evaluated_commit"] = "not-a-sha"
     with pytest.raises(PreflightError, match="evaluated_commit must be"):
         validate_external_evidence(_write_manifest(tmp_path, payload))
 
 
 def test_non_independent_labeling_is_rejected(tmp_path: Path) -> None:
-    payload = _manifest()
-    payload["independent_labeling"] = False
+    payload = _manifest(); payload["independent_labeling"] = False
     with pytest.raises(PreflightError, match="independent_labeling must be true"):
         validate_external_evidence(_write_manifest(tmp_path, payload))
 
 
 def test_unsanitized_evidence_is_rejected(tmp_path: Path) -> None:
-    payload = _manifest()
-    payload["sanitized"] = False
+    payload = _manifest(); payload["sanitized"] = False
     with pytest.raises(PreflightError, match="sanitized must be true"):
         validate_external_evidence(_write_manifest(tmp_path, payload))
 
 
-def test_evidence_binding_accepts_direct_evidence_only_child(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_evidence_binding_accepts_direct_evidence_only_child(monkeypatch: pytest.MonkeyPatch) -> None:
     _mock_valid_commit_shape(monkeypatch)
     validate_evidence_binding(_manifest(), RELEASE_SHA, Path("."))
 
 
-def test_evidence_binding_rejects_non_direct_ancestor(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        release_preflight,
-        "_release_commit_shape",
-        lambda release_commit, repository_root: (["d" * 40], {EVIDENCE_PATH}),
-    )
+def test_evidence_binding_rejects_non_direct_ancestor(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release_preflight, "_release_commit_shape", lambda release_commit, repository_root: (["d" * 40], {EVIDENCE_PATH}))
     with pytest.raises(PreflightError, match="direct single-parent child"):
         validate_evidence_binding(_manifest(), RELEASE_SHA, Path("."))
 
 
-def test_evidence_binding_rejects_merge_commit(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        release_preflight,
-        "_release_commit_shape",
-        lambda release_commit, repository_root: (
-            [EVALUATED_SHA, "d" * 40],
-            {EVIDENCE_PATH},
-        ),
-    )
+def test_evidence_binding_rejects_merge_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release_preflight, "_release_commit_shape", lambda release_commit, repository_root: ([EVALUATED_SHA, "d" * 40], {EVIDENCE_PATH}))
     with pytest.raises(PreflightError, match="direct single-parent child"):
         validate_evidence_binding(_manifest(), RELEASE_SHA, Path("."))
 
 
-def test_evidence_binding_rejects_code_change_with_evidence(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        release_preflight,
-        "_release_commit_shape",
-        lambda release_commit, repository_root: (
-            [EVALUATED_SHA],
-            {EVIDENCE_PATH, "src/aegislog/engine.py"},
-        ),
-    )
+def test_evidence_binding_rejects_code_change_with_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release_preflight, "_release_commit_shape", lambda release_commit, repository_root: ([EVALUATED_SHA], {EVIDENCE_PATH, "src/aegislog/engine.py"}))
     with pytest.raises(PreflightError, match="may differ.*only"):
         validate_evidence_binding(_manifest(), RELEASE_SHA, Path("."))
 
 
-def test_evidence_binding_rejects_wrong_only_file(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        release_preflight,
-        "_release_commit_shape",
-        lambda release_commit, repository_root: (
-            [EVALUATED_SHA],
-            {"evaluation/other.json"},
-        ),
-    )
+def test_evidence_binding_rejects_wrong_only_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release_preflight, "_release_commit_shape", lambda release_commit, repository_root: ([EVALUATED_SHA], {"evaluation/other.json"}))
     with pytest.raises(PreflightError, match="external-release-evidence.json"):
         validate_evidence_binding(_manifest(), RELEASE_SHA, Path("."))
 
 
-def test_preflight_rejects_http_timestamp_url(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _mock_valid_commit_shape(monkeypatch)
-    args = _args(_write_manifest(tmp_path))
-    args.timestamp_url = "http://timestamp.example.test"
-    with pytest.raises(PreflightError, match="credential-free HTTPS"):
-        validate_preflight(args)
-
-
-def test_preflight_rejects_malformed_thumbprint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _mock_valid_commit_shape(monkeypatch)
-    args = _args(_write_manifest(tmp_path))
-    args.signing_thumbprint = "1234"
-    with pytest.raises(PreflightError, match="40 hexadecimal"):
-        validate_preflight(args)
-
-
-def test_preflight_accepts_complete_release_context(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_preflight_accepts_complete_unsigned_release_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _mock_valid_commit_shape(monkeypatch)
     validate_preflight(_args(_write_manifest(tmp_path)))
