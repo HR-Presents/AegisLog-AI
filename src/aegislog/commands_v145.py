@@ -6,7 +6,7 @@ from rich.text import Text
 
 from . import __version__
 from . import commands_v144 as legacy
-from .theme import ACCENT, MUTED, NEUTRAL, SUCCESS, WARNING
+from .theme import ACCENT, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 
