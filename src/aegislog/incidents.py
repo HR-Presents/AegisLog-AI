@@ -40,19 +40,18 @@ def _source_from_evidence(evidence: str) -> str:
 
 
 def _correlation_key(finding: Finding) -> tuple[str, str, str, str]:
-    """Keep incidents scoped to signals that actually share useful context.
+    """Scope incidents to shared context while preserving generic fallback behavior."""
 
-    Broad category-only grouping caused unrelated firewall, SSH, application, sudo,
-    and backup findings to be presented as one incident.  Correlate by category,
-    detection title, parsed service, and source address when those values exist.
-    """
+    category = finding.category.lower()
+    service = _service_from_evidence(finding.evidence)
+    source = _source_from_evidence(finding.evidence)
 
-    return (
-        finding.category.lower(),
-        finding.title.lower(),
-        _service_from_evidence(finding.evidence),
-        _source_from_evidence(finding.evidence),
-    )
+    # Structured evidence should not be collapsed merely because two findings share
+    # a broad category.  When structured context is absent, retain the historical
+    # category-level fallback so older generic inputs remain compatible.
+    if service or source:
+        return (category, finding.title.lower(), service, source)
+    return (category, "", "", "")
 
 
 def correlate(findings: list[Finding]) -> list[Incident]:
@@ -65,13 +64,14 @@ def correlate(findings: list[Finding]) -> list[Incident]:
         category = key[0]
         top = max(items, key=lambda item: SEVERITY.get(item.severity, 0))
 
-        # Generic operational errors are useful findings, but one unrelated error is
-        # not a correlated incident. Keep them in the findings section unless the
-        # same detection recurs for the same service/source context.
-        if category == "error" and len(items) < 2:
+        # Generic operational errors are useful findings, but one isolated structured
+        # error is not a correlated incident. Keep it in Findings unless it recurs in
+        # the same service/source context. Generic legacy inputs keep prior behavior.
+        has_structured_context = bool(key[2] or key[3])
+        if category == "error" and has_structured_context and len(items) < 2:
             continue
 
-        digest_seed = "\0".join(key)
+        digest_seed = "\0".join(key) + "\0" + top.title.lower()
         digest = hashlib.sha256(digest_seed.encode()).hexdigest()[:12]
         incidents.append(
             Incident(
