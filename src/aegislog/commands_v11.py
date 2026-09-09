@@ -37,7 +37,7 @@ def dashboard(
         task = progress.add_task(f"Analyzing {path.name}...", total=None)
         data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
         progress.update(task, description="Building terminal dashboard...")
-    console.print(bounded(render_dashboard(data)))
+    console.print(bounded(render_dashboard(data, screen_width=console.size.width)))
     try:
         report_path = write_html_report(data)
     except OSError as exc:
