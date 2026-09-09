@@ -14,8 +14,14 @@ class Event:
     message: str = ""
 
 
-NGINX = re.compile(r'(?P<ip>\S+) \S+ \S+ \[[^]]+\] "(?P<method>\S+) (?P<path>\S+)[^"]*" (?P<status>\d{3})')
+NGINX = re.compile(r'(?P<ip>\S+) \S+ \S+ \[[^]]+\] "(?P<method>\S+) (?P<path>\S+)[^\"]*" (?P<status>\d{3})')
 SYSLOG = re.compile(r"^[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\S+\s+(?P<service>[\w.-]+)(?:\[\d+\])?:\s+(?P<message>.*)$")
+ISO_SERVICE = re.compile(
+    r"^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)\s+"
+    r"(?P<level>CRITICAL|ERROR|WARNING|WARN|NOTICE|INFO|DEBUG)\s+"
+    r"(?P<service>[\w.-]+)(?:\[\d+\])?:\s*(?P<message>.*)$",
+    re.IGNORECASE,
+)
 WINDOWS_EVENT = re.compile(
     r"^(?P<timestamp>\S+)\s+(?P<provider>[\w.(){}\-/ ]+)\[(?P<event_id>\d+)\]:\s+"
     r"(?P<level>CRITICAL|ERROR|WARNING|WARN|INFORMATION|INFO|VERBOSE)\s*(?P<message>.*)$",
@@ -42,6 +48,16 @@ WINDOWS_LEVELS = {
     "information": "info",
     "info": "info",
     "verbose": "debug",
+}
+
+GENERIC_LEVELS = {
+    "critical": "critical",
+    "error": "error",
+    "warning": "warning",
+    "warn": "warning",
+    "notice": "notice",
+    "info": "info",
+    "debug": "debug",
 }
 
 
@@ -79,6 +95,17 @@ def parse_line(line: str) -> Event:
             return Event(raw=raw, source="json/journald", level=level or None, service=service, message=message)
         except json.JSONDecodeError:
             pass
+
+    match = ISO_SERVICE.match(stripped)
+    if match:
+        level = GENERIC_LEVELS.get(match.group("level").lower())
+        return Event(
+            raw=raw,
+            source="iso-service",
+            level=level,
+            service=match.group("service"),
+            message=match.group("message").strip(),
+        )
 
     match = WINDOWS_EVENT.match(stripped)
     if match:
