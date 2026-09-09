@@ -8,13 +8,12 @@
 [![Security](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml/badge.svg)](https://github.com/HR-Presents/AegisLog-AI/actions/workflows/security.yml)
 [![Latest release](https://img.shields.io/github/v/release/HR-Presents/AegisLog-AI?display_name=tag&style=flat-square)](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/HR-Presents/AegisLog-AI?style=flat-square&logo=github)](https://github.com/HR-Presents/AegisLog-AI/stargazers)
 
-**Stable release: v1.6.0** · **Windows standalone EXE** · **Python package/source**
+**Stable release: v1.6.3** · **Windows standalone EXE** · **Python package/source**
 
-[Download for Windows](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0) · [Documentation](docs/README.md) · [User Guide](docs/USER_GUIDE.md) · [Commands](docs/COMMANDS.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
+[Download](https://github.com/HR-Presents/AegisLog-AI/releases/latest) · [User Guide](docs/USER_GUIDE.md) · [Commands](docs/COMMANDS.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
-**Defensive by design · Local-first · Read-only · Remote AI optional**
+**Deterministic · Local-first · Read-only · Defensive**
 
 </div>
 
@@ -22,73 +21,76 @@
 
 ## What is AegisLog?
 
-AegisLog is an open-source defensive security platform for turning raw logs into structured investigation context without making an external AI service part of the core workflow.
+AegisLog is an open-source, terminal-first defensive security tool for turning raw logs into structured investigation context while keeping analysis local and evidence visible.
 
-It is built for analysts, defenders, students, homelabs, and security teams that want a practical terminal-first workflow for:
+It is designed for analysts, defenders, students, homelabs, and security teams that need practical workflows for:
 
 - static log analysis;
 - live single-source monitoring;
 - multi-source correlation;
-- native Windows, Linux, and Docker telemetry where supported;
-- correlated incident review;
-- evidence-led explanations and MITRE ATT&CK context;
-- optional AI-assisted investigation using Local, Ollama, or explicitly opted-in OpenAI-compatible providers;
-- analyst-oriented HTML reports that can be printed or saved as PDF.
+- Windows, Linux, and Docker telemetry where supported;
+- incident reconstruction and evidence review;
+- MITRE ATT&CK context based on observed evidence;
+- analyst-oriented HTML reporting;
+- local case and entity investigation.
 
-AegisLog does **not** automatically remediate hosts, change firewall rules, modify accounts or services, deploy persistence, steal credentials, or perform exploitation. Findings and scores are investigation signals, not proof of compromise or attribution.
-
----
-
-## Why AegisLog
-
-| Capability | AegisLog approach |
-|---|---|
-| **Core processing** | Local-first and deterministic |
-| **Host behavior** | Read-only analysis and monitoring |
-| **Primary UI** | Terminal-first Security Operations Console |
-| **Windows delivery** | Standalone `AegisLog.exe` |
-| **Reports** | Self-contained analyst HTML report / Save-to-PDF |
-| **AI Analyst** | Local default; Ollama local; remote OpenAI-compatible optional and explicit |
-| **Telemetry** | File logs plus supported Windows Event Log, journald, and Docker sources |
-| **Security model** | Defensive, evidence-led, non-attributive |
-| **License** | MIT |
-
-The project intentionally favors clear analyst workflows over flashy dashboards or opaque automation. The interface is designed to show what AegisLog observed, how it grouped evidence, and what an analyst should review next.
+AegisLog does not automatically remediate systems, change firewall rules, modify accounts or services, deploy persistence, steal credentials, or perform exploitation. Findings are investigation signals, not proof of compromise or attribution.
 
 ---
 
-## Current interface
+## Product direction
 
-The current `main` branch includes the latest terminal UI refinements beyond the published v1.6.0 release. The public console now uses a consistent product hierarchy across Mission Control, source selection, analysis completion, health pages, command reference, investigation output, and the optional AI Analyst workspace.
+AegisLog intentionally keeps the core workflow deterministic. The current product surface does **not** include an AI Analyst, Ollama controls, or remote model-provider actions.
 
-Key UI behaviors include:
+The interface is built around three principles:
 
-- full-width responsive terminal layouts;
-- clear `AEGISLOG // WORKSPACE` page identity;
-- restrained color use with brighter colors reserved for meaningful severity states;
-- primary-input emphasis during source selection;
-- explicit `ANALYSIS COMPLETE` transition before investigation results;
-- compact report handoff messaging;
-- responsive System Health and Command Reference pages;
-- discoverable `A — AI ANALYST` provider-assisted investigation;
-- narrow-terminal fallbacks that preserve readability instead of squeezing dense tables.
+1. **Quiet navigation** — minimal menus, restrained color, clear labels.
+2. **Evidence-rich investigation** — findings, incidents, severity, confidence, and telemetry get the visual emphasis.
+3. **Semantic color** — color indicates navigation state, health, warning, or severity instead of decorating every panel.
 
-### Screenshots
+---
 
-Real product screenshots are intentionally not replaced with mockups or generated images. The repository contains a documented capture process in [`docs/SCREENSHOT_CAPTURE.md`](docs/SCREENSHOT_CAPTURE.md), and screenshots should only be published when captured from a verified Windows build using sanitized or synthetic telemetry.
+## Current terminal design
+
+```text
+AEGISLOG  v1.6.3
+Defensive log investigation
+────────────────────────────────────────────────────────
+● READY   LOCAL-FIRST   READ-ONLY   DEFENSIVE
+
+INVESTIGATE
+01  Analyze            Investigate a log and generate a report
+06  Incidents          Review correlated evidence chains
+04  Native logs        Inspect operating-system or container telemetry
+
+MONITOR
+02  Live monitor       Watch one log source continuously
+03  Multi-source       Correlate activity across live sources
+05  Native monitor     Watch native telemetry read-only
+
+TOOLS
+07  Demo               Run the built-in investigation dataset
+08  Health             Check engine and collector readiness
+09  Help               Open the command reference
+
+────────────────────────────────────────────────────────
+Select an action  ›  01-09    C command mode    Q exit
+```
+
+Heavy nested panels are avoided. Workspaces use flat page titles, aligned metadata, whitespace, and borderless tables. Severity colors are reserved for genuine security state.
 
 ---
 
 ## Quick start
 
-### Windows — recommended for most users
+### Windows
 
-1. Open the [v1.6.0 release](https://github.com/HR-Presents/AegisLog-AI/releases/tag/v1.6.0).
+1. Open the [latest release](https://github.com/HR-Presents/AegisLog-AI/releases/latest).
 2. Download `AegisLog.exe`.
 3. Optionally download `AegisLog.exe.sha256` and verify the checksum.
-4. Run `AegisLog.exe` to open Mission Control.
+4. Run `AegisLog.exe start`.
 
-The current Windows executable is unsigned, so Windows SmartScreen or endpoint-security reputation warnings may appear even when the published checksum matches.
+The Windows executable is currently unsigned, so Windows SmartScreen or endpoint-security reputation warnings may appear even when the published checksum matches.
 
 ### Python 3.10+
 
@@ -104,38 +106,9 @@ aegislog dashboard examples/auth.log
 
 ---
 
-## Mission Control
+## Common workflows
 
-Run AegisLog without a subcommand:
-
-```text
-AegisLog.exe
-```
-
-The terminal control center provides direct entry points for:
-
-```text
-01  ANALYZE LOG
-02  LIVE MONITOR
-03  MULTI-SOURCE SOC
-04  NATIVE LOGS
-05  NATIVE MONITOR
-06  INCIDENT INTEL
-A   AI ANALYST
-07  DEMO
-08  HEALTH
-09  COMMANDS
-C   COMMAND MODE
-Q   EXIT
-```
-
-The same workflows are available directly from the CLI.
-
----
-
-## Common commands
-
-### Static analysis
+### Analyze a log
 
 ```text
 AegisLog.exe dashboard C:\path\to\auth.log
@@ -143,21 +116,6 @@ AegisLog.exe incidents C:\path\to\auth.log
 AegisLog.exe explain C:\path\to\auth.log <incident-id>
 AegisLog.exe mitre C:\path\to\auth.log
 ```
-
-### AI Analyst
-
-```text
-# Deterministic local answer; no model or network required
-AegisLog.exe ai-analyst C:\path\to\auth.log --provider local
-
-# Local Ollama
-AegisLog.exe ai-analyst C:\path\to\auth.log --provider ollama --model llama3.2
-
-# Remote OpenAI-compatible provider: explicit consent required
-AegisLog.exe ai-analyst C:\path\to\auth.log --provider openai-compatible --model YOUR_MODEL --allow-remote
-```
-
-Remote AI also requires an API key through `AEGISLOG_API_KEY` or `OPENAI_API_KEY`. Detection is completed locally before the optional AI provider is invoked.
 
 ### Live monitoring
 
@@ -184,13 +142,11 @@ AegisLog.exe --help
 AegisLog.exe <command> --help
 ```
 
-For complete command coverage, see [`docs/COMMANDS.md`](docs/COMMANDS.md).
+See the full [Command Reference](docs/COMMANDS.md).
 
 ---
 
-## Investigation workflow
-
-A typical AegisLog investigation follows a simple path:
+## Investigation model
 
 ```text
 Telemetry
@@ -205,74 +161,47 @@ Incident queue
    ↓
 Evidence-led local explanation
    ↓
-Optional AI Analyst (Local / Ollama / opt-in remote)
-   ↓
 Analyst review / HTML report
 ```
 
-The output can include severity, confidence, retained evidence, categories, anomaly signals, correlated incidents, source/service distributions, MITRE ATT&CK context, and recommended defensive follow-up.
-
-AegisLog deliberately separates **signal** from **verdict**. A high-severity finding or confidence score means “review this evidence carefully,” not “this system is definitely compromised.” AI-provider output is assistance and does not replace retained evidence or deterministic findings.
+AegisLog deliberately separates **signal** from **verdict**. A high-severity finding or confidence score means “review this evidence carefully,” not “this system is definitely compromised.”
 
 ---
 
 ## Reports
 
-Static dashboard analysis automatically produces a self-contained investigation report. The report is designed for analyst handoff rather than marketing presentation and includes:
+Static analysis can produce a self-contained investigation report with:
 
 - executive assessment;
 - case reference and source metadata;
-- event/finding/incident counts;
+- event, finding, and incident counts;
 - severity distribution;
-- primary analyst decision context;
 - incident queue;
-- findings and recommendations;
+- retained evidence;
+- recommendations;
 - anomaly signals;
-- observed telemetry distribution;
+- telemetry distribution;
 - processing and evidence limitations.
 
-The report is local, read-only, and does not require remote AI. Use the browser action to print or save it as PDF.
-
----
-
-## Optional AI providers
-
-AegisLog's **AI Analyst** is an optional post-detection investigation layer. The deterministic engine runs first and remains authoritative for findings.
-
-Supported modes:
-
-- **Local** — deterministic rule-backed summary; no model or network required.
-- **Ollama** — local model through the loopback Ollama endpoint.
-- **OpenAI-compatible** — remote HTTPS provider; explicit consent is required for each Mission Control request or via `--allow-remote` on the CLI.
-
-Before provider execution, AegisLog builds a bounded investigation prompt, redacts recognized sensitive values, and labels log content as untrusted telemetry. Remote provider transport is disabled by default.
-
-See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md), [`docs/AI_SAFETY.md`](docs/AI_SAFETY.md), and [`docs/REMOTE_AI.md`](docs/REMOTE_AI.md).
+Reports remain local and read-only and can be printed or saved as PDF from the browser.
 
 ---
 
 ## Security and privacy
 
-AegisLog is defensive tooling and treats log-derived content as untrusted input.
+AegisLog treats log-derived content as untrusted input.
 
 Core principles:
 
 - read-only host interaction;
+- deterministic local analysis;
 - no automatic remediation;
 - no exploitation or persistence behavior;
-- no user-tracking telemetry added simply to count installations;
-- remote AI remains optional and explicitly consented;
-- evidence and uncertainty are kept visible to the analyst;
-- public bug reports and reviews must use sanitized or synthetic data.
+- no telemetry added simply to count installations;
+- evidence and uncertainty remain visible;
+- public issues and reviews should use sanitized or synthetic data.
 
-Read the full model:
-
-- [`SECURITY.md`](SECURITY.md)
-- [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
-- [`docs/PRIVACY.md`](docs/PRIVACY.md)
-- [`docs/NO_AUTOREMEDIATION.md`](docs/NO_AUTOREMEDIATION.md)
-
-Please report security vulnerabilities privately using the process in [`SECURITY.md`](SECURITY.md). Do not place sensitive proof-of-concept material or real production telemetry in a public issue.
+Read more in [SECURITY.md](SECURITY.md), [Threat Model](docs/THREAT_MODEL.md), [Privacy](docs/PRIVACY.md), and [No Auto-Remediation](docs/NO_AUTOREMEDIATION.md).
 
 ---
 
@@ -293,42 +222,18 @@ Please report security vulnerabilities privately using the process in [`SECURITY
 
 ## Contributing
 
-Contributions are welcome when they preserve the project’s defensive, local-first, evidence-led model.
+Contributions are welcome when they preserve the project's defensive, local-first, evidence-led model.
 
 ```bash
-git clone https://github.com/HR-Presents/AegisLog-AI.git
-cd AegisLog-AI
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e '.[dev]'
 pytest
 ruff check .
 bandit -q -r src
 ```
 
-Before opening a pull request, read [`CONTRIBUTING.md`](CONTRIBUTING.md). Keep PRs focused, add tests for behavioral changes, and never commit credentials, customer information, or real sensitive logs.
-
----
-
-## Support and community
-
-- **Bug or reproducible UX issue:** use the GitHub issue templates with sanitized reproduction data.
-- **Feature idea:** request defensive, local-first improvements.
-- **Security vulnerability:** follow [`SECURITY.md`](SECURITY.md) privately.
-- **Usage help:** start with [`SUPPORT.md`](SUPPORT.md) and the [User Guide](docs/USER_GUIDE.md).
-- **Public experience:** use the [User Review](https://github.com/HR-Presents/AegisLog-AI/issues/new?template=user_review.yml) form.
-
-Stars, forks, issues, pull requests, and public reviews are GitHub-native community signals. A star is support or interest; it is not proof that someone installed the application.
-
----
-
-## Release status
-
-**Published stable:** v1.6.0
-
-The `main` branch may contain reviewed improvements that are newer than the latest stable binary. v1.6.1 work remains unreleased until its release process is explicitly completed. Do not treat CI artifacts as permanent customer downloads; official user downloads are GitHub Release assets.
-
-See [`CHANGELOG.md`](CHANGELOG.md), [`docs/RELEASE_V1.6.0.md`](docs/RELEASE_V1.6.0.md), and the [GitHub Releases](https://github.com/HR-Presents/AegisLog-AI/releases) page.
+Keep pull requests focused, add tests for behavioral changes, and never commit credentials, customer information, or sensitive production logs.
 
 ---
 

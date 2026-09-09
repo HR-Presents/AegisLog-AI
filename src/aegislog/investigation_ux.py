@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from rich.panel import Panel
+from rich.console import Group, RenderableType
+from rich.table import Table
 from rich.text import Text
 
 from .investigation import InvestigationIncident
-from .theme import ACCENT, ACCENT_SOFT, INCIDENT, MUTED, WARNING
+from .theme import ACCENT, ACCENT_SOFT, INCIDENT, MUTED, NEUTRAL, WARNING
 
 
 def triage_priority(incident: InvestigationIncident) -> tuple[str, str]:
@@ -17,21 +18,21 @@ def triage_priority(incident: InvestigationIncident) -> tuple[str, str]:
     return "Routine review", ACCENT_SOFT
 
 
-def incident_triage_panel(incident: InvestigationIncident) -> Panel:
-    """Summarize why an incident deserves analyst attention without claiming compromise."""
+def incident_triage_panel(incident: InvestigationIncident) -> RenderableType:
+    """Summarize triage with a flat evidence-first layout."""
     priority, style = triage_priority(incident)
-    text = Text()
-    text.append("Priority: ", style="bold white")
-    text.append(priority, style=style)
-    text.append("\nEvidence: ", style="bold white")
-    text.append(str(len(incident.findings)), style=ACCENT)
-    text.append(" finding(s), ", style=MUTED)
-    text.append(str(len(incident.timeline)), style=ACCENT)
-    text.append(" timeline event(s), ", style=MUTED)
-    text.append(str(len(incident.entities)), style=ACCENT)
-    text.append(" associated entity value(s)", style=MUTED)
-    text.append("\nConfidence: ", style="bold white")
-    text.append(f"{incident.confidence}%", style=ACCENT)
+
+    heading = Text("Analyst triage", style=f"bold {MUTED}")
+    priority_line = Text("Priority: ", style=MUTED)
+    priority_line.append(priority, style=f"bold {style}")
+    priority_line.append(f"   Confidence: {incident.confidence}%", style=MUTED)
+
+    metrics = Table.grid(padding=(0, 2))
+    metrics.add_column(style=MUTED)
+    metrics.add_column(style=NEUTRAL)
+    metrics.add_row("Findings", str(len(incident.findings)))
+    metrics.add_row("Timeline events", str(len(incident.timeline)))
+    metrics.add_row("Associated entities", str(len(incident.entities)))
 
     if incident.entities:
         next_step = "Validate the associated entities against nearby identity, host, network, or application telemetry."
@@ -40,10 +41,23 @@ def incident_triage_panel(incident: InvestigationIncident) -> Panel:
     else:
         next_step = "Collect additional source context before escalating this incident."
 
-    text.append("\nRecommended triage step: ", style="bold white")
-    text.append(next_step, style="white")
-    text.append(
-        "\n\nPriority reflects available local evidence only; it is not proof of compromise, attribution, or attacker intent.",
+    guidance = Text()
+    guidance.append("Next  ", style=f"bold {ACCENT}")
+    guidance.append(next_step, style=NEUTRAL)
+
+    caveat = Text(
+        "Priority reflects available local evidence only; it is not proof of compromise, attribution, or attacker intent.",
         style=MUTED,
     )
-    return Panel(text, title="Analyst triage", title_align="left", border_style=style)
+
+    return Group(
+        heading,
+        Text("─" * 48, style="grey35"),
+        priority_line,
+        Text(""),
+        metrics,
+        Text(""),
+        guidance,
+        Text(""),
+        caveat,
+    )

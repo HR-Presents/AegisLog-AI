@@ -1,38 +1,55 @@
 from __future__ import annotations
 
 from rich.console import Group, RenderableType
-from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from . import __version__
 from . import commands_v144 as legacy
-from .commands_ai import interactive_ai_analyst
-from .theme import ACCENT, ACCENT_SOFT, HIGH, INCIDENT, INFO, MUTED, SUCCESS, WARNING
+from .theme import ACCENT, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 
 
-def _header(screen_width: int | None = None) -> Panel:
-    """Render the current product version from package metadata."""
+def _rule(width: int) -> Text:
+    return Text("─" * max(24, width - 2), style="grey35")
+
+
+def _header(screen_width: int | None = None) -> RenderableType:
+    """Quiet product header: identity first, status second, no decorative frame."""
     frame_width = legacy._frame_width(screen_width)
-    banner = Text()
-    banner.append_text(legacy._brand_mark())
-    if frame_width >= 82:
-        banner.append("  SECURITY OPERATIONS CONSOLE", style="bold white")
-    else:
-        banner.append("  SECURITY OPERATIONS", style="bold white")
-    banner.append(f"  v{__version__}", style=MUTED)
-    banner.append("\n")
-    banner.append("READY", style=f"bold {SUCCESS}")
-    banner.append("  LOCAL-FIRST", style=f"bold {ACCENT_SOFT}")
-    banner.append("  READ-ONLY MONITORING", style=MUTED)
-    banner.append("  REMOTE AI / OPT-IN", style=MUTED)
-    return Panel(
-        banner,
-        border_style=ACCENT_SOFT,
-        padding=(0, 1),
-        width=frame_width,
+    title = Text()
+    title.append("AEGISLOG", style=f"bold {NEUTRAL}")
+    title.append(f"  v{__version__}", style=MUTED)
+
+    subtitle = Text("Defensive log investigation", style=MUTED)
+    status = Text()
+    status.append("● ", style=SUCCESS)
+    status.append("READY", style=f"bold {SUCCESS}")
+    status.append("   LOCAL-FIRST", style=MUTED)
+    status.append("   READ-ONLY", style=MUTED)
+    status.append("   DEFENSIVE", style=MUTED)
+    return Group(title, subtitle, _rule(frame_width), status)
+
+
+def _operation_header(
+    title: str,
+    subtitle: str,
+    accent: str = ACCENT,
+    *,
+    screen_width: int | None = None,
+) -> RenderableType:
+    """Flat workspace title with hierarchy created by type and spacing, not boxes."""
+    frame_width = legacy._frame_width(screen_width)
+    heading = Text()
+    heading.append("AEGISLOG", style=f"bold {NEUTRAL}")
+    heading.append(" / ", style=MUTED)
+    heading.append(title.upper(), style=f"bold {accent}")
+    return Group(
+        heading,
+        Text(subtitle, style=MUTED),
+        _rule(frame_width),
+        Text("LOCAL  •  READ-ONLY", style=MUTED),
     )
 
 
@@ -43,151 +60,92 @@ def _input_panel(
     *,
     screen_width: int | None = None,
     primary_label: str | None = None,
-) -> Panel:
-    """Render readable generic panels while reserving stronger emphasis for primary input."""
-    frame_width = legacy._frame_width(screen_width)
-    grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(width=11 if frame_width < 60 else 14, no_wrap=True)
+) -> RenderableType:
+    """Aligned workspace guidance without nested border chrome."""
+    grid = Table.grid(expand=True, padding=(0, 2))
+    grid.add_column(width=14, no_wrap=True)
     grid.add_column(ratio=1, overflow="fold")
     for label, value in lines:
-        if primary_label is not None and label == primary_label:
-            grid.add_row(
-                Text(f"▶ {label}", style=f"bold {accent}"),
-                Text(value, style="bold white"),
-            )
-        elif primary_label is None:
-            grid.add_row(
-                Text(label, style=f"bold {accent}"),
-                Text(value, style="white"),
-            )
-        else:
-            grid.add_row(Text(label, style=MUTED), Text(value, style=MUTED))
-    return Panel(
-        grid,
-        title=Text(f" {title} ", style=f"bold {accent}"),
-        title_align="left",
-        border_style=legacy.ACCENT_SOFT,
-        padding=(0, 1),
-        width=frame_width,
+        is_primary = primary_label is not None and label == primary_label
+        grid.add_row(
+            Text(label, style=f"bold {accent}" if is_primary else MUTED),
+            Text(value, style=NEUTRAL if is_primary else MUTED),
+        )
+    return Group(Text(title.upper(), style=f"bold {accent}"), Text(""), grid)
+
+
+def _menu_row(key: str, label: str, description: str) -> RenderableType:
+    row = Table.grid(expand=True, padding=(0, 1))
+    row.add_column(width=4, no_wrap=True)
+    row.add_column(width=19, no_wrap=True)
+    row.add_column(ratio=1, overflow="fold")
+    row.add_row(
+        Text(key, style=f"bold {ACCENT}"),
+        Text(label, style=f"bold {NEUTRAL}"),
+        Text(description, style=MUTED),
     )
+    return row
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
-    """Render Mission Control with the optional AI analyst clearly discoverable."""
+    """Minimal navigation with one clear hierarchy and no nested menu panels."""
     frame_width = legacy._frame_width(screen_width)
-    operations = [
-        ("01", "ANALYZE LOG", "Static investigation and HTML report"),
-        ("02", "LIVE MONITOR", "Continuous detection for one log"),
-        ("03", "MULTI-SOURCE SOC", "Correlate multiple live sources"),
+    rows: list[RenderableType] = [
+        Text("INVESTIGATE", style="bold grey70"),
+        _menu_row("01", "Analyze", "Investigate a log and generate a report"),
+        _menu_row("06", "Incidents", "Review correlated evidence chains"),
+        _menu_row("04", "Native logs", "Inspect operating-system or container telemetry"),
+        Text(""),
+        Text("MONITOR", style="bold grey70"),
+        _menu_row("02", "Live monitor", "Watch one log source continuously"),
+        _menu_row("03", "Multi-source", "Correlate activity across live sources"),
+        _menu_row("05", "Native monitor", "Watch native telemetry read-only"),
+        Text(""),
+        Text("TOOLS", style="bold grey70"),
+        _menu_row("07", "Demo", "Run the built-in investigation dataset"),
+        _menu_row("08", "Health", "Check engine and collector readiness"),
+        _menu_row("09", "Help", "Open the command reference"),
     ]
-    investigation = [
-        ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
-        ("05", "NATIVE MONITOR", "Watch native telemetry read-only"),
-        ("06", "INCIDENT INTEL", "Review correlated evidence chains"),
-        ("A", "AI ANALYST", "Ask Local, Ollama, or opt-in remote AI"),
-    ]
-    system = [
-        ("07", "DEMO", "Run the built-in investigation dataset"),
-        ("08", "HEALTH", "Check engine and collector readiness"),
-        ("09", "COMMANDS", "Open the command reference"),
-    ]
-    control = [
-        ("C", "COMMAND MODE", "Open the direct command interface"),
-        ("Q", "EXIT", "Close AegisLog safely"),
-    ]
-
-    left_sections = (
-        ("OPERATIONS", operations, ACCENT),
-        ("INVESTIGATION", investigation, INCIDENT),
-    )
-    right_sections = (
-        ("SYSTEM / TOOLS", system, INFO),
-        ("CONTROL", control, WARNING),
-    )
-
-    if frame_width < legacy._NARROW_MENU_BREAKPOINT:
-        content: RenderableType = legacy._menu_column(
-            left_sections + right_sections,
-            compact=True,
-        )
-    elif frame_width >= legacy._WIDE_MENU_BREAKPOINT:
-        layout = Table.grid(expand=True, padding=(0, 2))
-        layout.add_column(ratio=1)
-        layout.add_column(ratio=1)
-        layout.add_row(
-            legacy._menu_column(left_sections, compact=False),
-            legacy._menu_column(right_sections, compact=False),
-        )
-        content = layout
-    else:
-        content = legacy._menu_column(left_sections + right_sections, compact=False)
-
-    return Panel(
-        content,
-        title=Text(" MISSION CONTROL ", style=f"bold {ACCENT}"),
-        title_align="left",
-        border_style=legacy.ACCENT_SOFT,
-        padding=(1, 1),
-        width=frame_width,
-    )
+    return Group(*rows, _rule(frame_width))
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
     footer = Text()
-    footer.append("01-09", style=f"bold {ACCENT}")
-    footer.append(" run   ", style=MUTED)
-    footer.append("A", style=f"bold {INCIDENT}")
-    footer.append(" AI analyst   ", style=MUTED)
-    footer.append("C", style=f"bold {WARNING}")
-    footer.append(" command mode   ", style=MUTED)
-    footer.append("Q", style=f"bold {HIGH}")
-    footer.append(" exit   |   reports automatic   |   Ctrl+C stops live views", style=MUTED)
+    footer.append("Select an action", style=MUTED)
+    footer.append("  ›  ", style=f"bold {ACCENT}")
+    footer.append("01-09", style=NEUTRAL)
+    footer.append("    C command mode    Q exit", style=MUTED)
     return Group(_header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
 
 
-def _ai_workspace() -> None:
-    path = legacy._choose_single_file_workspace(
-        "AI ANALYST",
-        "Ask an optional AI assistant about deterministic AegisLog findings.",
-        INCIDENT,
-        output_note="Local by default; remote providers require explicit consent",
-    )
-    if path is None:
-        return
-
-    legacy.console.clear()
-    legacy.console.print(
-        legacy._operation_header(
-            "AI ANALYST",
-            "Provider-assisted investigation. Detection results remain deterministic and unchanged.",
-            INCIDENT,
-        )
-    )
-    legacy.console.print()
-    interactive_ai_analyst(path)
-
-
 def _run_inline_command(raw: str) -> None:
-    if raw.strip().lower() in {"a", "ai", "ai-analyst"}:
-        _ai_workspace()
+    # AI Analyst is intentionally absent from the product surface.
+    if raw.strip().lower() in {"a", "ai", "ai-analyst", "ask"}:
+        legacy.console.print(
+            "AI Analyst is not part of AegisLog. Use deterministic investigation commands instead.",
+            style=MUTED,
+        )
         return
     _LEGACY_INLINE_COMMAND(raw)
 
 
 def start() -> None:
-    """Run the polished control center with the AI analyst extension enabled."""
+    """Run the minimal terminal shell over the deterministic investigation engine."""
     original_home = legacy._home
     original_inline = legacy._run_inline_command
     original_input_panel = legacy._input_panel
+    original_operation_header = legacy._operation_header
     try:
         legacy._home = _home
         legacy._run_inline_command = _run_inline_command
         legacy._input_panel = _input_panel
+        legacy._operation_header = _operation_header
         legacy.start()
     finally:
         legacy._home = original_home
         legacy._run_inline_command = original_inline
         legacy._input_panel = original_input_panel
+        legacy._operation_header = original_operation_header
 
 
 __all__ = ["start"]

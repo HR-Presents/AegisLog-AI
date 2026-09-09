@@ -4,20 +4,20 @@ from aegislog.console_pages import _command_summary, _health_summary
 
 
 def _render(value, width: int = 100) -> str:
-    console = Console(record=True, force_terminal=False, width=width)
+    console = Console(record=True, force_terminal=False, color_system=None, width=width)
     console.print(value)
-    return console.export_text()
+    return console.export_text(clear=False)
 
 
 def test_health_summary_surfaces_readiness_and_native_availability() -> None:
     output = _render(_health_summary(2, 3))
 
-    assert "CORE CAPABILITIES" in output
+    assert "SYSTEM" in output
     assert "READY" in output
     assert "NATIVE SOURCES" in output
     assert "2/3" in output
-    assert "HOST CHECK" in output
     assert "READ-ONLY" in output
+    assert "AI" not in output
 
 
 def test_command_summary_highlights_primary_entry_points() -> None:

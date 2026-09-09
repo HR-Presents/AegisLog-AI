@@ -2,26 +2,27 @@ from __future__ import annotations
 
 from rich.text import Text
 
-# Restrained operator palette: keep structural chrome calm and reserve brighter
-# colors for elevated severity states that genuinely need attention.
-ACCENT = "cyan"
-ACCENT_SOFT = "cyan"
-MUTED = "dim"
-SUCCESS = "green"
-INFO = "blue"
-WARNING = "yellow"
-HIGH = "bright_red"
-CRITICAL = "bold bright_red"
-INCIDENT = "magenta"
-ANOMALY = "blue"
-NEUTRAL = "white"
+# Restrained terminal palette. Navigation stays neutral; color is reserved for
+# selection, state, and security severity so it carries meaning instead of
+# becoming decoration.
+ACCENT = "#5fb3a6"
+ACCENT_SOFT = "#3f7f78"
+MUTED = "#8b949e"
+SUCCESS = "#56a36c"
+INFO = "#6f93b5"
+WARNING = "#d4a72c"
+HIGH = "#d96767"
+CRITICAL = "bold #ff6b6b"
+INCIDENT = "#8fa6c9"
+ANOMALY = "#8497b0"
+NEUTRAL = "#e6edf3"
 
 SEVERITY_STYLES = {
     "CRITICAL": CRITICAL,
     "HIGH": HIGH,
     "MEDIUM": WARNING,
     "LOW": INFO,
-    "INFO": ACCENT_SOFT,
+    "INFO": MUTED,
 }
 
 RISK_STYLES = {

@@ -3,18 +3,14 @@ from rich.console import Console
 from aegislog.commands_v145 import _input_panel
 
 
-def _render(panel, width: int = 90) -> str:
-    console = Console(record=True, force_terminal=False, width=width)
-    console.print(panel)
-    return console.export_text()
+def _render(value, width: int = 90) -> str:
+    console = Console(record=True, force_terminal=False, color_system=None, width=width)
+    console.print(value)
+    return console.export_text(clear=False)
 
 
-def _cell_style(panel, column: int, row: int) -> str:
-    return str(panel.renderable.columns[column]._cells[row].style)
-
-
-def test_source_input_panel_emphasizes_only_primary_action() -> None:
-    panel = _input_panel(
+def test_source_input_emphasizes_primary_action_without_panel_chrome() -> None:
+    value = _input_panel(
         "SOURCE INPUT",
         [
             ("INPUT", "Drag a log file here or paste its full path"),
@@ -25,27 +21,29 @@ def test_source_input_panel_emphasizes_only_primary_action() -> None:
         primary_label="INPUT",
         screen_width=90,
     )
-    output = _render(panel)
+    output = _render(value)
 
-    assert "▶ INPUT" in output
-    assert "▶ DEMO" not in output
-    assert "▶ BACK" not in output
-    assert "▶ OUTPUT" not in output
+    assert "SOURCE INPUT" in output
+    assert "INPUT" in output
     assert "Drag a log file here or paste its full path" in output
-    assert _cell_style(panel, 0, 0) == "bold cyan"
-    assert _cell_style(panel, 0, 1) == "dim"
-    assert _cell_style(panel, 1, 1) == "dim"
+    assert "DEMO" in output
+    assert "BACK" in output
+    assert "OUTPUT" in output
+    assert "╭" not in output
+    assert "╰" not in output
+    assert "▶" not in output
 
 
-def test_generic_input_panel_restores_readable_hierarchy() -> None:
-    panel = _input_panel(
-        "WATCH PROFILE",
-        [("SECURITY", "Balanced defensive detection")],
-        screen_width=90,
+def test_generic_input_surface_remains_readable() -> None:
+    output = _render(
+        _input_panel(
+            "WATCH PROFILE",
+            [("SECURITY", "Balanced defensive detection")],
+            screen_width=90,
+        )
     )
-    output = _render(panel)
 
+    assert "WATCH PROFILE" in output
     assert "SECURITY" in output
-    assert "▶ SECURITY" not in output
-    assert _cell_style(panel, 0, 0) == "bold cyan"
-    assert _cell_style(panel, 1, 0) == "white"
+    assert "Balanced defensive detection" in output
+    assert "╭" not in output
