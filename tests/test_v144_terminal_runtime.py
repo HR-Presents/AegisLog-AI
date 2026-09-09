@@ -3,11 +3,11 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from aegislog import commands_v13, commands_v18, commands_v144, entry
+from aegislog import commands_v13, commands_v18, commands_v144, commands_v145, entry
 
 
 def test_start_command_uses_hardened_runtime() -> None:
-    assert entry.start.__module__ == "aegislog.commands_v144"
+    assert entry.start is commands_v145.start
 
 
 def test_interactive_live_file_loads_current_content(monkeypatch, tmp_path: Path) -> None:

@@ -1,46 +1,82 @@
 # AI providers
 
-AegisLog remains useful without an LLM. Core detection, correlation, investigation, triage, and deterministic explanations run locally and do not require a network connection.
+AegisLog remains fully useful without an LLM. Core detection, correlation, incident creation, triage, and deterministic explanations run locally and do not require a network connection.
+
+The optional AI layer is exposed in two places:
+
+- Mission Control: **`A — AI ANALYST`**
+- CLI: `aegislog ai-analyst FILE`
+
+The AI layer runs **after** deterministic analysis. It does not decide whether a detection exists, change findings, or modify the host.
+
+## Local provider
+
+`local` is the default AI Analyst mode. It uses AegisLog's rule-backed findings and deterministic recommendations only.
+
+```bash
+aegislog ai-analyst examples/auth.log --provider local
+```
+
+No model, API key, or network connection is required.
 
 ## Local Ollama
 
+Ollama runs on the local machine and does not require the remote-AI opt-in flag.
+
 ```bash
-aegislog config --provider ollama --model llama3.2
-aegislog ask "What likely happened?" examples/auth.log
+aegislog ai-analyst examples/auth.log \
+  --provider ollama \
+  --model llama3.2
 ```
 
-The default endpoint is `http://127.0.0.1:11434`. Override it with `AEGISLOG_OLLAMA_URL` or `--base-url` in config. Local/private addresses are permitted for the explicit Ollama adapter. Ollama does not require the remote-AI opt-in flag.
+The default Ollama endpoint is `http://127.0.0.1:11434`. Override it with `AEGISLOG_OLLAMA_URL` or `--base-url`.
+
+Plain HTTP is restricted to loopback addresses for local-provider use.
 
 ## Remote OpenAI-compatible endpoint
 
 Remote AI is disabled by default. An API key alone is not treated as consent to transmit analysis context.
 
-To use a remote OpenAI-compatible provider, the operator must explicitly opt in for the current environment:
+For one explicit CLI request:
 
 ```bash
-export AEGISLOG_ALLOW_REMOTE_AI=1
-export AEGISLOG_API_KEY='your-key'
-aegislog config --provider openai-compatible --model YOUR_MODEL
-aegislog ask "Explain the strongest security signals" examples/auth.log
+AEGISLOG_API_KEY='your-key' aegislog ai-analyst examples/auth.log \
+  --provider openai-compatible \
+  --model YOUR_MODEL \
+  --allow-remote
 ```
 
-On PowerShell:
+`OPENAI_API_KEY` is accepted as a fallback. `AEGISLOG_BASE_URL` can point at a compatible public `/v1` endpoint, or use `--base-url` for the current command.
 
-```powershell
-$env:AEGISLOG_ALLOW_REMOTE_AI = "1"
-$env:AEGISLOG_API_KEY = "your-key"
-aegislog config --provider openai-compatible --model YOUR_MODEL
-aegislog ask "Explain the strongest security signals" examples/auth.log
-```
+Inside Mission Control, selecting `openai-compatible` triggers an explicit confirmation before any remote request is allowed. The consent flag is enabled only for that request and then restored.
 
-`AEGISLOG_ALLOW_REMOTE_AI` accepts `1`, `true`, `yes`, or `on` (case-insensitive). If it is absent or false, the remote adapter fails closed before attempting provider transport.
+Remote provider safeguards include:
 
-`AEGISLOG_BASE_URL` can point at a public compatible `/v1` API. `OPENAI_API_KEY` is accepted as a fallback. Keys are never written by the `config` command. The remote adapter rejects endpoints resolving to loopback, link-local, private, multicast, or reserved addresses and disables HTTP redirects so the validated destination cannot silently redirect into a different network boundary. Use Ollama for local models.
+- explicit opt-in before provider transport;
+- HTTPS requirement for remote endpoints;
+- rejection of embedded URL credentials;
+- rejection of loopback/private/link-local/multicast/reserved remote destinations;
+- pinned validated destination addresses;
+- redirects disabled;
+- bounded provider response size;
+- JSON response validation;
+- optional explicit HTTPS proxy support;
+- recognized sensitive-value redaction before provider execution.
 
 ## Privacy boundary
 
-The default behavior is local-first: AegisLog does not need to send log data or analysis context to an external AI service for its core workflow.
+The default behavior is local-first. AegisLog does not need to send log data or analysis context to an external AI service for its core workflow.
 
-When an operator explicitly enables remote AI, AegisLog redacts recognized passwords, tokens, API keys and secrets before provider execution, bounds the amount of telemetry, labels log data as untrusted, and tells the model to ignore instructions embedded in logs. Redaction reduces exposure risk but is not a guarantee that every possible sensitive value can be recognized. Remote-provider users are responsible for reviewing their provider's data-processing terms and ensuring the selected telemetry is permitted to leave the host or environment.
+For optional AI analysis, AegisLog first runs local deterministic detection, then builds a bounded investigation context from findings and a limited log excerpt. Recognized passwords, tokens, API keys, and secrets are redacted. Log-derived content is labeled as untrusted telemetry, and the prompt tells the model not to follow instructions embedded in logs.
 
-Use `aegislog ask --local ...` to force local rule-backed investigation even when a provider is configured.
+Redaction reduces exposure risk but cannot guarantee that every possible sensitive value will be recognized. Operators are responsible for ensuring selected telemetry is permitted to leave the host or environment and for reviewing the chosen provider's data-processing terms.
+
+## Provider summary
+
+| Provider | Network | Explicit remote consent | Default model |
+| --- | --- | --- | --- |
+| `local` | No | No | `deterministic` |
+| `ollama` | Local loopback | No | `llama3.2` |
+| `openai-compatible` | Remote HTTPS | Yes | `gpt-4.1-mini` |
+
+AegisLog does not currently ship a dedicated Gemini adapter. A future provider should be added explicitly rather than being advertised before it exists.
