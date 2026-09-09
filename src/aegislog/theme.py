@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from rich.text import Text
 
-# Restrained operator palette: keep structural chrome calm and reserve brighter
-# colors for elevated severity states that genuinely need attention.
-ACCENT = "cyan"
+# AegisLog terminal palette. Structural UI stays quiet; semantic colors are
+# reserved for state and severity so operators can scan screens quickly.
+ACCENT = "bright_cyan"
 ACCENT_SOFT = "cyan"
-MUTED = "dim"
+MUTED = "grey62"
 SUCCESS = "green"
-INFO = "blue"
+INFO = "bright_blue"
 WARNING = "yellow"
-HIGH = "bright_red"
+HIGH = "red"
 CRITICAL = "bold bright_red"
-INCIDENT = "magenta"
-ANOMALY = "blue"
+INCIDENT = "bright_cyan"
+ANOMALY = "bright_blue"
 NEUTRAL = "white"
 
 SEVERITY_STYLES = {
@@ -21,7 +21,7 @@ SEVERITY_STYLES = {
     "HIGH": HIGH,
     "MEDIUM": WARNING,
     "LOW": INFO,
-    "INFO": ACCENT_SOFT,
+    "INFO": MUTED,
 }
 
 RISK_STYLES = {
