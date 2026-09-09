@@ -15,7 +15,8 @@ def test_version_flag():
 def test_doctor():
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
-    assert "Local detection engine: ready" in result.stdout
+    assert "Detection engine: ready" in result.stdout
+    assert "local / deterministic / read-only" in result.stdout
 
 
 def test_analyze_sample():
