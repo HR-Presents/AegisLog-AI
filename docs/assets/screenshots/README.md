@@ -7,15 +7,15 @@ This directory is reserved for **real product screenshots** captured from a veri
 The current PR screenshot set must come from the CI-validated Windows artifact built from:
 
 ```text
-74e55590da56305056cf984887da3ebd1e799e61
+7b5269e8990fcd3743f28bfaea720dfd00828060
 ```
 
 Temporary GitHub Actions validation artifact:
 
 ```text
 Name: AegisLog-Windows-Single-EXE
-Artifact ID: 10070978629
-Artifact digest: sha256:e8c1642e30de1b004d774cbb84af273758b6a840fc745e62eb3e008c08d5df8e
+Artifact ID: 10074199022
+Artifact digest: sha256:2514932a6687f045fa6877de20c42c70db892a1dd20808f013a43a4dbb819720
 ```
 
 This artifact is temporary CI evidence. It is not the permanent customer download channel and must not be presented as a stable release asset. Permanent customer downloads are published as GitHub Release assets only after the guarded release workflow succeeds on `main`.
