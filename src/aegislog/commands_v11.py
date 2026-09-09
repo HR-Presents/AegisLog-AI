@@ -8,13 +8,26 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
-from .dashboard import analyze_dashboard, render_dashboard
+from .dashboard import DashboardData, analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
 from .reporting import write_html_report
 from .theme import ACCENT, MUTED, SUCCESS, WARNING
 from .ui import bounded
 
 console = Console()
+
+
+def _analysis_complete_line(data: DashboardData) -> Text:
+    """Render a compact transition from processing into investigation results."""
+    line = Text()
+    line.append("ANALYSIS COMPLETE", style=f"bold {SUCCESS}")
+    line.append("  /  ", style=MUTED)
+    line.append(f"{data.lines:,} events", style="white")
+    line.append("  /  ", style=MUTED)
+    line.append(f"{len(data.findings)} findings", style=ACCENT)
+    line.append("  /  ", style=MUTED)
+    line.append(f"{len(data.incidents)} incidents", style=ACCENT)
+    return line
 
 
 def _report_ready_panel(report_path: Path) -> Panel:
@@ -55,7 +68,9 @@ def dashboard(
     ) as progress:
         task = progress.add_task(f"Analyzing {path.name}...", total=None)
         data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
-        progress.update(task, description="Building terminal dashboard...")
+        progress.update(task, description="Building investigation dashboard...")
+    console.print(_analysis_complete_line(data))
+    console.print()
     console.print(bounded(render_dashboard(data, screen_width=console.size.width)))
     try:
         report_path = write_html_report(data)
