@@ -8,6 +8,8 @@ from . import commands_v144 as legacy
 from .commands_ai import interactive_ai_analyst
 from .theme import ACCENT, HIGH, INCIDENT, INFO, MUTED, WARNING
 
+_LEGACY_INLINE_COMMAND = legacy._run_inline_command
+
 
 def _menu(screen_width: int | None = None) -> RenderableType:
     """Render Mission Control with the optional AI analyst clearly discoverable."""
@@ -110,7 +112,7 @@ def _run_inline_command(raw: str) -> None:
     if raw.strip().lower() in {"a", "ai", "ai-analyst"}:
         _ai_workspace()
         return
-    legacy._run_inline_command(raw)
+    _LEGACY_INLINE_COMMAND(raw)
 
 
 def start() -> None:
