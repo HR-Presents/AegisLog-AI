@@ -9,6 +9,10 @@ def _render(panel, width: int = 90) -> str:
     return console.export_text()
 
 
+def _cell_style(panel, column: int, row: int) -> str:
+    return str(panel.renderable.columns[column]._cells[row].style)
+
+
 def test_source_input_panel_emphasizes_only_primary_action() -> None:
     panel = _input_panel(
         "SOURCE INPUT",
@@ -28,9 +32,9 @@ def test_source_input_panel_emphasizes_only_primary_action() -> None:
     assert "▶ BACK" not in output
     assert "▶ OUTPUT" not in output
     assert "Drag a log file here or paste its full path" in output
-    assert str(panel.renderable.rows[0].cells[0].style) == "bold cyan"
-    assert str(panel.renderable.rows[1].cells[0].style) == "dim"
-    assert str(panel.renderable.rows[1].cells[1].style) == "dim"
+    assert _cell_style(panel, 0, 0) == "bold cyan"
+    assert _cell_style(panel, 0, 1) == "dim"
+    assert _cell_style(panel, 1, 1) == "dim"
 
 
 def test_generic_input_panel_restores_readable_hierarchy() -> None:
@@ -43,5 +47,5 @@ def test_generic_input_panel_restores_readable_hierarchy() -> None:
 
     assert "SECURITY" in output
     assert "▶ SECURITY" not in output
-    assert str(panel.renderable.rows[0].cells[0].style) == "bold cyan"
-    assert str(panel.renderable.rows[0].cells[1].style) == "white"
+    assert _cell_style(panel, 0, 0) == "bold cyan"
+    assert _cell_style(panel, 1, 0) == "white"
