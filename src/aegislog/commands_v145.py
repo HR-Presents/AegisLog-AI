@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rich import box
+from rich.align import Align
 from rich.console import Group, RenderableType
 from rich.table import Table
 from rich.text import Text
@@ -11,11 +12,18 @@ from .theme import ACCENT, DIM, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 _NARROW_BREAKPOINT = 72
-_WIDE_BREAKPOINT = 112
+_WIDE_BREAKPOINT = 104
+_MAX_HOME_WIDTH = 112
+
+
+def _screen_width(screen_width: int | None = None) -> int:
+    width = legacy.console.size.width if screen_width is None else screen_width
+    return max(1, width - 2)
 
 
 def _frame_width(screen_width: int | None = None) -> int:
-    return legacy._frame_width(screen_width)
+    """Keep Mission Control deliberately compact on very wide Windows terminals."""
+    return min(_screen_width(screen_width), _MAX_HOME_WIDTH)
 
 
 def _rule(width: int) -> Text:
@@ -23,41 +31,38 @@ def _rule(width: int) -> Text:
 
 
 def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> RenderableType:
-    """A compact, Windows-safe product identity that scales with the viewport."""
+    """Render an ASCII-safe identity with status anchored to the same visual frame."""
     width = _frame_width(screen_width)
-    if compact:
-        line = Text()
-        line.append("/\\ ", style=f"bold {ACCENT}")
-        line.append("AEGISLOG", style=f"bold {NEUTRAL}")
-        return line
-
-    if width < _NARROW_BREAKPOINT:
+    if compact or width < _NARROW_BREAKPOINT:
         brand = Text()
-        brand.append("/\\  AEGISLOG\n", style=f"bold {ACCENT}")
+        brand.append("/\\  AEGISLOG", style=f"bold {ACCENT}")
+        brand.append(f"   VERSION v{__version__}\n", style=MUTED)
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
-        brand.append("LOCAL-FIRST / READ-ONLY / DETERMINISTIC", style=MUTED)
+        brand.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+        brand.append("   + SYSTEM READY", style=f"bold {SUCCESS}")
         return brand
 
-    grid = Table.grid(expand=True, padding=(0, 2))
-    grid.add_column(width=16, no_wrap=True)
-    grid.add_column(ratio=1)
-    grid.add_column(width=24, justify="right", no_wrap=True)
+    left1 = "  /\\    A E G I S L O G"
+    left2 = " /  \\   DEFENSIVE LOG INVESTIGATION"
+    right1 = f"VERSION v{__version__}"
+    right2 = "+ SYSTEM READY"
 
-    mark = Text("    /\\\n   /  \\\n  |---/\\_/\\---|\n    \\____/", style=f"bold {ACCENT}")
-    identity = Text()
-    identity.append("A E G I S L O G\n", style=f"bold {NEUTRAL}")
-    identity.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {ACCENT}")
-    identity.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    status = Text()
-    status.append(f"VERSION v{__version__}\n", style=MUTED)
-    status.append("+ SYSTEM READY", style=f"bold {SUCCESS}")
-    grid.add_row(mark, identity, status)
-    return grid
+    line1 = Text(left1, style=f"bold {NEUTRAL}")
+    line1.append(" " * max(2, width - len(left1) - len(right1)), style=MUTED)
+    line1.append(right1, style=MUTED)
+
+    line2 = Text(left2, style=f"bold {ACCENT}")
+    line2.append(" " * max(2, width - len(left2) - len(right2)), style=MUTED)
+    line2.append(right2, style=f"bold {SUCCESS}")
+
+    mark = Text("/____\\  |---/\\_/\\---|", style=f"bold {ACCENT}")
+    posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+    return Group(line1, line2, mark, posture)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
     width = _frame_width(screen_width)
-    return Group(_brand_lockup(screen_width=screen_width), Text(""), _rule(width))
+    return Group(_brand_lockup(screen_width=screen_width), _rule(width))
 
 
 def _operation_header(
@@ -89,7 +94,7 @@ def _input_panel(
     compact = width < _NARROW_BREAKPOINT
     grid = Table(
         box=box.ASCII,
-        expand=True,
+        width=width,
         padding=(0, 1),
         border_style=DIM,
         show_header=True,
@@ -106,44 +111,40 @@ def _input_panel(
     return grid
 
 
-def _menu_table(rows: list[tuple[str, str, str]], heading: str) -> Table:
-    table = Table(
-        box=box.ASCII,
-        expand=True,
-        padding=(0, 1),
-        border_style=DIM,
-        show_header=True,
-        header_style=f"bold {ACCENT}",
-    )
-    table.add_column(heading, width=5, justify="center", no_wrap=True)
-    table.add_column("ACTION", width=18, no_wrap=True)
-    table.add_column("PURPOSE", ratio=1, overflow="fold")
-    for key, label, description in rows:
-        table.add_row(
-            Text(key, style=f"bold {ACCENT}"),
-            Text(label, style=f"bold {NEUTRAL}"),
-            Text(description, style=MUTED),
-        )
-    return table
+def _menu_item(key: str, label: str, description: str) -> Text:
+    item = Text()
+    item.append(f"[{key}] ", style=f"bold {ACCENT}")
+    item.append(label, style=f"bold {NEUTRAL}")
+    item.append("\n     ")
+    item.append(description, style=MUTED)
+    return item
 
 
-def _compact_menu(rows: list[tuple[str, str, str]]) -> Table:
-    table = Table(box=box.ASCII, expand=True, padding=(0, 1), border_style=DIM, show_header=False)
-    table.add_column(width=4, no_wrap=True)
-    table.add_column(ratio=1, overflow="fold")
-    for key, label, description in rows:
-        body = Text(label, style=f"bold {NEUTRAL}")
-        body.append("\n")
-        body.append(description, style=MUTED)
-        table.add_row(Text(key, style=f"bold {ACCENT}"), body)
-    return table
+def _menu_column(title: str, rows: list[tuple[str, str, str]], width: int) -> RenderableType:
+    heading = Text(title, style=f"bold {ACCENT}")
+    rule = Text("-" * max(18, width - 1), style=DIM)
+    body: list[RenderableType] = [heading, rule]
+    for index, (key, label, description) in enumerate(rows):
+        if index:
+            body.append(Text(""))
+        body.append(_menu_item(key, label, description))
+    return Group(*body)
+
+
+def _compact_menu(rows: list[tuple[str, str, str]]) -> RenderableType:
+    body: list[RenderableType] = []
+    for index, row in enumerate(rows):
+        if index:
+            body.append(Text(""))
+        body.append(_menu_item(*row))
+    return Group(*body)
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
-    """Use the full viewport: two balanced work areas on wide terminals, one on narrow."""
+    """Render Mission Control as an operator dashboard, not a spreadsheet."""
     width = _frame_width(screen_width)
     investigation = [
-        ("01", "ANALYZE", "Analyze a log and generate an evidence report"),
+        ("01", "ANALYZE LOG", "Analyze evidence and generate a report"),
         ("06", "INCIDENTS", "Review correlated evidence chains"),
         ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
     ]
@@ -158,51 +159,50 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         ("09", "HELP", "Open the command reference"),
     ]
 
+    title = Text("MISSION CONTROL", style=f"bold {ACCENT}")
+    hierarchy = Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED)
     if width < _NARROW_BREAKPOINT:
-        return Group(
-            Text("MISSION CONTROL", style=f"bold {ACCENT}"),
-            Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
-            _compact_menu(investigation + monitoring + system),
-        )
+        return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
 
     if width >= _WIDE_BREAKPOINT:
-        top = Table.grid(expand=True, padding=(0, 1))
-        top.add_column(ratio=1)
-        top.add_column(ratio=1)
-        top.add_row(_menu_table(investigation, "INV"), _menu_table(monitoring, "MON"))
-        return Group(
-            Text("MISSION CONTROL", style=f"bold {ACCENT}"),
-            Text("INVESTIGATION                         MONITORING", style=MUTED),
+        gap = 5
+        column_width = max(36, (width - gap) // 2)
+        top = Table.grid(padding=0)
+        top.add_column(width=column_width)
+        top.add_column(width=gap)
+        top.add_column(width=column_width)
+        top.add_row(
+            _menu_column("INVESTIGATE", investigation, column_width),
             Text(""),
-            top,
-            Text(""),
-            Text("SYSTEM", style=MUTED),
-            _menu_table(system, "SYS"),
+            _menu_column("MONITOR", monitoring, column_width),
         )
+        system_line = Text()
+        system_line.append("SYSTEM", style=f"bold {ACCENT}")
+        system_line.append("   ")
+        for index, (key, label, _description) in enumerate(system):
+            if index:
+                system_line.append("      ")
+            system_line.append(f"[{key}] ", style=f"bold {ACCENT}")
+            system_line.append(label, style=f"bold {NEUTRAL}")
+        return Group(title, hierarchy, Text(""), top, Text(""), system_line)
 
-    return Group(
-        Text("MISSION CONTROL", style=f"bold {ACCENT}"),
-        Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
-        Text(""),
-        _menu_table(investigation + monitoring + system, "KEY"),
-    )
+    return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
 
 
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
     footer = Text()
-    footer.append("01-09 select", style=f"bold {ACCENT}")
-    footer.append("    Q EXIT", style=MUTED)
-    if width >= 44:
-        footer.append("    C command mode", style=MUTED)
-    if width >= 86:
-        footer.append("    CTRL+C STOPS LIVE VIEWS", style=MUTED)
+    footer.append("01-09 Select", style=f"bold {ACCENT}")
+    footer.append("   |   C Command Mode", style=MUTED)
+    footer.append("   |   Q Exit", style=MUTED)
+    if width >= 96:
+        footer.append("   |   Ctrl+C stops live views", style=MUTED)
     return footer
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
     width = _frame_width(screen_width)
-    return Group(
+    content = Group(
         _header(screen_width),
         Text(""),
         _menu(screen_width),
@@ -210,6 +210,7 @@ def _home(screen_width: int | None = None) -> RenderableType:
         _rule(width),
         _footer(screen_width),
     )
+    return Align.left(content, width=width, pad=False)
 
 
 def _run_inline_command(raw: str) -> None:
