@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import shutil
 from collections import Counter
-from pathlib import Path
 
 from rich import box
 from rich.console import Group, RenderableType
@@ -195,7 +194,6 @@ def render_realtime_command_center(state) -> RenderableType:
     events = state.focused_events
     findings = state.focused_findings
     severities = Counter(item.severity for item in findings)
-    categories = Counter(item.category for item in findings)
     services = Counter(event.service or "unknown" for event in events if event.message)
     incidents = correlate(findings)
     anomalies = score_events(events)
@@ -330,12 +328,10 @@ def render_multisource_command_center(state) -> RenderableType:
     width = shutil.get_terminal_size((80, 24)).columns
     compact = width < _NARROW
     profile = state.profile
-    events = state.focused_events
     findings = state.focused_findings
     severities = Counter(item.severity for item in findings)
     categories = Counter(item.category for item in findings)
     incidents = correlate(findings)
-    anomalies = score_events(events)
     trend = state.trends
     allowed_metrics = set(profile.trend_metrics)
     spikes = sum(1 for item in trend.metrics if item.name in allowed_metrics and item.state == "SPIKE")
