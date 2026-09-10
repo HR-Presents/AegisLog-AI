@@ -22,14 +22,30 @@ _wilson_interval = EVALUATOR._wilson_interval
 def test_synthetic_report_includes_confidence_intervals_and_exact_accuracy():
     report = evaluate(FIXTURE, dataset_kind="synthetic")
 
-    assert report["cases"] == 12
+    assert report["cases"] == 18
     assert report["precision"] == 1.0
     assert report["recall"] == 1.0
     assert report["case_exact_accuracy"] == 1.0
+    assert report["fp"] == 0
+    assert report["fn"] == 0
     assert report["precision_ci95"]["lower"] < 1.0
     assert report["precision_ci95"]["upper"] == 1.0
     assert report["recall_ci95"]["lower"] < 1.0
     assert "Synthetic regression evidence only" in report["limitations"]
+
+
+def test_authentication_benchmark_cases_remain_exact_matches():
+    report = evaluate(FIXTURE, dataset_kind="synthetic")
+    auth_rows = [
+        row
+        for row in report["results"]
+        if "auth" in row["id"] or "authentication" in row["expected"]
+    ]
+
+    assert len(auth_rows) >= 8
+    assert all(row["exact_match"] for row in auth_rows)
+    assert all(not row["false_positives"] for row in auth_rows)
+    assert all(not row["false_negatives"] for row in auth_rows)
 
 
 def test_wilson_interval_is_bounded_and_non_degenerate_for_small_perfect_sample():
