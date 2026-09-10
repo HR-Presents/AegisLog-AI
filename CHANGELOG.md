@@ -4,6 +4,16 @@
 
 - No unreleased changes yet.
 
+## 2.1.2 - 2026-09-10
+
+- Evolved the existing terminal interface into a more polished security command center without replacing AegisLog architecture or commands.
+- Adopted the Shield A terminal identity while preserving the established AegisLog signature and Windows-safe ASCII/cp1252 rendering.
+- Upgraded Analyze Log with compact real-data metrics, severity/category distributions, timestamp-aware activity and investigation timelines, stronger Analyst Focus, improved incident/finding presentation, and raw evidence views.
+- Improved Live Monitor and Multi-Source with real state-backed metrics, distributions, trends, source activity, alert feeds, and status presentation.
+- Reworked Health and Help into consistent command-center panels and strengthened responsive behavior across narrow, normal, and wide terminals.
+- Added regression coverage for command-center rendering, data-aware visualization, terminal-width behavior, Windows encoding safety, and executable smoke validation.
+- Preserved detection, parsing, streaming, authentication, incident-correlation, evidence, and local-first/read-only security semantics; no mock security results were introduced.
+
 ## 2.1.1 - 2026-09-10
 
 - Reworked Mission Control based on the actual Windows Terminal render rather than synthetic layout assumptions.
