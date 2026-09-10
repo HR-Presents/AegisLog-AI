@@ -4,6 +4,15 @@
 
 - No unreleased changes yet.
 
+## 2.1.1 - 2026-09-10
+
+- Reworked Mission Control based on the actual Windows Terminal render rather than synthetic layout assumptions.
+- Replaced the spreadsheet-style dashboard composition with dedicated INVESTIGATE and MONITOR work areas and a compact SYSTEM action row.
+- Bounded the home-screen composition on ultra-wide terminals so the interface no longer stretches awkwardly or leaves wrapped descriptions beside large unused space.
+- Preserved AegisLog public identity, ASCII/cp1252 compatibility, narrow-terminal fallback, deterministic behavior, and the local-first/read-only security model.
+- Added regression coverage for wide Windows-terminal rendering, bounded line width, action visibility, prompt/footer behavior, and ASCII-safe output.
+- No detection, parsing, correlation, streaming, authentication, or security semantics changed in this patch.
+
 ## 2.1.0 - 2026-09-10
 
 - Added deterministic fuzz-style reliability regressions for malformed input, randomized streaming chunk boundaries, authentication event reordering, and bounded authentication-source floods.
