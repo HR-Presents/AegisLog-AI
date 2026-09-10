@@ -2,11 +2,11 @@ from rich.console import Console
 
 from aegislog import __version__
 from aegislog.ai import InvestigationContext, build_safe_prompt
-from aegislog.commands_v145 import _header
+from aegislog.commands_v145 import _header, _home
 
 
-def _render(renderable) -> str:
-    console = Console(record=True, width=120, color_system=None)
+def _render(renderable, *, width: int = 120) -> str:
+    console = Console(record=True, width=width, color_system=None)
     console.print(renderable)
     return console.export_text()
 
@@ -24,6 +24,18 @@ def test_mission_control_brand_matches_readme_identity_and_stays_ascii_safe() ->
     assert "LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC" in rendered
     assert "|---/\\_/\\---|" in rendered
     rendered.encode("ascii")
+
+
+def test_mission_control_fits_common_terminal_widths_without_horizontal_overflow() -> None:
+    for width in (32, 40, 54, 64, 80, 120, 160):
+        rendered = _render(_home(width), width=width)
+        rendered.encode("ascii")
+        lines = rendered.splitlines()
+        assert lines
+        assert max(len(line) for line in lines) <= width
+        assert "AEGISLOG" in rendered or "A E G I S L O G" in rendered
+        assert "01" in rendered
+        assert "Q EXIT" in rendered.upper()
 
 
 def test_ai_prompt_forbids_unsupported_trust_and_confidence_claims() -> None:
