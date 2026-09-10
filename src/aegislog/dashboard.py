@@ -157,7 +157,7 @@ def _header(data: DashboardData) -> Panel:
 
     return Panel(
         grid,
-        title=Text(" INVESTIGATION CONTEXT ", style=f"bold {ACCENT}"),
+        title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT}"),
         title_align="left",
         box=box.ASCII,
         border_style=ACCENT_SOFT,
@@ -297,17 +297,23 @@ def _distribution_panel(data: DashboardData, *, compact: bool = False) -> Panel:
 
     maximum = max(count for _, _, count, _ in rows)
     table = Table.grid(expand=True, padding=(0, 1))
-    table.add_column(width=10, style=MUTED, no_wrap=True)
-    table.add_column(width=16 if not compact else 11, overflow="ellipsis")
-    if not compact:
+    if compact:
+        table.add_column(ratio=1, overflow="ellipsis")
+        table.add_column(width=7, justify="right")
+        for _, label, count, style in rows:
+            table.add_row(Text(label, style=f"bold {style}"), Text(str(count), style=f"bold {style}"))
+    else:
+        table.add_column(width=10, style=MUTED, no_wrap=True)
+        table.add_column(width=16, overflow="ellipsis")
         table.add_column(width=_MAX_BAR_WIDTH)
-    table.add_column(width=7, justify="right")
-    for dimension, label, count, style in rows:
-        row = [Text(dimension, style=MUTED), Text(label, style=f"bold {style}")]
-        if not compact:
-            row.append(_bar(count, maximum))
-        row.append(Text(str(count), style=f"bold {style}"))
-        table.add_row(*row)
+        table.add_column(width=7, justify="right")
+        for dimension, label, count, style in rows:
+            table.add_row(
+                Text(dimension, style=MUTED),
+                Text(label, style=f"bold {style}"),
+                _bar(count, maximum),
+                Text(str(count), style=f"bold {style}"),
+            )
     return Panel(
         table,
         title=Text(" SECURITY DISTRIBUTION ", style=f"bold {ACCENT}"),
@@ -396,7 +402,7 @@ def _evidence_preview(value: str, limit: int = 180) -> str:
     normalized = " ".join(value.split())
     if len(normalized) <= limit:
         return normalized
-    return normalized[: limit - 3].rstrip() + "..."
+    return normalized[: limit - 1].rstrip() + "…"
 
 
 def _finding_table(data: DashboardData, limit: int = 12, *, compact: bool = False) -> Table:
