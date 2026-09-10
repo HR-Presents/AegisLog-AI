@@ -1,6 +1,6 @@
 # Roadmap
 
-AegisLog is currently released as **v2.1.0**.
+AegisLog is currently released as **v2.1.1**.
 
 ## Completed foundation
 
@@ -8,16 +8,26 @@ The V0.1–V2.0 foundation delivered the terminal CLI, deterministic detections,
 
 ## Current stable line — v2.1.x
 
-### v2.1.0 — current stable release
+### v2.1.1 — current stable release
 
-v2.1.0 strengthens reliability and evaluation evidence without intentionally changing detection, parsing, streaming, authentication, monitoring, or read-only security semantics.
+v2.1.1 is a focused Windows terminal UI polish patch built from real rendered output while preserving the v2.1 reliability and evidence hardening.
+
+- Bounded Mission Control on wide Windows terminals instead of stretching across all available columns.
+- Reworked investigation and monitoring actions into separate operator work areas with clearer hierarchy and shorter descriptions.
+- Compressed System actions into a compact command row and simplified the navigation footer.
+- Preserved ASCII/cp1252-safe output, version/readiness status, the single authoritative prompt, and the public removal of AI Analyst.
+- Preserved detection, parsing, streaming, authentication, incident correlation, monitoring semantics, evidence handling, and read-only security behavior.
+- Passed the required exact-head CI, security, package-build, Windows executable, and dependency-lock checks before release preparation was merged.
+- Passed the guarded v2.1.1 release workflow on target commit `31dbb523bd79959738b3a5e2a7ffc0ec6f5ceea2` and published `AegisLog.exe` with its matching SHA-256 checksum.
+
+### v2.1.0 — reliability and evidence foundation
+
+v2.1.0 strengthened reliability and evaluation evidence without intentionally changing detection, parsing, streaming, authentication, monitoring, or read-only security semantics.
 
 - Added deterministic fuzz-style regressions around malformed input, randomized streaming chunk boundaries, authentication-event ordering, and bounded authentication-source floods.
 - Strengthened external detection evidence to schema v2 with explicit provenance fields, source types, collection period, sampling method, known exclusions, class balance, category counts, per-category metrics, and confidence intervals.
 - Added a broader representative synthetic benchmark corpus with benign controls, near-miss cases, authentication variants, and category coverage across audit, error, network, privilege, service, and web detections.
 - Kept the larger benchmark explicitly labeled as synthetic regression evidence rather than real-world effectiveness proof.
-- Passed the required exact-head CI, security, package-build, Windows executable, and dependency-lock checks before release.
-- Passed the guarded v2.1.0 release workflow on target commit `9eefb18af494d2488f0795eb7326470f642058f2` and published `AegisLog.exe` with its matching SHA-256 checksum.
 
 Independent real-world evaluation remains valuable but must use genuinely authorized, sanitized, independently labeled external data. It must not be fabricated as a release checkbox or implied by the synthetic regression results.
 
