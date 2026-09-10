@@ -7,8 +7,9 @@ import typer
 from rich.console import Console
 from rich.live import Live
 
+from .command_center_ui import render_realtime_command_center
 from .live_ux import live_initial_status, live_source_status, live_startup_panel, live_stopped_status
-from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor, render_realtime
+from .realtime import RealtimeState, initial_cursor, read_new_lines_cursor
 from .ui import bounded
 from .watch_profiles import get_profile
 
@@ -16,7 +17,7 @@ console = Console()
 
 
 def _view(state: RealtimeState):
-    return bounded(render_realtime(state))
+    return bounded(render_realtime_command_center(state))
 
 
 def live_dashboard(
@@ -50,7 +51,6 @@ def live_dashboard(
         )
     )
     if from_start:
-        # Initial snapshot contract: console.print(render_realtime(state))
         console.print(_view(state))
         console.print(live_initial_status("file", prefix="Initial scan complete."))
 
