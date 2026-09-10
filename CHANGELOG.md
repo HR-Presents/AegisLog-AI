@@ -4,6 +4,14 @@
 
 - No unreleased changes yet.
 
+## 2.0.1 - 2026-09-10
+
+- Aligned the public CLI, customer bundle launchers/installers, README terminal example, documentation index, project status, and roadmap with the AegisLog v2 product identity.
+- Removed stale public-facing `AegisLog AI` branding from supported runtime and customer-startup surfaces while preserving historical release records unchanged.
+- Updated the README Mission Control example to show v2.0.x and removed the obsolete duplicate `SELECT` prompt from the documented console flow.
+- Added regression coverage to keep current public branding and release-status documentation synchronized.
+- Preserved all v2.0 detection, streaming, authentication, parser, and security semantics unchanged.
+
 ## 2.0.0 - 2026-09-10
 
 - Rebuilt Mission Control into a responsive, full-width terminal workspace with balanced investigation and monitoring panels on wide terminals and clean single-column fallbacks on narrow terminals.
