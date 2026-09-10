@@ -17,6 +17,15 @@ def test_mission_control_header_uses_runtime_package_version() -> None:
     assert "v1.6.1" not in rendered
 
 
+def test_mission_control_brand_matches_readme_identity_and_stays_ascii_safe() -> None:
+    rendered = _render(_header(120))
+    assert "A E G I S L O G" in rendered
+    assert "DEFENSIVE LOG INVESTIGATION" in rendered
+    assert "LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC" in rendered
+    assert "|---/\\_/\\---|" in rendered
+    rendered.encode("ascii")
+
+
 def test_ai_prompt_forbids_unsupported_trust_and_confidence_claims() -> None:
     prompt = build_safe_prompt(
         InvestigationContext(
