@@ -14,7 +14,7 @@ if [ ! -x ".aegislog-venv/bin/python" ]; then
 fi
 
 VPY="$(pwd)/.aegislog-venv/bin/python"
-echo "Installing AegisLog AI and bundled dependencies offline..."
+echo "Installing AegisLog and bundled dependencies offline..."
 "$VPY" -m pip install --disable-pip-version-check --no-index --find-links "$(pwd)/vendor" "$(pwd)"/package/aegislog_ai-*.whl
 "$VPY" -m aegislog --version
 
