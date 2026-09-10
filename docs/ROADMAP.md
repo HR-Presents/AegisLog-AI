@@ -8,7 +8,7 @@ The V0.1–V2.0 foundation delivered the terminal CLI, deterministic detections,
 
 ## Current stable line — v2.1.x
 
-### v2.1.3 — current published release
+### v2.1.3 — current stable release
 
 v2.1.3 shipped a Windows presentation update while preserving the v2.1 correctness and evidence foundations.
 
@@ -16,7 +16,7 @@ v2.1.3 shipped a Windows presentation update while preserving the v2.1 correctne
 - The guarded v2.1.3 workflow published `AegisLog.exe` and its matching SHA-256 checksum from target commit `c01247b34a2dd54c863dd142c618f03e184af8f8`.
 - The released Windows EXE SHA-256 is `1ddda99e03fd36ba1816b1567a28b8cc23d410583f34771c1287f9e3c1a28155`.
 - The executable remains unsigned.
-- Synthetic benchmark results remain regression evidence only.
+- Synthetic benchmark results remain regression evidence only and are not independently validated real-world effectiveness evidence.
 
 ### Visual acceptance lesson
 
@@ -26,7 +26,9 @@ No new UI release should be prepared unless there is a deliberate product decisi
 
 ### v2.1.0–v2.1.2 — reliability and terminal hardening
 
-The earlier v2.1 releases strengthened deterministic fuzz regressions, external-evidence schema quality, representative synthetic benchmark coverage, Windows terminal bounds, and release engineering without intentionally rewriting core detection semantics.
+The earlier v2.1 releases strengthened deterministic fuzz regressions, external-evidence schema quality, representative synthetic benchmark coverage, Windows terminal bounds, and release engineering without intentionally rewriting core detection semantics. Passed the required exact-head CI before their guarded release preparation was merged, with matching SHA-256 checksum verification retained in release records.
+
+Independent real-world evaluation remains valuable when genuinely authorized, sanitized, independently labeled data is available; it must not be fabricated as a release checkbox or implied by synthetic regression results.
 
 ## Near-term maintenance priorities
 
