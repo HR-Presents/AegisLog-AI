@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================
-echo       AegisLog AI Customer Installer
+echo         AegisLog Customer Installer
 echo ========================================
 echo.
 
@@ -34,7 +34,7 @@ if not defined WHEEL (
   goto :fail
 )
 
-echo Installing AegisLog AI and bundled dependencies offline...
+echo Installing AegisLog and bundled dependencies offline...
 "%VPY%" -m pip install --disable-pip-version-check --no-index --find-links "%CD%\vendor" "%WHEEL%"
 if errorlevel 1 goto :fail
 
