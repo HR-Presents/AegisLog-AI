@@ -2,13 +2,19 @@
 
 ## Unreleased
 
-- Added the optional AI Analyst workflow to Mission Control and the CLI with `local`, Ollama, and explicitly opted-in OpenAI-compatible provider modes while keeping deterministic local detection authoritative.
-- Refined the terminal UI across Mission Control, source selection, analysis completion, report handoff, System Health, Command Reference, and responsive narrow-terminal layouts.
-- Standardized shared console hierarchy and restrained the terminal color palette so elevated severity states carry more visual weight than structural chrome.
-- Added focused regression coverage for terminal layout resilience, source-input hierarchy, analysis completion state, shared page chrome, and responsive system pages.
-- Refreshed the public GitHub experience with a clearer README, documentation index, contribution guide, support routing, and pull-request template.
-- Clarified public release wording: v1.6.0 remains the published stable release, while newer reviewed work on `main` remains unreleased until an explicit release is completed.
-- Preserved the defensive, local-first, read-only security model; no offensive behavior or automatic remediation was introduced by these UI/documentation changes.
+- No unreleased changes yet.
+
+## 1.9.0 - 2026-09-10
+
+- Made streaming authentication correlation independent of chunk boundaries by preserving one bounded correlation state across the full stream.
+- Added explicit RFC3164 year-hint support to streaming analysis so full-file and streaming paths share timestamp context.
+- Improved authentication parsing for RFC3164 syslog hosts and validated IPv4/IPv6 source addresses.
+- Prevented destination-only addresses from being treated as authentication sources.
+- Added regression coverage for out-of-order authentication events, exact correlation-window boundaries, expired events, and missing-timestamp fallback behavior.
+- Expanded the maintained synthetic detection corpus from 12 to 18 labeled cases, including IPv6, structured-source, destination-only, distinct-source, and out-of-order authentication scenarios.
+- Enforced zero false positives and zero false negatives on the maintained synthetic regression corpus while preserving explicit limitations about real-world effectiveness.
+- Preserved the responsive, Windows-console-safe terminal identity from v1.8.0.
+- Kept AI Analyst removed from the public product surface; deterministic local detection and read-only investigation remain authoritative.
 
 ## 1.6.0 - 2026-09-02
 
@@ -70,7 +76,7 @@
 
 ## 0.9.0 - Release candidate hardening
 
-- Completed the security, configuration migration, packaging, and terminal-safety gate.
+- Completed the security, configuration, migration, packaging, and terminal-safety gate.
 
 ## 0.2.0 - Unreleased
 
