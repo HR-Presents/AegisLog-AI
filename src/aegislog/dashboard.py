@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import re
 import shlex
 import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from rich import box
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
@@ -20,16 +22,26 @@ from .theme import (
     ACCENT,
     ACCENT_SOFT,
     ANOMALY,
+    DIM,
     INCIDENT,
     INFO,
     MUTED,
+    NEUTRAL,
     SUCCESS,
     risk_style,
+    severity_style,
     severity_text,
 )
 
 _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
 _NARROW_DASHBOARD_BREAKPOINT = 72
+_WIDE_DASHBOARD_BREAKPOINT = 104
+_MAX_BAR_WIDTH = 24
+_TIMESTAMP_PATTERNS = (
+    re.compile(r"^(?P<label>\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::\d{2})?"),
+    re.compile(r"^(?P<label>[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2})(?::\d{2})?"),
+    re.compile(r"^(?P<label>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})(?::\d{2})?"),
+)
 
 
 @dataclass(frozen=True)
@@ -43,15 +55,12 @@ class DashboardData:
     services: dict[str, int]
     categories: dict[str, int]
     severities: dict[str, int]
+    events: tuple[Event, ...] = ()
+    raw_lines: tuple[str, ...] = ()
 
 
 def analyze_dashboard(path: Path, *, timestamp_year_hint: int | None = None) -> DashboardData:
-    """Build one complete, local-only analysis snapshot for terminal rendering.
-
-    ``timestamp_year_hint`` is explicit operator context for RFC3164-style timestamps
-    that omit a year. It is forwarded to the detection engine and is never inferred
-    from the current clock.
-    """
+    """Build one complete, local-only analysis snapshot for terminal rendering."""
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         lines = handle.readlines()
 
@@ -75,6 +84,8 @@ def analyze_dashboard(path: Path, *, timestamp_year_hint: int | None = None) -> 
         services=dict(service_counts),
         categories=dict(category_counts),
         severities=dict(severity_counts),
+        events=tuple(events),
+        raw_lines=tuple(line.rstrip("\n") for line in lines),
     )
 
 
@@ -95,10 +106,7 @@ def _risk_state(data: DashboardData) -> str:
 
 
 def _ordered_findings(data: DashboardData) -> list[Finding]:
-    return sorted(
-        data.findings,
-        key=lambda item: (-_severity_rank(item.severity), item.category, item.title),
-    )
+    return sorted(data.findings, key=lambda item: (-_severity_rank(item.severity), item.category, item.title))
 
 
 def _ordered_incidents(data: DashboardData) -> list[Incident]:
@@ -108,44 +116,93 @@ def _ordered_incidents(data: DashboardData) -> list[Incident]:
     )
 
 
-def _header(data: DashboardData) -> Panel:
-    risk = _risk_state(data)
-    source_name = Path(data.source).name or data.source
-    elevated = sum(
+def _elevated_count(data: DashboardData) -> int:
+    return sum(
         count
         for severity, count in data.severities.items()
         if _severity_rank(severity) >= _severity_rank("MEDIUM")
     )
 
-    body = Text()
-    body.append("AEGISLOG", style=f"bold {ACCENT}")
-    body.append("  /  INVESTIGATION", style="bold white")
-    body.append(f"  v{__version__}", style=MUTED)
-    body.append("\n")
-    body.append("SOURCE  ", style=MUTED)
-    body.append(source_name, style="bold white")
-    body.append("    POSTURE  ", style=MUTED)
-    body.append(risk, style=f"bold {risk_style(risk)}")
-    body.append("\n")
-    body.append("EVENTS  ", style=MUTED)
-    body.append(f"{data.lines:,}", style=f"bold {ACCENT}")
-    body.append("    FINDINGS  ", style=MUTED)
-    body.append(str(len(data.findings)), style="bold white")
-    body.append("    ELEVATED  ", style=MUTED)
-    body.append(str(elevated), style=f"bold {risk_style(risk)}")
-    body.append("    INCIDENTS  ", style=MUTED)
-    body.append(str(len(data.incidents)), style=f"bold {INCIDENT}")
-    body.append("    ANOMALIES  ", style=MUTED)
-    body.append(str(len(data.anomalies)), style=f"bold {ANOMALY}")
+
+def _shield_label() -> Text:
+    mark = Text("/A\\", style=f"bold {ACCENT}")
+    mark.append("  AEGISLOG", style=f"bold {NEUTRAL}")
+    return mark
+
+
+def _header(data: DashboardData) -> Panel:
+    risk = _risk_state(data)
+    source_name = Path(data.source).name or data.source
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(ratio=1)
+    grid.add_column(no_wrap=True)
+
+    title = Text()
+    title.append_text(_shield_label())
+    title.append("  /  INVESTIGATION", style=f"bold {ACCENT}")
+    status = Text()
+    status.append(f"VERSION v{__version__}", style=MUTED)
+    status.append("   POSTURE ", style=MUTED)
+    status.append(risk, style=f"bold {risk_style(risk)}")
+    grid.add_row(title, status)
+
+    source = Text()
+    source.append("SOURCE  ", style=MUTED)
+    source.append(source_name, style=f"bold {NEUTRAL}")
     if data.source != source_name:
-        body.append("\nPATH    ", style=MUTED)
-        body.append(data.source, style=MUTED)
-    body.append("\nLOCAL / READ-ONLY", style=MUTED)
+        source.append("\nPATH    ", style=MUTED)
+        source.append(data.source, style=MUTED)
+    mode = Text("LOCAL / READ-ONLY / DETERMINISTIC", style=MUTED)
+    grid.add_row(source, mode)
 
     return Panel(
-        body,
-        title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT_SOFT}"),
+        grid,
+        title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT}"),
         title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+    )
+
+
+def _metric_cell(label: str, value: int | str, style: str, note: str = "") -> Text:
+    cell = Text(justify="center")
+    cell.append(label, style=MUTED)
+    cell.append("\n")
+    cell.append(str(value), style=f"bold {style}")
+    if note:
+        cell.append("\n")
+        cell.append(note, style=MUTED)
+    return cell
+
+
+def _metric_strip(data: DashboardData, *, compact: bool = False) -> Panel:
+    risk = _risk_state(data)
+    metrics = (
+        ("EVENTS", f"{data.lines:,}", ACCENT, "parsed input"),
+        ("FINDINGS", len(data.findings), NEUTRAL, "rule-backed"),
+        ("ELEVATED", _elevated_count(data), risk_style(risk), "medium+"),
+        ("INCIDENTS", len(data.incidents), INCIDENT, "correlated"),
+        ("ANOMALIES", len(data.anomalies), ANOMALY, "scored"),
+    )
+    if compact:
+        table = Table.grid(expand=True, padding=(0, 1))
+        table.add_column(ratio=1)
+        table.add_column(ratio=1)
+        for index in range(0, len(metrics), 2):
+            left = _metric_cell(*metrics[index])
+            right = _metric_cell(*metrics[index + 1]) if index + 1 < len(metrics) else Text("")
+            table.add_row(left, right)
+    else:
+        table = Table.grid(expand=True, padding=(0, 1))
+        for _ in metrics:
+            table.add_column(ratio=1)
+        table.add_row(*(_metric_cell(*metric) for metric in metrics))
+    return Panel(
+        table,
+        title=Text(" SECURITY METRICS ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
@@ -158,62 +215,154 @@ def _analyst_focus(data: DashboardData) -> Panel:
     top_finding = findings[0] if findings else None
     top_incident = incidents[0] if incidents else None
 
-    body = Text()
-    body.append("PRIORITY  ", style=MUTED)
-    body.append(risk, style=f"bold {risk_style(risk)}")
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(width=10, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
+    grid.add_row(Text("PRIORITY", style=MUTED), Text(risk, style=f"bold {risk_style(risk)}"))
 
     incident_first = bool(
         top_incident
-        and (
-            top_finding is None
-            or _severity_rank(top_incident.severity) >= _severity_rank(top_finding.severity)
-        )
+        and (top_finding is None or _severity_rank(top_incident.severity) >= _severity_rank(top_finding.severity))
     )
-
     if incident_first and top_incident:
         incident_id = f"INC-{top_incident.id.upper()[:8]}"
-        body.append("\nPRIMARY   ", style=MUTED)
-        body.append(incident_id, style=f"bold {INCIDENT}")
-        body.append("  ", style=MUTED)
-        body.append(top_incident.title, style="bold white")
-        body.append("\nACTION    ", style=MUTED)
-        body.append(
-            "Review the correlated evidence chain with source, identity, host, and surrounding telemetry context.",
-            style="white",
+        primary = Text(incident_id, style=f"bold {INCIDENT}")
+        primary.append("  ")
+        primary.append(top_incident.title, style=f"bold {NEUTRAL}")
+        grid.add_row(Text("PRIMARY", style=MUTED), primary)
+        grid.add_row(
+            Text("ACTION", style=MUTED),
+            Text("Review the correlated evidence chain with source, identity, host, and surrounding telemetry context.", style=NEUTRAL),
         )
         if top_finding:
-            body.append("\nNEXT      ", style=MUTED)
-            body.append(top_finding.severity, style=f"bold {risk_style(top_finding.severity)}")
-            body.append("  ", style=MUTED)
-            body.append(top_finding.title, style="white")
+            next_item = Text(top_finding.severity, style=f"bold {severity_style(top_finding.severity)}")
+            next_item.append("  ")
+            next_item.append(top_finding.title, style=NEUTRAL)
+            grid.add_row(Text("NEXT", style=MUTED), next_item)
     elif top_finding:
-        body.append("\nPRIMARY   ", style=MUTED)
-        body.append(top_finding.title, style="bold white")
-        body.append("\nACTION    ", style=MUTED)
-        body.append(top_finding.recommendation, style="white")
+        grid.add_row(Text("PRIMARY", style=MUTED), Text(top_finding.title, style=f"bold {NEUTRAL}"))
+        grid.add_row(Text("ACTION", style=MUTED), Text(top_finding.recommendation, style=NEUTRAL))
         if top_incident:
-            body.append("\nNEXT      ", style=MUTED)
-            body.append(f"INC-{top_incident.id.upper()[:8]}", style=f"bold {INCIDENT}")
-            body.append("  ", style=MUTED)
-            body.append(top_incident.title, style="white")
+            next_item = Text(f"INC-{top_incident.id.upper()[:8]}", style=f"bold {INCIDENT}")
+            next_item.append("  ")
+            next_item.append(top_incident.title, style=NEUTRAL)
+            grid.add_row(Text("NEXT", style=MUTED), next_item)
         elif len(findings) > 1:
-            next_item = findings[1]
-            body.append("\nNEXT      ", style=MUTED)
-            body.append(next_item.severity, style=f"bold {risk_style(next_item.severity)}")
-            body.append("  ", style=MUTED)
-            body.append(next_item.title, style="white")
+            next_finding = findings[1]
+            next_item = Text(next_finding.severity, style=f"bold {severity_style(next_finding.severity)}")
+            next_item.append("  ")
+            next_item.append(next_finding.title, style=NEUTRAL)
+            grid.add_row(Text("NEXT", style=MUTED), next_item)
     else:
-        body.append("\nPRIMARY   ", style=MUTED)
-        body.append("No elevated rule-backed findings or correlated incidents retained", style=SUCCESS)
-        body.append("\nACTION    ", style=MUTED)
-        body.append("Review coverage and preserve original telemetry when required.", style="white")
+        grid.add_row(Text("PRIMARY", style=MUTED), Text("No elevated rule-backed findings or correlated incidents retained", style=SUCCESS))
+        grid.add_row(Text("ACTION", style=MUTED), Text("Review coverage and preserve original telemetry when required.", style=NEUTRAL))
 
-    body.append("\n\nSignals are investigative evidence, not proof of compromise.", style=MUTED)
+    footer = Text("Signals are investigative evidence, not proof of compromise.", style=MUTED)
     return Panel(
-        body,
+        Group(grid, Text(""), footer),
         title=Text(" ANALYST FOCUS ", style=f"bold {risk_style(risk)}"),
         title_align="left",
+        box=box.ASCII,
         border_style=risk_style(risk),
+        padding=(0, 1),
+    )
+
+
+def _bar(value: int, maximum: int, width: int = _MAX_BAR_WIDTH) -> Text:
+    maximum = max(maximum, 1)
+    filled = 0 if value <= 0 else max(1, round((value / maximum) * width))
+    filled = min(width, filled)
+    bar = Text("#" * filled, style=ACCENT)
+    bar.append("." * (width - filled), style=DIM)
+    return bar
+
+
+def _distribution_panel(data: DashboardData, *, compact: bool = False) -> Panel:
+    rows: list[tuple[str, str, int, str]] = []
+    severity_order = ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")
+    for severity in severity_order:
+        count = data.severities.get(severity, 0)
+        if count:
+            rows.append(("SEVERITY", severity, count, severity_style(severity)))
+    for category, count in sorted(data.categories.items(), key=lambda item: (-item[1], item[0]))[:5]:
+        rows.append(("CATEGORY", category.upper(), count, ACCENT))
+    if not rows:
+        return Panel(
+            Text("No finding distribution is available for this input.", style=SUCCESS),
+            title=Text(" SECURITY DISTRIBUTION ", style=f"bold {ACCENT}"),
+            title_align="left",
+            box=box.ASCII,
+            border_style=ACCENT_SOFT,
+        )
+
+    maximum = max(count for _, _, count, _ in rows)
+    table = Table.grid(expand=True, padding=(0, 1))
+    if compact:
+        table.add_column(ratio=1, overflow="ellipsis")
+        table.add_column(width=7, justify="right")
+        for _, label, count, style in rows:
+            table.add_row(Text(label, style=f"bold {style}"), Text(str(count), style=f"bold {style}"))
+    else:
+        table.add_column(width=10, style=MUTED, no_wrap=True)
+        table.add_column(width=16, overflow="ellipsis")
+        table.add_column(width=_MAX_BAR_WIDTH)
+        table.add_column(width=7, justify="right")
+        for dimension, label, count, style in rows:
+            table.add_row(
+                Text(dimension, style=MUTED),
+                Text(label, style=f"bold {style}"),
+                _bar(count, maximum),
+                Text(str(count), style=f"bold {style}"),
+            )
+    return Panel(
+        table,
+        title=Text(" SECURITY DISTRIBUTION ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+    )
+
+
+def _timestamp_label(raw: str) -> str | None:
+    stripped = raw.strip()
+    for pattern in _TIMESTAMP_PATTERNS:
+        match = pattern.match(stripped)
+        if match:
+            return match.group("label")
+    return None
+
+
+def _activity_panel(data: DashboardData, *, compact: bool = False) -> Panel | None:
+    if not data.events:
+        return None
+    buckets: Counter[str] = Counter()
+    for event in data.events:
+        label = _timestamp_label(event.raw)
+        if label:
+            buckets[label] += 1
+    if len(buckets) < 2:
+        return None
+    items = list(buckets.items())[-8:]
+    maximum = max(count for _, count in items)
+    table = Table.grid(expand=True, padding=(0, 1))
+    table.add_column(width=18 if not compact else 13, style=MUTED, no_wrap=True)
+    if not compact:
+        table.add_column(width=_MAX_BAR_WIDTH)
+    table.add_column(width=7, justify="right")
+    for label, count in items:
+        cells: list[RenderableType] = [Text(label, style=MUTED)]
+        if not compact:
+            cells.append(_bar(count, maximum))
+        cells.append(Text(str(count), style=f"bold {ACCENT}"))
+        table.add_row(*cells)
+    return Panel(
+        table,
+        title=Text(" EVENT ACTIVITY ", style=f"bold {ACCENT}"),
+        subtitle=Text("timestamped events / latest buckets", style=MUTED),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
 
@@ -224,32 +373,28 @@ def _incident_table(data: DashboardData, limit: int = 8, *, compact: bool = Fals
         title=f"ACTIVE INCIDENTS  [{min(len(ordered), limit)}/{len(ordered)}]",
         title_style=f"bold {INCIDENT}",
         expand=True,
+        box=box.ASCII,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
+        show_lines=False,
     )
-    table.add_column("ID", width=15, style=INCIDENT, no_wrap=True)
+    table.add_column("ID", width=14, style=INCIDENT, no_wrap=True)
     table.add_column("SEV", width=9)
     if compact:
         table.add_column("INCIDENT", ratio=1, overflow="fold")
     else:
         table.add_column("SIGNALS", width=8, justify="right", style=ACCENT)
-        table.add_column("CATEGORY", width=18)
+        table.add_column("CATEGORY", width=16, overflow="ellipsis")
         table.add_column("SUMMARY", ratio=1, overflow="fold")
     for item in ordered[:limit]:
         incident_id = f"INC-{item.id.upper()[:8]}"
         if compact:
-            detail = Text(item.title)
+            detail = Text(item.title, style=NEUTRAL)
             detail.append("\n")
-            detail.append(f"{item.count} signals  /  {item.category}", style=MUTED)
+            detail.append(f"{item.count} signals / {item.category}", style=MUTED)
             table.add_row(incident_id, severity_text(item.severity), detail)
         else:
-            table.add_row(
-                incident_id,
-                severity_text(item.severity),
-                str(item.count),
-                Text(item.category),
-                Text(item.title),
-            )
+            table.add_row(incident_id, severity_text(item.severity), str(item.count), Text(item.category), Text(item.title))
     return table
 
 
@@ -266,6 +411,7 @@ def _finding_table(data: DashboardData, limit: int = 12, *, compact: bool = Fals
         title=f"DETECTED FINDINGS  [{min(len(ordered), limit)}/{len(ordered)}]",
         title_style=f"bold {ACCENT}",
         expand=True,
+        box=box.ASCII,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
@@ -273,39 +419,66 @@ def _finding_table(data: DashboardData, limit: int = 12, *, compact: bool = Fals
     if compact:
         table.add_column("DETECTION / EVIDENCE", ratio=1, overflow="fold")
     else:
-        table.add_column("CATEGORY", width=17)
-        table.add_column("DETECTION", width=32)
+        table.add_column("CATEGORY", width=16)
+        table.add_column("DETECTION", width=28)
         table.add_column("EVIDENCE PREVIEW", ratio=1, overflow="fold")
     for item in ordered[:limit]:
         if compact:
             detail = Text()
             detail.append(item.category.upper(), style=MUTED)
             detail.append("  ")
-            detail.append(item.title, style="bold white")
+            detail.append(item.title, style=f"bold {NEUTRAL}")
             detail.append("\n")
             detail.append(_evidence_preview(item.evidence, limit=120), style=MUTED)
             table.add_row(severity_text(item.severity), detail)
         else:
-            table.add_row(
-                severity_text(item.severity),
-                Text(item.category),
-                Text(item.title),
-                Text(_evidence_preview(item.evidence)),
-            )
+            table.add_row(severity_text(item.severity), Text(item.category), Text(item.title), Text(_evidence_preview(item.evidence)))
     if not ordered:
         if compact:
-            table.add_row(
-                "-",
-                Text("No rule-backed findings\nNo matching local detection rules", style=SUCCESS),
-            )
+            table.add_row("-", Text("No rule-backed findings\nNo matching local detection rules", style=SUCCESS))
         else:
-            table.add_row(
-                "-",
-                "-",
-                Text("No rule-backed findings", style=SUCCESS),
-                Text("No matching local detection rules", style=MUTED),
-            )
+            table.add_row("-", "-", Text("No rule-backed findings", style=SUCCESS), Text("No matching local detection rules", style=MUTED))
     return table
+
+
+def _timeline_panel(data: DashboardData, limit: int = 10, *, compact: bool = False) -> Panel | None:
+    if not data.events:
+        return None
+    rows: list[tuple[int, str, Event]] = []
+    for line_no, event in enumerate(data.events, start=1):
+        if not event.message:
+            continue
+        timestamp = _timestamp_label(event.raw)
+        if timestamp is None:
+            continue
+        rows.append((line_no, timestamp, event))
+    if len(rows) < 2:
+        return None
+    interesting = [row for row in rows if (row[2].level or "").lower() in {"critical", "error", "warning"}]
+    selected = interesting[:limit] if len(interesting) >= 2 else rows[:limit]
+    table = Table(expand=True, box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1))
+    table.add_column("TIME", width=18 if not compact else 13, style=MUTED, no_wrap=True)
+    table.add_column("LEVEL", width=9, no_wrap=True)
+    if not compact:
+        table.add_column("SOURCE", width=14, overflow="ellipsis")
+    table.add_column("EVENT", ratio=1, overflow="fold")
+    for line_no, timestamp, event in selected:
+        level = (event.level or "INFO").upper()
+        cells: list[RenderableType] = [Text(timestamp), Text(level, style=severity_style(level))]
+        if not compact:
+            cells.append(Text(event.service or event.source or "unknown", style=MUTED))
+        message = Text(event.message, style=NEUTRAL)
+        message.append(f"  [line {line_no}]", style=MUTED)
+        cells.append(message)
+        table.add_row(*cells)
+    return Panel(
+        table,
+        title=Text(" INVESTIGATION TIMELINE ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 0),
+    )
 
 
 def _anomaly_table(data: DashboardData, limit: int = 6, *, compact: bool = False) -> Table:
@@ -313,6 +486,7 @@ def _anomaly_table(data: DashboardData, limit: int = 6, *, compact: bool = False
         title=f"ANOMALY SIGNALS  [{min(len(data.anomalies), limit)}/{len(data.anomalies)}]",
         title_style=f"bold {ANOMALY}",
         expand=True,
+        box=box.ASCII,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
@@ -320,7 +494,7 @@ def _anomaly_table(data: DashboardData, limit: int = 6, *, compact: bool = False
     if compact:
         table.add_column("SIGNAL", ratio=1, overflow="fold")
     else:
-        table.add_column("EVENT CLASS", width=28)
+        table.add_column("EVENT CLASS", width=26)
         table.add_column("REASON", ratio=1, overflow="fold")
     for item in data.anomalies[:limit]:
         if compact:
@@ -333,11 +507,12 @@ def _anomaly_table(data: DashboardData, limit: int = 6, *, compact: bool = False
     return table
 
 
-def _telemetry_table(data: DashboardData) -> Table:
+def _telemetry_table(data: DashboardData, *, compact: bool = False) -> Table:
     table = Table(
         title="TELEMETRY CONTEXT",
-        title_style=f"bold {ACCENT_SOFT}",
+        title_style=f"bold {ACCENT}",
         expand=True,
+        box=box.ASCII,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
@@ -350,17 +525,58 @@ def _telemetry_table(data: DashboardData) -> Table:
         if not items:
             text.append("none", style=MUTED)
             return text
+        maximum = max(count for _, count in items)
         for index, (name, count) in enumerate(items):
             if index:
-                text.append("   ", style=MUTED)
-            text.append(str(name), style="white")
-            text.append(f" {count}", style=ACCENT)
+                text.append("   " if not compact else "\n", style=MUTED)
+            text.append(str(name), style=NEUTRAL)
+            text.append(f" {count}", style=f"bold {ACCENT}")
+            if not compact:
+                width = max(1, round((count / maximum) * 6))
+                text.append(" " + "#" * width, style=ACCENT_SOFT)
         return text
 
     table.add_row("CATEGORIES", render(data.categories))
     table.add_row("LOG LEVELS", render(data.levels))
     table.add_row("SERVICES", render(data.services))
     return table
+
+
+def _raw_evidence_panel(data: DashboardData, limit: int = 10, *, compact: bool = False) -> Panel | None:
+    raw_lines = data.raw_lines or tuple(event.raw for event in data.events)
+    if not raw_lines:
+        return None
+    finding_evidence = {item.evidence.strip() for item in data.findings if item.evidence.strip()}
+    selected: list[tuple[int, str]] = []
+    for line_no, raw in enumerate(raw_lines, start=1):
+        if raw.strip() in finding_evidence:
+            selected.append((line_no, raw))
+        if len(selected) >= limit:
+            break
+    if not selected:
+        selected = [(line_no, raw) for line_no, raw in enumerate(raw_lines[:limit], start=1) if raw.strip()]
+    if not selected:
+        return None
+    table = Table(expand=True, box=None, padding=(0, 1))
+    table.add_column("LINE", width=6, justify="right", style=MUTED)
+    if not compact:
+        table.add_column("TIME", width=18, style=MUTED, no_wrap=True)
+    table.add_column("RAW LOG EVIDENCE", ratio=1, overflow="fold")
+    for line_no, raw in selected:
+        cells: list[RenderableType] = [Text(str(line_no), style=MUTED)]
+        if not compact:
+            cells.append(Text(_timestamp_label(raw) or "-", style=MUTED))
+        cells.append(Text(raw, style=NEUTRAL))
+        table.add_row(*cells)
+    return Panel(
+        table,
+        title=Text(" RAW EVIDENCE ", style=f"bold {ACCENT}"),
+        subtitle=Text("source preserved / read-only", style=MUTED),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 0),
+    )
 
 
 def _source_argument(source: str) -> str:
@@ -373,43 +589,61 @@ def _next_steps(data: DashboardData) -> Panel:
     command = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
     source = _source_argument(data.source)
     incidents = _ordered_incidents(data)
-
-    body = Text()
-    body.append("REPORT  ", style=MUTED)
-    body.append("HTML investigation report generated automatically", style=SUCCESS)
-    body.append("\nLIST    ", style=MUTED)
-    body.append(f"{command} incidents {source}", style=ACCENT)
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(width=9, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
+    grid.add_row(Text("REPORT", style=MUTED), Text("HTML investigation report generated automatically", style=SUCCESS))
+    grid.add_row(Text("LIST", style=MUTED), Text(f"{command} incidents {source}", style=ACCENT))
     if incidents:
         incident_id = f"INC-{incidents[0].id.upper()[:8]}"
-        body.append("\nOPEN    ", style=MUTED)
-        body.append(f"{command} investigate {source} {incident_id}", style=INCIDENT)
-        body.append("\nEXPLAIN ", style=MUTED)
-        body.append(f"{command} explain {source} {incident_id}", style=INFO)
-
+        grid.add_row(Text("OPEN", style=MUTED), Text(f"{command} investigate {source} {incident_id}", style=INCIDENT))
+        grid.add_row(Text("EXPLAIN", style=MUTED), Text(f"{command} explain {source} {incident_id}", style=INFO))
     return Panel(
-        body,
+        grid,
         title=Text(" FOLLOW-UP / COPY-READY ", style=f"bold {ACCENT}"),
         title_align="left",
+        box=box.ASCII,
         border_style=ACCENT_SOFT,
         padding=(0, 1),
     )
 
 
+def _visual_analysis(data: DashboardData, *, screen_width: int, compact: bool) -> RenderableType:
+    distribution = _distribution_panel(data, compact=compact)
+    activity = _activity_panel(data, compact=compact)
+    if activity is None or screen_width < _WIDE_DASHBOARD_BREAKPOINT:
+        return Group(distribution, *((Text(""), activity) if activity is not None else ()))
+    layout = Table.grid(expand=True, padding=(0, 1))
+    layout.add_column(ratio=1)
+    layout.add_column(ratio=1)
+    layout.add_row(distribution, activity)
+    return layout
+
+
 def render_dashboard(data: DashboardData, *, screen_width: int | None = None) -> RenderableType:
-    """Return a prioritized, responsive SOC-style investigation dashboard."""
-    compact = screen_width is not None and screen_width < _NARROW_DASHBOARD_BREAKPOINT
-    sections: list[RenderableType] = [_header(data), Text(""), _analyst_focus(data)]
+    """Return a prioritized, responsive, data-aware terminal investigation command center."""
+    width = screen_width if screen_width is not None else 100
+    compact = width < _NARROW_DASHBOARD_BREAKPOINT
+    sections: list[RenderableType] = [
+        _header(data),
+        Text(""),
+        _metric_strip(data, compact=compact),
+        Text(""),
+        _visual_analysis(data, screen_width=width, compact=compact),
+        Text(""),
+        _analyst_focus(data),
+    ]
+    timeline = _timeline_panel(data, compact=compact)
+    if timeline is not None:
+        sections.extend((Text(""), timeline))
     if data.incidents:
         sections.extend((Text(""), _incident_table(data, compact=compact)))
     sections.extend((Text(""), _finding_table(data, compact=compact)))
     if data.anomalies:
         sections.extend((Text(""), _anomaly_table(data, compact=compact)))
-    sections.extend(
-        (
-            Text(""),
-            _telemetry_table(data),
-            Text(""),
-            _next_steps(data),
-        )
-    )
+    sections.extend((Text(""), _telemetry_table(data, compact=compact)))
+    raw = _raw_evidence_panel(data, compact=compact)
+    if raw is not None:
+        sections.extend((Text(""), raw))
+    sections.extend((Text(""), _next_steps(data)))
     return Group(*sections)

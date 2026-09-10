@@ -4,6 +4,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 
+from rich import box
 from rich.table import Table
 from rich.text import Text
 
@@ -178,7 +179,7 @@ def _state_style(state: str) -> str:
 
 def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None = None) -> Table:
     title = f"RATE & BASELINE INTELLIGENCE  [{snapshot.window_seconds}s]"
-    table = Table(title=title, expand=True, border_style=ACCENT, padding=(0, 1))
+    table = Table(title=title, expand=True, box=box.ASCII, border_style=ACCENT, padding=(0, 1))
     table.add_column("Signal", min_width=10, ratio=3, style=ACCENT, overflow="fold")
     table.add_column("Current", min_width=7, max_width=10, justify="right", style=INFO, no_wrap=True)
     table.add_column("Baseline", min_width=7, max_width=10, justify="right", no_wrap=True)

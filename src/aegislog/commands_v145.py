@@ -3,12 +3,13 @@ from __future__ import annotations
 from rich import box
 from rich.align import Align
 from rich.console import Group, RenderableType
+from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from . import __version__
 from . import commands_v144 as legacy
-from .theme import ACCENT, DIM, MUTED, NEUTRAL, SUCCESS
+from .theme import ACCENT, ACCENT_SOFT, DIM, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 _NARROW_BREAKPOINT = 72
@@ -30,39 +31,64 @@ def _rule(width: int) -> Text:
     return Text("-" * max(16, width), style=DIM)
 
 
+def _shield_a(compact: bool = False) -> Text:
+    """ASCII-safe terminal interpretation of the Shield A brand mark."""
+    mark = Text()
+    if compact:
+        mark.append("/A\\", style=f"bold {ACCENT}")
+        return mark
+    for index, line in enumerate(("   /\\", "  /  \\", " / /\\ \\", "| /__\\ |", " \\____/")):
+        if index:
+            mark.append("\n")
+        mark.append(line, style=f"bold {ACCENT}")
+    return mark
+
+
 def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> RenderableType:
-    """Render an ASCII-safe identity with status anchored to the same visual frame."""
+    """Render the Shield A identity with version/status anchored to one bounded frame."""
     width = _frame_width(screen_width)
     if compact or width < _NARROW_BREAKPOINT:
         brand = Text()
-        brand.append("/\\  AEGISLOG", style=f"bold {ACCENT}")
+        brand.append("/A\\  AEGISLOG", style=f"bold {ACCENT}")
         brand.append(f"   VERSION v{__version__}\n", style=MUTED)
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
         brand.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
         brand.append("   + SYSTEM READY", style=f"bold {SUCCESS}")
         return brand
 
-    left1 = "  /\\    A E G I S L O G"
-    left2 = " /  \\   DEFENSIVE LOG INVESTIGATION"
-    right1 = f"VERSION v{__version__}"
-    right2 = "+ SYSTEM READY"
+    left_width = 12
+    details = Table.grid(padding=0)
+    details.add_column(width=left_width)
+    details.add_column(ratio=1)
+    details.add_row(_shield_a(), _brand_text(width - left_width))
+    return details
 
-    line1 = Text(left1, style=f"bold {NEUTRAL}")
-    line1.append(" " * max(2, width - len(left1) - len(right1)), style=MUTED)
-    line1.append(right1, style=MUTED)
 
-    line2 = Text(left2, style=f"bold {ACCENT}")
-    line2.append(" " * max(2, width - len(left2) - len(right2)), style=MUTED)
-    line2.append(right2, style=f"bold {SUCCESS}")
-
-    mark = Text("/____\\  |---/\\_/\\---|", style=f"bold {ACCENT}")
+def _brand_text(width: int) -> RenderableType:
+    name = Text("A E G I S L O G", style=f"bold {NEUTRAL}")
+    status = Text()
+    status.append(f"VERSION v{__version__}", style=MUTED)
+    status.append("    ")
+    status.append("+ SYSTEM READY", style=f"bold {SUCCESS}")
+    top = Table.grid(expand=True, padding=(0, 2))
+    top.add_column(ratio=1)
+    top.add_column(no_wrap=True)
+    top.add_row(name, status)
+    subtitle = Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
+    signature = Text("|---/\\_/\\---|", style=ACCENT_SOFT)
     posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    return Group(line1, line2, mark, posture)
+    return Group(top, subtitle, signature, posture)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
     width = _frame_width(screen_width)
-    return Group(_brand_lockup(screen_width=screen_width), _rule(width))
+    return Panel(
+        _brand_lockup(screen_width=screen_width),
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=width,
+    )
 
 
 def _operation_header(
@@ -74,12 +100,20 @@ def _operation_header(
 ) -> RenderableType:
     width = _frame_width(screen_width)
     heading = Text()
-    heading.append("/\\ AEGISLOG", style=f"bold {NEUTRAL}")
+    heading.append("/A\\ AEGISLOG", style=f"bold {NEUTRAL}")
     heading.append("  //  ", style=MUTED)
     heading.append(title.upper(), style=f"bold {accent}")
     context = Text(subtitle, style=NEUTRAL, overflow="fold")
-    posture = Text("LOCAL / READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    return Group(heading, context, _rule(width), posture)
+    posture = Text("LOCAL / READ-ONLY / DETERMINISTIC", style=MUTED)
+    return Panel(
+        Group(heading, context, posture),
+        title=Text(" ACTIVE WORKSPACE ", style=f"bold {accent}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=width,
+    )
 
 
 def _input_panel(
@@ -92,23 +126,24 @@ def _input_panel(
 ) -> RenderableType:
     width = _frame_width(screen_width)
     compact = width < _NARROW_BREAKPOINT
-    grid = Table(
-        box=box.ASCII,
-        width=width,
-        padding=(0, 1),
-        border_style=DIM,
-        show_header=True,
-        header_style=f"bold {accent}",
-    )
-    grid.add_column(title.upper(), width=12 if compact else 16, no_wrap=True)
-    grid.add_column("DETAIL", ratio=1, overflow="fold")
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(width=12 if compact else 16, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
     for label, value in lines:
         primary = primary_label is not None and label == primary_label
         grid.add_row(
             Text(label.upper(), style=f"bold {accent}" if primary else MUTED),
             Text(value, style=NEUTRAL if primary else MUTED, overflow="fold"),
         )
-    return grid
+    return Panel(
+        grid,
+        title=Text(f" {title.upper()} ", style=f"bold {accent}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=width,
+    )
 
 
 def _menu_item(key: str, label: str, description: str) -> Text:
@@ -120,15 +155,21 @@ def _menu_item(key: str, label: str, description: str) -> Text:
     return item
 
 
-def _menu_column(title: str, rows: list[tuple[str, str, str]], width: int) -> RenderableType:
-    heading = Text(title, style=f"bold {ACCENT}")
-    rule = Text("-" * max(18, width - 1), style=DIM)
-    body: list[RenderableType] = [heading, rule]
-    for index, (key, label, description) in enumerate(rows):
+def _menu_panel(title: str, rows: list[tuple[str, str, str]], width: int) -> Panel:
+    body: list[RenderableType] = []
+    for index, row in enumerate(rows):
         if index:
             body.append(Text(""))
-        body.append(_menu_item(key, label, description))
-    return Group(*body)
+        body.append(_menu_item(*row))
+    return Panel(
+        Group(*body),
+        title=Text(f" {title} ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(1, 1),
+        width=width,
+    )
 
 
 def _compact_menu(rows: list[tuple[str, str, str]]) -> RenderableType:
@@ -137,11 +178,40 @@ def _compact_menu(rows: list[tuple[str, str, str]]) -> RenderableType:
         if index:
             body.append(Text(""))
         body.append(_menu_item(*row))
-    return Group(*body)
+    return Panel(
+        Group(*body),
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(1, 1),
+    )
+
+
+def _system_panel(system: list[tuple[str, str, str]], width: int) -> Panel:
+    grid = Table.grid(expand=True, padding=(0, 1))
+    for _ in system:
+        grid.add_column(ratio=1)
+    cells: list[Text] = []
+    for key, label, description in system:
+        cell = Text()
+        cell.append(f"[{key}] ", style=f"bold {ACCENT}")
+        cell.append(label, style=f"bold {NEUTRAL}")
+        cell.append("\n")
+        cell.append(description, style=MUTED)
+        cells.append(cell)
+    grid.add_row(*cells)
+    return Panel(
+        grid,
+        title=Text(" SYSTEM ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+        width=width,
+    )
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
-    """Render Mission Control as an operator dashboard, not a spreadsheet."""
+    """Render Mission Control as a compact terminal-first security command center."""
     width = _frame_width(screen_width)
     investigation = [
         ("01", "ANALYZE LOG", "Analyze evidence and generate a report"),
@@ -154,9 +224,9 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         ("05", "NATIVE MONITOR", "Watch native telemetry read-only"),
     ]
     system = [
-        ("07", "DEMO", "Run the built-in investigation dataset"),
-        ("08", "HEALTH", "Check engine and collector readiness"),
-        ("09", "HELP", "Open the command reference"),
+        ("07", "DEMO", "Built-in dataset"),
+        ("08", "HEALTH", "Engine readiness"),
+        ("09", "HELP", "Command reference"),
     ]
 
     title = Text("MISSION CONTROL", style=f"bold {ACCENT}")
@@ -165,26 +235,18 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
 
     if width >= _WIDE_BREAKPOINT:
-        gap = 5
-        column_width = max(36, (width - gap) // 2)
+        gap = 2
+        column_width = max(34, (width - gap) // 2)
         top = Table.grid(padding=0)
         top.add_column(width=column_width)
         top.add_column(width=gap)
         top.add_column(width=column_width)
         top.add_row(
-            _menu_column("INVESTIGATE", investigation, column_width),
+            _menu_panel("INVESTIGATE", investigation, column_width),
             Text(""),
-            _menu_column("MONITOR", monitoring, column_width),
+            _menu_panel("MONITOR", monitoring, column_width),
         )
-        system_line = Text()
-        system_line.append("SYSTEM", style=f"bold {ACCENT}")
-        system_line.append("   ")
-        for index, (key, label, _description) in enumerate(system):
-            if index:
-                system_line.append("      ")
-            system_line.append(f"[{key}] ", style=f"bold {ACCENT}")
-            system_line.append(label, style=f"bold {NEUTRAL}")
-        return Group(title, hierarchy, Text(""), top, Text(""), system_line)
+        return Group(title, hierarchy, Text(""), top, _system_panel(system, width))
 
     return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
 

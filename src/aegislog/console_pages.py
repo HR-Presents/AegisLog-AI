@@ -3,51 +3,94 @@ from __future__ import annotations
 import platform
 import sys
 
+from rich import box
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from .config import config_dir
 from .native_collectors import source_status
-from .theme import ACCENT, MUTED, SUCCESS
+from .theme import ACCENT, ACCENT_SOFT, MUTED, NEUTRAL, SUCCESS, WARNING
 from .ui import bounded, compact_footer
 
 console = Console()
 _NARROW_PAGE_BREAKPOINT = 72
 
 
-def _health_summary(available_native: int, total_native: int) -> Text:
-    line = Text()
-    line.append("SYSTEM", style=MUTED)
-    line.append("  + READY", style=f"bold {SUCCESS}")
-    line.append("    NATIVE SOURCES ", style=MUTED)
-    line.append(f"{available_native}/{total_native}", style=f"bold {ACCENT}")
-    line.append("    READ-ONLY", style=MUTED)
-    return line
+def _health_summary(available_native: int, total_native: int) -> Panel:
+    state_style = SUCCESS if available_native == total_native else WARNING
+    grid = Table.grid(expand=True, padding=(0, 1))
+    for _ in range(4):
+        grid.add_column(ratio=1)
+
+    def cell(label: str, value: str, style: str, note: str) -> Text:
+        text = Text(justify="center")
+        text.append(label, style=MUTED)
+        text.append("\n")
+        text.append(value, style=f"bold {style}")
+        text.append("\n")
+        text.append(note, style=MUTED)
+        return text
+
+    grid.add_row(
+        cell("SYSTEM", "READY", SUCCESS, "local runtime"),
+        cell("ENGINE", "READY", SUCCESS, "deterministic"),
+        cell("NATIVE SOURCES", f"{available_native}/{total_native}", state_style, "available"),
+        cell("MODE", "READ-ONLY", ACCENT, "no host changes"),
+    )
+    return Panel(
+        grid,
+        title=Text(" /A\\ AEGISLOG  /  SYSTEM HEALTH ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+    )
 
 
-def _command_summary(executable: str) -> Text:
-    line = Text()
-    line.append("START  ", style=MUTED)
-    line.append(executable, style=f"bold {ACCENT}")
-    line.append("    ANALYZE  ", style=MUTED)
-    line.append(f"{executable} dashboard <file>", style=f"bold {ACCENT}")
-    line.append("    HELP  ", style=MUTED)
-    line.append(f"{executable} --help", style=f"bold {ACCENT}")
-    return line
+def _command_summary(executable: str) -> Panel:
+    body = Text()
+    body.append("START     ", style=MUTED)
+    body.append(executable, style=f"bold {ACCENT}")
+    body.append("\nANALYZE   ", style=MUTED)
+    body.append(f"{executable} dashboard <file>", style=f"bold {ACCENT}")
+    body.append("\nHELP      ", style=MUTED)
+    body.append(f"{executable} --help", style=f"bold {ACCENT}")
+    body.append("\nMODE      ", style=MUTED)
+    body.append("LOCAL / READ-ONLY / DETERMINISTIC", style=NEUTRAL)
+    return Panel(
+        body,
+        title=Text(" /A\\ AEGISLOG  /  COMMAND REFERENCE ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
+    )
 
 
 def _health_table(rows: list[tuple[str, Text, str]], screen_width: int) -> Table:
     compact = screen_width < _NARROW_PAGE_BREAKPOINT
-    table = Table(box=None, expand=True, padding=(0, 1), header_style="bold grey70")
+    table = Table(
+        title="COMPONENT STATUS",
+        title_style=f"bold {ACCENT}",
+        box=box.ASCII,
+        expand=True,
+        padding=(0, 1),
+        border_style=ACCENT_SOFT,
+        header_style=f"bold {NEUTRAL}",
+    )
     if compact:
-        table.add_column("Component", min_width=12, ratio=2, style="white", overflow="fold")
+        table.add_column("Component", min_width=12, ratio=2, style=NEUTRAL, overflow="fold")
         table.add_column("Status / Details", min_width=18, ratio=4, overflow="fold")
         for component, state, detail in rows:
-            body = Text(); body.append_text(state); body.append("\n"); body.append(detail, style=MUTED)
+            body = Text()
+            body.append_text(state)
+            body.append("\n")
+            body.append(detail, style=MUTED)
             table.add_row(component, body)
     else:
-        table.add_column("Component", min_width=14, ratio=2, style="white", overflow="fold")
+        table.add_column("Component", min_width=14, ratio=2, style=NEUTRAL, overflow="fold")
         table.add_column("State", min_width=10, max_width=18, no_wrap=True)
         table.add_column("Details", min_width=18, ratio=4, style=MUTED, overflow="fold")
         for component, state, detail in rows:
@@ -57,11 +100,22 @@ def _health_table(rows: list[tuple[str, Text, str]], screen_width: int) -> Table
 
 def _command_table(rows: tuple[tuple[str, str], ...], screen_width: int) -> Table:
     compact = screen_width < _NARROW_PAGE_BREAKPOINT
-    table = Table(box=None, expand=True, padding=(0, 1), header_style="bold grey70")
+    table = Table(
+        title="AVAILABLE OPERATIONS",
+        title_style=f"bold {ACCENT}",
+        box=box.ASCII,
+        expand=True,
+        padding=(0, 1),
+        border_style=ACCENT_SOFT,
+        header_style=f"bold {NEUTRAL}",
+    )
     if compact:
         table.add_column("Command / Purpose", ratio=1, overflow="fold")
         for command, purpose in rows:
-            body = Text(command, style=f"bold {ACCENT}"); body.append("\n"); body.append(purpose, style=MUTED); table.add_row(body)
+            body = Text(command, style=f"bold {ACCENT}")
+            body.append("\n")
+            body.append(purpose, style=MUTED)
+            table.add_row(body)
     else:
         table.add_column("Command", min_width=18, ratio=4, style=ACCENT, overflow="fold")
         table.add_column("Purpose", min_width=18, ratio=3, style=MUTED, overflow="fold")
@@ -73,7 +127,8 @@ def _command_table(rows: tuple[tuple[str, str], ...], screen_width: int) -> Tabl
 def system_check() -> None:
     sources = tuple(source_status())
     available_native = sum(1 for item in sources if item.available)
-    console.print(_health_summary(available_native, len(sources))); console.print()
+    console.print(_health_summary(available_native, len(sources)))
+    console.print()
     runtime = "Bundled Windows runtime" if getattr(sys, "frozen", False) else f"Python {sys.version.split()[0]}"
     rows: list[tuple[str, Text, str]] = [
         ("Runtime", Text("READY", style=f"bold {SUCCESS}"), runtime),
@@ -95,7 +150,8 @@ def system_check() -> None:
 
 def commands_reference() -> None:
     executable = "AegisLog.exe" if getattr(sys, "frozen", False) else "aegislog"
-    console.print(_command_summary(executable)); console.print()
+    console.print(_command_summary(executable))
+    console.print()
     rows = (
         (executable, "Open the terminal control center"),
         (f"{executable} --help", "Show all CLI commands"),
