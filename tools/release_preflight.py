@@ -38,6 +38,78 @@ def _require_metric(value: object, field: str) -> float:
     return number
 
 
+def _require_non_negative_int(value: object, field: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise PreflightError(f"{field} must be a non-negative integer")
+    return value
+
+
+def _validate_ci(value: object, field: str) -> None:
+    if not isinstance(value, dict):
+        raise PreflightError(f"{field} must be a JSON object")
+    lower = _require_metric(value.get("lower"), f"{field}.lower")
+    upper = _require_metric(value.get("upper"), f"{field}.upper")
+    if lower > upper:
+        raise PreflightError(f"{field}.lower must not exceed upper")
+    successes = _require_non_negative_int(value.get("successes"), f"{field}.successes")
+    total = _require_non_negative_int(value.get("total"), f"{field}.total")
+    if successes > total:
+        raise PreflightError(f"{field}.successes must not exceed total")
+
+
+def _validate_dataset_profile(value: object) -> None:
+    if not isinstance(value, dict):
+        raise PreflightError("dataset_profile must be a JSON object")
+    source_types = value.get("source_types")
+    if not isinstance(source_types, list) or not source_types:
+        raise PreflightError("dataset_profile.source_types must be a non-empty list")
+    cleaned: list[str] = []
+    for item in source_types:
+        cleaned.append(_require_text(item, "dataset_profile.source_types[]"))
+    if len(cleaned) != len(set(cleaned)):
+        raise PreflightError("dataset_profile.source_types must contain unique values")
+    collection_period = _require_text(value.get("collection_period"), "dataset_profile.collection_period")
+    sampling_method = _require_text(value.get("sampling_method"), "dataset_profile.sampling_method")
+    exclusions = _require_text(value.get("known_exclusions"), "dataset_profile.known_exclusions")
+    if len(collection_period) < 8:
+        raise PreflightError("dataset_profile.collection_period must contain at least 8 characters")
+    if len(sampling_method) < 20:
+        raise PreflightError("dataset_profile.sampling_method must contain at least 20 characters")
+    if len(exclusions) < 4:
+        raise PreflightError("dataset_profile.known_exclusions must contain at least 4 characters")
+
+
+def _validate_class_balance(value: object, sample_count: int) -> None:
+    if not isinstance(value, dict):
+        raise PreflightError("class_balance must be a JSON object")
+    benign = _require_non_negative_int(value.get("benign_cases"), "class_balance.benign_cases")
+    positive = _require_non_negative_int(value.get("positive_cases"), "class_balance.positive_cases")
+    if benign + positive != sample_count:
+        raise PreflightError("class_balance benign_cases + positive_cases must equal sample_count")
+    category_counts = value.get("expected_category_case_counts")
+    if not isinstance(category_counts, dict):
+        raise PreflightError("class_balance.expected_category_case_counts must be a JSON object")
+    for category, count in category_counts.items():
+        _require_text(category, "class_balance.expected_category_case_counts key")
+        if _require_non_negative_int(count, f"class_balance.expected_category_case_counts.{category}") <= 0:
+            raise PreflightError("expected category case counts must be positive integers")
+
+
+def _validate_per_category_metrics(value: object) -> None:
+    if not isinstance(value, dict):
+        raise PreflightError("per_category_metrics must be a JSON object")
+    for category, metrics in value.items():
+        _require_text(category, "per_category_metrics key")
+        if not isinstance(metrics, dict):
+            raise PreflightError(f"per_category_metrics.{category} must be a JSON object")
+        for field in ("tp", "fp", "fn"):
+            _require_non_negative_int(metrics.get(field), f"per_category_metrics.{category}.{field}")
+        _require_metric(metrics.get("precision"), f"per_category_metrics.{category}.precision")
+        _require_metric(metrics.get("recall"), f"per_category_metrics.{category}.recall")
+        _validate_ci(metrics.get("precision_ci95"), f"per_category_metrics.{category}.precision_ci95")
+        _validate_ci(metrics.get("recall_ci95"), f"per_category_metrics.{category}.recall_ci95")
+
+
 def validate_external_evidence(path: Path) -> dict[str, object]:
     if not path.is_file():
         raise PreflightError(f"external detection evidence is missing: {path}")
@@ -47,8 +119,8 @@ def validate_external_evidence(path: Path) -> dict[str, object]:
         raise PreflightError(f"external evidence is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise PreflightError("external evidence must be a JSON object")
-    if payload.get("schema_version") != 1:
-        raise PreflightError("external evidence schema_version must be 1")
+    if payload.get("schema_version") != 2:
+        raise PreflightError("external evidence schema_version must be 2")
     if payload.get("dataset_kind") != "external":
         raise PreflightError("external evidence dataset_kind must be 'external'")
     provenance = _require_text(payload.get("provenance"), "provenance")
@@ -66,6 +138,13 @@ def validate_external_evidence(path: Path) -> dict[str, object]:
     sample_count = payload.get("sample_count")
     if not isinstance(sample_count, int) or isinstance(sample_count, bool) or sample_count <= 0:
         raise PreflightError("sample_count must be a positive integer")
+    minimum_severity = _require_text(payload.get("minimum_reported_severity"), "minimum_reported_severity")
+    if minimum_severity not in {"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}:
+        raise PreflightError("minimum_reported_severity is not supported")
+
+    _validate_dataset_profile(payload.get("dataset_profile"))
+    _validate_class_balance(payload.get("class_balance"), sample_count)
+
     metrics = payload.get("metrics")
     if not isinstance(metrics, dict):
         raise PreflightError("metrics must be a JSON object")
@@ -73,9 +152,17 @@ def validate_external_evidence(path: Path) -> dict[str, object]:
     _require_metric(metrics.get("recall"), "metrics.recall")
     _require_metric(metrics.get("case_accuracy"), "metrics.case_accuracy")
     for field in ("false_positives", "false_negatives"):
-        value = metrics.get(field)
-        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            raise PreflightError(f"metrics.{field} must be a non-negative integer")
+        _require_non_negative_int(metrics.get(field), f"metrics.{field}")
+
+    _validate_per_category_metrics(payload.get("per_category_metrics"))
+    uncertainty = payload.get("uncertainty")
+    if not isinstance(uncertainty, dict):
+        raise PreflightError("uncertainty must be a JSON object")
+    _validate_ci(uncertainty.get("precision_ci95"), "uncertainty.precision_ci95")
+    _validate_ci(uncertainty.get("recall_ci95"), "uncertainty.recall_ci95")
+    _validate_ci(uncertainty.get("case_accuracy_ci95"), "uncertainty.case_accuracy_ci95")
+    _require_text(payload.get("limitations"), "limitations")
+
     if len(provenance) < 20:
         raise PreflightError("provenance must contain at least 20 characters")
     if len(labeling) < 20:

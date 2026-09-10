@@ -1,6 +1,6 @@
 # External Detection Evaluation Runbook
 
-This runbook prepares AegisLog for a truthful v1.6.1 external detection evaluation. It does not create, imply, or substitute for real external evidence.
+This runbook prepares AegisLog for truthful external detection evaluation. It does not create, imply, or substitute for real external evidence.
 
 ## 1. Freeze the evaluated code
 
@@ -8,12 +8,12 @@ Select the exact `main` commit intended for evaluation and record its full lower
 
 ## 2. Obtain an authorized dataset
 
-Use telemetry that you are authorized to evaluate. Record:
+Use telemetry that you are authorized to evaluate. Record all of the following before running AegisLog:
 
 - dataset owner/source and authorization basis;
-- collection environment and time period;
+- collection environment and collection period;
 - sampling method and inclusion/exclusion rules;
-- log/source types represented;
+- every log/source type represented;
 - known class balance or enrichment;
 - sanitization performed before AegisLog receives the data;
 - important differences from expected deployment environments.
@@ -33,9 +33,9 @@ The evaluator expects JSONL cases shaped like:
 
 Each `id` must be unique. `lines` must be a non-empty list of strings. `expected_categories` must contain unique AegisLog detection-category strings. A benign case normally has an empty category list.
 
-## 4. Validate the dataset before generating release evidence
+## 4. Validate the dataset
 
-Run the evaluator first and inspect both aggregate and per-category results:
+Run the evaluator first and inspect aggregate, confidence-interval, case-level, and per-category results:
 
 ```bash
 python tools/evaluate_detections.py /path/to/reviewed-external.jsonl \
@@ -47,7 +47,7 @@ python tools/evaluate_detections.py /path/to/reviewed-external.jsonl \
 
 Do not tune labels to make the metrics look better. Investigate false positives and false negatives as engineering findings. If detection code changes, freeze the new commit and repeat the evaluation from the beginning.
 
-## 5. Generate release evidence
+## 5. Generate schema-v2 evidence
 
 Only after authorization, sanitization, and independent labeling are genuinely complete:
 
@@ -58,15 +58,22 @@ python tools/build_external_evidence.py /path/to/reviewed-external.jsonl \
   --labeling-procedure "<truthful labeling procedure of at least 20 characters>" \
   --reviewer "<real reviewer identity>" \
   --reviewer-role "<real reviewer role>" \
+  --source-type "linux-auth" \
+  --source-type "application" \
+  --collection-period "<truthful collection period>" \
+  --sampling-method "<truthful sampling method of at least 20 characters>" \
+  --known-exclusions "<known exclusions, or 'none known' when that is true>" \
   --independent-labeling \
   --sanitized
 ```
 
-This writes `evaluation/external-release-evidence.json`, records the dataset SHA-256, metrics, confidence intervals, evaluated commit, provenance, reviewer metadata, and limitations.
+`--source-type` is repeatable. Use the actual source types represented by the dataset rather than desired deployment coverage.
+
+The generator writes `evaluation/external-release-evidence.json`. Schema v2 records the dataset SHA-256, evaluated commit, dataset profile, derived benign/positive class balance, expected-category counts, aggregate metrics, per-category metrics, confidence intervals, reviewer metadata, and limitations.
 
 ## 6. Preserve the evidence-only commit model
 
-The generated evidence file must be committed as the immediate direct single-parent child of the exact evaluated code commit, with no unrelated changes. This lets release preflight verify that the evidence describes the code that was actually evaluated.
+The generated evidence file must be committed as the immediate direct single-parent child of the exact evaluated code commit, with no unrelated changes. This allows release preflight to verify that the evidence describes the code that was actually evaluated.
 
 Before committing, verify:
 
@@ -77,25 +84,26 @@ git status --short
 
 Only the evidence file should be part of the evidence-only release commit.
 
-## 7. Release preflight and publication
+## 7. Release preflight
 
-Run the repository's guarded v1.6.1 release preflight/workflow from the evidence-only commit. Stop if parentage, evaluated SHA, evidence, version, tag, confirmation, CI, package, security, checksum, or provenance checks fail.
+When a release elects to bind external evidence, `tools/release_preflight.py` requires schema v2 and validates the evidence structure before verifying the direct-child binding. A release without external evidence remains permitted unless its release policy explicitly makes external evidence mandatory.
 
-Do not claim v1.6.1 is released until the GitHub Release actually exists and its published artifacts have been verified.
+External evidence is not a substitute for the repository's normal CI, security, package, Windows-build, and dependency-lock gates.
 
-## 8. Post-release verification
+## 8. Post-evaluation review
 
-After publication, verify the downloaded release artifact rather than a temporary Actions artifact:
+Before citing results publicly, review:
 
-- SHA-256 matches the published checksum;
-- build provenance/attestation is available;
-- `AegisLog.exe --help` works on a clean Windows machine;
-- `doctor` works;
-- a local sample analysis works without network access;
-- remote AI remains disabled by default;
-- local Ollama remains optional and local;
-- public documentation is updated from v1.6.0 to v1.6.1 only after these checks pass.
+- whether the dataset population resembles the intended deployment;
+- whether sampling enriched positives or otherwise changed prevalence;
+- whether important source types are absent;
+- whether labels were created independently and disagreements were handled consistently;
+- whether false positives and false negatives cluster by category;
+- confidence-interval width and sample size;
+- dataset shift or collection limitations.
+
+Do not convert a strong result on one external dataset into a general claim of production effectiveness.
 
 ## Evidence integrity rules
 
-Never fabricate authorization, provenance, sanitization, reviewer identity, independent labeling, metrics, or release verification. Synthetic fixtures and public demo logs are useful regression inputs but must not be represented as deployment-specific real-world evidence. Public research datasets may be useful for additional benchmarking when their license and labels fit AegisLog's evaluation schema, but their results must retain the dataset's actual provenance and limitations.
+Never fabricate authorization, provenance, collection period, source types, sampling method, exclusions, sanitization, reviewer identity, independent labeling, metrics, or release verification. Synthetic fixtures and public demo logs are useful regression inputs but must not be represented as deployment-specific real-world evidence. Public research datasets may be useful for additional benchmarking when their license and labels fit AegisLog's evaluation schema, but their results must retain the dataset's actual provenance and limitations.
