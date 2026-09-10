@@ -34,7 +34,7 @@ Welcome to the AegisLog documentation hub. Start with the user guide for the com
 - [Why local-first](WHY_LOCAL_FIRST.md)
 - [No automatic remediation](NO_AUTOREMEDIATION.md)
 
-Older AI/provider documents may remain in repository history for traceability, but they do not define the supported v2.0 product surface.
+Older AI/provider documents may remain in repository history for traceability, but they do not define the supported v2 product surface.
 
 ## Product and operator experience
 
@@ -63,7 +63,7 @@ Public screenshots should come from a verified build and sanitized or synthetic 
 
 ## Release status
 
-- **Published stable:** [v2.0.1 release notes](RELEASE_V2.0.1.md)
+- **Published stable:** [v2.1.0 release notes](RELEASE_V2.1.0.md)
 - **Release history:** see the repository [CHANGELOG](../CHANGELOG.md) and [GitHub Releases](https://github.com/HR-Presents/AegisLog-AI/releases)
 - [Upgrading](UPGRADING.md)
 - [Latest GitHub release](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
