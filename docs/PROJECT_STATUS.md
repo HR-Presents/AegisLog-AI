@@ -1,6 +1,6 @@
 # Project status
 
-AegisLog is a released, terminal-first defensive security platform. The current published stable release is **v2.0.0**.
+AegisLog is a released, terminal-first defensive security platform. The current published stable release is **v2.0.1**.
 
 ## Current capabilities
 
@@ -18,7 +18,7 @@ AI Analyst and remote-provider workflows are not part of the supported public v2
 
 ## Current v2.0 UI
 
-v2.0.0 rebuilt Mission Control around a clearer operator hierarchy without changing detection semantics:
+v2.0.0 rebuilt Mission Control around a clearer operator hierarchy without changing detection semantics, and v2.0.1 carries that terminal experience forward unchanged while correcting public branding and release-status surfaces:
 
 - responsive full-width layouts with narrow-terminal fallbacks;
 - balanced Investigation and Monitoring work areas on wide terminals;
@@ -30,7 +30,7 @@ v2.0.0 rebuilt Mission Control around a clearer operator hierarchy without chang
 
 ## Correctness carried forward from v1.9
 
-v2.0.0 preserves the v1.9 hardening for streaming correlation, timestamp-based authentication windows, source/account/host parsing, IPv4/IPv6 validation, out-of-order events, bounded state, and synthetic regression evaluation. The maintained synthetic corpus is regression evidence only, not an independent real-world benchmark.
+v2.0.1 preserves the v1.9 hardening for streaming correlation, timestamp-based authentication windows, source/account/host parsing, IPv4/IPv6 validation, out-of-order events, bounded state, and synthetic regression evaluation. The maintained synthetic corpus is regression evidence only, not an independent real-world benchmark.
 
 ## Windows distribution
 
@@ -48,8 +48,8 @@ The application does not automatically modify accounts, firewall rules, services
 
 ## Release status
 
-- **Published stable:** v2.0.0
-- **Release target commit:** `4432b2f5d6be53b261ac19b0f1a88a5f5f47991c`
+- **Published stable:** v2.0.1
+- **Release target commit:** `c6b66083105116047c2a8471d7f1333f4cbe2b4f`
 - **Windows artifacts:** `AegisLog.exe` and `AegisLog.exe.sha256`
 
-See [`RELEASE_V2.0.0.md`](RELEASE_V2.0.0.md), [`ROADMAP.md`](ROADMAP.md), and the repository [`CHANGELOG.md`](../CHANGELOG.md) for details.
+See [`RELEASE_V2.0.1.md`](RELEASE_V2.0.1.md), [`ROADMAP.md`](ROADMAP.md), and the repository [`CHANGELOG.md`](../CHANGELOG.md) for details.

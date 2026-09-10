@@ -1,6 +1,6 @@
 # Roadmap
 
-AegisLog is currently released as **v2.0.0**. Stable release work stays reviewable on `main`; new development should begin from a fresh branch with a concrete, testable goal.
+AegisLog is currently released as **v2.0.1**. Stable release work stays reviewable on `main`; new development should begin from a fresh branch with a concrete, testable goal.
 
 ## Completed foundation
 
@@ -8,7 +8,11 @@ The V0.1–V2.0 foundation delivered the terminal CLI, deterministic detections,
 
 ## Current stable line — v2.0.x
 
-### v2.0.0 — current stable release
+### v2.0.1 — current stable release
+
+v2.0.1 is the public-surface consistency patch for the v2 line. It keeps the v2.0.0 Mission Control redesign and v1.9 correctness hardening unchanged while aligning the supported CLI, customer bundle, README examples, and current-status documentation with the AegisLog product identity.
+
+### v2.0.0 — terminal experience foundation
 
 v2.0.0 focused on the operator experience while preserving the deterministic investigation engine hardened in v1.9.0.
 
@@ -19,7 +23,7 @@ v2.0.0 focused on the operator experience while preserving the deterministic inv
 - Added explicit layout, Windows rendering, and ASCII-safety regression coverage.
 - Preserved v1.9 streaming-correlation, authentication-window, parser, IPv4/IPv6, bounded-state, and synthetic regression hardening without changing detection semantics.
 - Kept AI Analyst and remote-provider workflows out of the supported public product surface.
-- Published the standalone Windows `AegisLog.exe` and matching SHA-256 checksum through the guarded v2.0.0 release workflow.
+- Published the standalone Windows `AegisLog.exe` and matching SHA-256 checksum through the guarded v2.0 release workflows.
 
 ## Near-term maintenance priorities
 

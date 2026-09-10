@@ -63,7 +63,7 @@ Public screenshots should come from a verified build and sanitized or synthetic 
 
 ## Release status
 
-- **Published stable:** [v2.0.0 release notes](RELEASE_V2.0.0.md)
+- **Published stable:** [v2.0.1 release notes](RELEASE_V2.0.1.md)
 - **Release history:** see the repository [CHANGELOG](../CHANGELOG.md) and [GitHub Releases](https://github.com/HR-Presents/AegisLog-AI/releases)
 - [Upgrading](UPGRADING.md)
 - [Latest GitHub release](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
