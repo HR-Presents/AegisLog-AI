@@ -42,9 +42,9 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
         brand.append("   + READY", style=f"bold {SUCCESS}")
         return brand
 
-    grid = Table.grid(width=width, padding=(0, 1))
+    grid = Table.grid(padding=0)
     grid.add_column(width=8, no_wrap=True)
-    grid.add_column(ratio=1)
+    grid.add_column(width=max(24, width - 26), no_wrap=True)
     grid.add_column(width=18, justify="right", no_wrap=True)
 
     mark = Text("  /\\\n /  \\\n/____\\", style=f"bold {ACCENT}")
@@ -170,11 +170,13 @@ def _menu(screen_width: int | None = None) -> RenderableType:
     if width >= _WIDE_BREAKPOINT:
         gap = 5
         column_width = max(36, (width - gap) // 2)
-        top = Table.grid(width=width, padding=(0, gap // 2))
+        top = Table.grid(padding=0)
         top.add_column(width=column_width)
+        top.add_column(width=gap)
         top.add_column(width=column_width)
         top.add_row(
             _menu_column("INVESTIGATE", investigation, column_width),
+            Text(""),
             _menu_column("MONITOR", monitoring, column_width),
         )
         system_line = Text()
