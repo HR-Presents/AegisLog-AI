@@ -31,7 +31,7 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
         line.append("AEGISLOG", style=f"bold {NEUTRAL}")
         return line
 
-    if width < 52:
+    if width < _NARROW_BREAKPOINT:
         brand = Text()
         brand.append("/\\  AEGISLOG\n", style=f"bold {ACCENT}")
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
@@ -191,7 +191,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
     footer = Text()
-    footer.append("01-09 SELECT", style=f"bold {ACCENT}")
+    footer.append("01-09 select", style=f"bold {ACCENT}")
     footer.append("    Q EXIT", style=MUTED)
     if width >= 44:
         footer.append("    C COMMAND MODE", style=MUTED)
