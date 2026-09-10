@@ -19,7 +19,7 @@ def test_ai_analyst_is_absent_from_home() -> None:
     assert "REMOTE AI" not in output
     assert "LOCAL-FIRST" in output
     assert "READ-ONLY" in output
-    assert "DEFENSIVE" in output
+    assert "DETERMINISTIC" in output
 
 
 def test_public_cli_does_not_expose_ai_commands() -> None:
@@ -36,5 +36,5 @@ def test_public_cli_does_not_expose_ai_commands() -> None:
 def test_home_keeps_deterministic_investigation_paths() -> None:
     output = _render(_home(100))
 
-    for label in ("Analyze", "Incidents", "Native logs", "Live monitor", "Multi-source", "Health", "Help"):
+    for label in ("ANALYZE", "INCIDENTS", "NATIVE LOGS", "LIVE MONITOR", "MULTI-SOURCE", "HEALTH", "HELP"):
         assert label in output
