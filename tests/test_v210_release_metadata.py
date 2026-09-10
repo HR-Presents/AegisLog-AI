@@ -1,6 +1,10 @@
 from pathlib import Path
 import re
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,16 +36,16 @@ def test_v210_release_workflow_is_guarded_and_version_locked() -> None:
     workflow = _text(".github/workflows/release-v2.1.0.yml")
 
     assert "name: Release v2.1.0" in workflow
-    assert 'RELEASE_TAG: v2.1.0' in workflow
-    assert 'RELEASE_VERSION: 2.1.0' in workflow
-    assert 'RELEASE-v2.1.0' in workflow
-    assert 'refs/heads/main' in workflow
-    assert 'python tools/release_preflight.py' in workflow
-    assert 'Refuse to mutate an existing release or tag' in workflow
-    assert 'Re-check immutability immediately before publication' in workflow
-    assert 'AegisLog-v2.1.0-release-assets' in workflow
+    assert "RELEASE_TAG: v2.1.0" in workflow
+    assert "RELEASE_VERSION: 2.1.0" in workflow
+    assert "RELEASE-v2.1.0" in workflow
+    assert "refs/heads/main" in workflow
+    assert "python tools/release_preflight.py" in workflow
+    assert "Refuse to mutate an existing release or tag" in workflow
+    assert "Re-check immutability immediately before publication" in workflow
+    assert "AegisLog-v2.1.0-release-assets" in workflow
     assert '--title "AegisLog v2.1.0"' in workflow
-    assert '--notes-file docs/RELEASE_V2.1.0.md' in workflow
+    assert "--notes-file docs/RELEASE_V2.1.0.md" in workflow
 
 
 def test_v210_release_workflow_gates_both_synthetic_corpora() -> None:
