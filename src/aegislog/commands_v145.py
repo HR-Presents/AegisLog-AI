@@ -75,8 +75,9 @@ def _brand_text(width: int) -> RenderableType:
     top.add_column(no_wrap=True)
     top.add_row(name, status)
     subtitle = Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
+    signature = Text("|---/\\_/\\---|", style=ACCENT_SOFT)
     posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    return Group(top, subtitle, Text(""), posture)
+    return Group(top, subtitle, signature, posture)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
