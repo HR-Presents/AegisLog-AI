@@ -36,7 +36,7 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
     if compact or width < _NARROW_BREAKPOINT:
         brand = Text()
         brand.append("/\\  AEGISLOG", style=f"bold {ACCENT}")
-        brand.append(f"   v{__version__}\n", style=MUTED)
+        brand.append(f"   VERSION v{__version__}\n", style=MUTED)
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
         brand.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
         brand.append("   + READY", style=f"bold {SUCCESS}")
@@ -51,9 +51,9 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
     identity = Text()
     identity.append("A E G I S L O G\n", style=f"bold {NEUTRAL}")
     identity.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {ACCENT}")
-    identity.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+    identity.append("|---/\\_/\\---|  LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
     status = Text()
-    status.append(f"v{__version__}\n", style=MUTED)
+    status.append(f"VERSION v{__version__}\n", style=MUTED)
     status.append("+ READY", style=f"bold {SUCCESS}")
     grid.add_row(mark, identity, status)
     return grid
@@ -162,7 +162,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
     if width < _NARROW_BREAKPOINT:
         return Group(
             title,
-            Text("INVESTIGATE / MONITOR / SYSTEM", style=MUTED),
+            Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
             Text(""),
             _compact_menu(investigation + monitoring + system),
         )
@@ -175,9 +175,9 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         top.add_column(width=gap)
         top.add_column(width=column_width)
         top.add_row(
-            _menu_column("INVESTIGATE", investigation, column_width),
+            _menu_column("INVESTIGATION", investigation, column_width),
             Text(""),
-            _menu_column("MONITOR", monitoring, column_width),
+            _menu_column("MONITORING", monitoring, column_width),
         )
         system_line = Text()
         system_line.append("SYSTEM", style=f"bold {ACCENT}")
@@ -191,7 +191,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
     return Group(
         title,
-        Text("INVESTIGATE / MONITOR / SYSTEM", style=MUTED),
+        Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
         Text(""),
         _compact_menu(investigation + monitoring + system),
     )
@@ -219,8 +219,8 @@ def _home(screen_width: int | None = None) -> RenderableType:
         _footer(screen_width),
     )
     # A bounded frame makes very wide Windows Terminal windows look intentional.
-    # Keep it left-aligned with the interactive prompt rather than floating the UI.
-    return Align.left(content, width=width)
+    # pad=False prevents Rich from filling the unused right side of a wide console.
+    return Align.left(content, width=width, pad=False)
 
 
 def _run_inline_command(raw: str) -> None:
