@@ -28,7 +28,6 @@ from .theme import (
     MUTED,
     NEUTRAL,
     SUCCESS,
-    WARNING,
     risk_style,
     severity_style,
     severity_text,
@@ -449,7 +448,6 @@ def _timeline_panel(data: DashboardData, limit: int = 10, *, compact: bool = Fal
         rows.append((line_no, timestamp, event))
     if len(rows) < 2:
         return None
-    # Prefer security-relevant entries but retain chronological order.
     interesting = [row for row in rows if (row[2].level or "").lower() in {"critical", "error", "warning"}]
     selected = interesting[:limit] if len(interesting) >= 2 else rows[:limit]
     table = Table(expand=True, box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1))
@@ -608,7 +606,7 @@ def _visual_analysis(data: DashboardData, *, screen_width: int, compact: bool) -
     distribution = _distribution_panel(data, compact=compact)
     activity = _activity_panel(data, compact=compact)
     if activity is None or screen_width < _WIDE_DASHBOARD_BREAKPOINT:
-        return Group(distribution, *( (Text(""), activity) if activity is not None else () ))
+        return Group(distribution, *((Text(""), activity) if activity is not None else ()))
     layout = Table.grid(expand=True, padding=(0, 1))
     layout.add_column(ratio=1)
     layout.add_column(ratio=1)
