@@ -1,18 +1,10 @@
 from pathlib import Path
-import re
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # Python 3.10
-    import tomli as tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_v201_release_metadata_is_consistent():
-    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    init_text = (ROOT / "src/aegislog/__init__.py").read_text(encoding="utf-8")
     workflow = (ROOT / ".github/workflows/release-v2.0.1.yml").read_text(encoding="utf-8")
     historical_v20_workflow = (ROOT / ".github/workflows/release-v2.0.0.yml").read_text(encoding="utf-8")
     historical_v19_workflow = (ROOT / ".github/workflows/release-v1.9.0.yml").read_text(encoding="utf-8")
@@ -29,12 +21,9 @@ def test_v201_release_metadata_is_consistent():
     older_notes = (ROOT / "docs/RELEASE_V1.6.3.md").read_text(encoding="utf-8")
     older_release_notes = (ROOT / "docs/RELEASE_V1.6.2.md").read_text(encoding="utf-8")
     retired_notes = (ROOT / "docs/RELEASE_V1.6.0.md").read_text(encoding="utf-8")
-    package_workflow = (ROOT / ".github/workflows/package.yml").read_text(encoding="utf-8")
 
-    match = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
-
-    assert project["project"]["version"] == "2.0.1"
-    assert match and match.group(1) == "2.0.1"
+    # v2.0.1 is now historical metadata: verify its immutable release records,
+    # not the repository's current package/runtime version.
     assert "RELEASE_TAG: v2.0.1" in workflow
     assert "RELEASE_VERSION: 2.0.1" in workflow
     assert "RELEASE-v2.0.1" in workflow
@@ -43,8 +32,6 @@ def test_v201_release_metadata_is_consistent():
     assert "Mission Control banner did not report v2.0.1" in workflow
     assert "Removed AI surface reappeared in public help" in workflow
     assert "Removed AI surface reappeared in Mission Control" in workflow
-    assert "aegislog_ai-2.0.1-py3-none-any.whl" in package_workflow
-    assert "AegisLog-AI-v2.0.1-Customer-Bundle.zip" in package_workflow
     assert notes.startswith("# AegisLog v2.0.1")
 
     assert "RELEASE_TAG: v2.0.0" in historical_v20_workflow
