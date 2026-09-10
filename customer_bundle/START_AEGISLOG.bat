@@ -1,11 +1,11 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title AegisLog AI
+title AegisLog
 
 cls
 echo ========================================
-echo             AegisLog AI
+echo               AegisLog
 echo      One-File Customer Launcher
 echo ========================================
 echo.
@@ -24,7 +24,7 @@ if %errorlevel%==0 (
 )
 
 if not exist ".aegislog-venv\Scripts\python.exe" (
-  echo First run detected. Installing AegisLog AI locally...
+  echo First run detected. Installing AegisLog locally...
   echo.
   %PY% -m venv .aegislog-venv
   if errorlevel 1 goto :fail
