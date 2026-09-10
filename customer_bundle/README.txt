@@ -1,5 +1,5 @@
-AEGISLOG AI CUSTOMER BUNDLE
-===========================
+AEGISLOG CUSTOMER BUNDLE
+========================
 
 AegisLog is designed to run locally in one terminal. Customers do not need GitHub access or a global Python package installation.
 
@@ -9,7 +9,7 @@ Windows:
 1. Install Python 3.10 or newer if it is not already installed.
 2. Double-click START_AEGISLOG.bat.
 3. On the first run it installs AegisLog into a private environment inside this folder.
-4. The same terminal immediately opens the AegisLog control center.
+4. The same terminal immediately opens the AegisLog Mission Control console.
 5. On future runs, double-click the same START_AEGISLOG.bat file. It skips installation and opens AegisLog directly.
 
 Linux / macOS:
@@ -19,15 +19,20 @@ Linux / macOS:
    chmod +x START_AEGISLOG.sh
    ./START_AEGISLOG.sh
 
-The same script installs AegisLog on first run and then opens the terminal control center.
+The same script installs AegisLog on first run and then opens Mission Control.
 
-TERMINAL CONTROL CENTER
------------------------
-The `aegislog start` control center keeps the customer in one terminal and provides menu options to:
+MISSION CONTROL
+---------------
+The `aegislog start` console provides responsive Investigation, Monitoring, and System work areas. It adapts to wide, medium, and narrow terminals and keeps the real shell prompt as the only authoritative input path.
+
+The menu provides options to:
 - analyze a log file
-- analyze the bundled demo log
-- run a system check
-- view useful advanced commands
+- watch one or multiple telemetry sources read-only
+- inspect native telemetry
+- review incidents
+- run the bundled demonstration dataset
+- run a system health check
+- open command help
 - exit safely
 
 When selecting a log, provide the path to an actual file such as auth.log, syslog, messages, application.log, or a text log export. If a folder is entered by mistake, AegisLog explains the problem and returns to the menu.
@@ -40,7 +45,7 @@ Customers who prefer direct commands can still use:
    aegislog doctor
    aegislog dashboard C:\path\to\your\logfile.log
    aegislog analyze C:\path\to\your\logfile.log
-   aegislog stream C:\path\to\your\logfile.log
+   aegislog live C:\path\to\your\logfile.log
 
 LEGACY LAUNCHERS
 ----------------
@@ -55,7 +60,7 @@ The separate installers and launchers remain included for support and troublesho
 WHAT IS INCLUDED
 ----------------
 - START_AEGISLOG.bat / START_AEGISLOG.sh: recommended one-file startup
-- package/: AegisLog AI wheel
+- package/: AegisLog Python wheel
 - vendor/: offline Python dependency wheels
 - sample_logs/: bundled demonstration log
 - support installers and terminal launchers
