@@ -1,6 +1,6 @@
 # Project status
 
-AegisLog is a released, terminal-first defensive security platform. The current published stable release is **v2.0.1**. The **v2.1 development line is active on `main`** and is in release-readiness review; it is not yet a published release.
+AegisLog is a released, terminal-first defensive security platform. The current published stable release is **v2.1.0**.
 
 ## Current capabilities
 
@@ -16,20 +16,20 @@ AegisLog is a released, terminal-first defensive security platform. The current 
 
 AI Analyst and remote-provider workflows are not part of the supported public v2 product surface.
 
-## v2.1 development status
+## v2.1 stable status
 
-The current v2.1 work is reliability- and evidence-focused rather than a detection-semantic rewrite:
+v2.1.0 is a reliability- and evidence-focused release rather than a detection-semantic rewrite:
 
 - deterministic fuzz-style regressions cover malformed input, randomized stream chunking, authentication event reordering, and bounded source floods;
 - the external detection-evidence format uses schema v2 with explicit provenance, source types, collection period, sampling method, known exclusions, class balance, category counts, per-category metrics, and confidence intervals;
 - a broader representative synthetic benchmark corpus supplements the core regression fixture with benign controls, near-miss cases, authentication variants, and coverage across audit, error, network, privilege, service, and web detections;
 - synthetic benchmark results remain regression evidence only and must not be represented as deployment-specific or independently validated real-world effectiveness.
 
-These changes preserve the existing read-only product model and do not by themselves justify a v2.1.0 release until the release-preparation branch, exact-head quality gates, packaging checks, and guarded release workflow are completed.
+The guarded v2.1.0 release workflow completed successfully on release target commit `9eefb18af494d2488f0795eb7326470f642058f2`, publishing the standalone Windows executable and matching checksum. These changes preserve the existing read-only product model.
 
-## Current v2.0 UI
+## Current v2 UI
 
-v2.0.0 rebuilt Mission Control around a clearer operator hierarchy without changing detection semantics, and v2.0.1 carries that terminal experience forward unchanged while correcting public branding and release-status surfaces:
+v2.0.0 rebuilt Mission Control around a clearer operator hierarchy. v2.0.1 corrected public branding and release-status surfaces, and v2.1.0 carries that terminal experience forward while hardening reliability and evaluation evidence:
 
 - responsive full-width layouts with narrow-terminal fallbacks;
 - balanced Investigation and Monitoring work areas on wide terminals;
@@ -45,7 +45,7 @@ The active v2 line preserves the v1.9 hardening for streaming correlation, times
 
 ## Windows distribution
 
-The primary Windows release artifact is a standalone `AegisLog.exe`; Python and a virtual environment are not required for the released executable. A matching SHA-256 checksum is published with the stable release.
+The primary Windows release artifact is a standalone `AegisLog.exe`; Python and a virtual environment are not required for the released executable. A matching `AegisLog.exe.sha256` checksum is published with the stable release.
 
 The published executable is unsigned, so Windows SmartScreen or antivirus reputation warnings can occur even when the published checksum matches.
 
@@ -59,9 +59,9 @@ The application does not automatically modify accounts, firewall rules, services
 
 ## Release status
 
-- **Published stable:** v2.0.1
-- **Published release target commit:** `c6b66083105116047c2a8471d7f1333f4cbe2b4f`
-- **Development line:** v2.1 release-readiness review on `main`
+- **Published stable:** v2.1.0
+- **Published release target commit:** `9eefb18af494d2488f0795eb7326470f642058f2`
 - **Windows artifacts for current stable:** `AegisLog.exe` and `AegisLog.exe.sha256`
+- **Evaluation boundary:** maintained benchmark corpora are synthetic regression evidence, not independently validated real-world effectiveness evidence
 
-See [`RELEASE_V2.0.1.md`](RELEASE_V2.0.1.md), [`ROADMAP.md`](ROADMAP.md), and the repository [`CHANGELOG.md`](../CHANGELOG.md) for details.
+See [`RELEASE_V2.1.0.md`](RELEASE_V2.1.0.md), [`ROADMAP.md`](ROADMAP.md), and the repository [`CHANGELOG.md`](../CHANGELOG.md) for details.
