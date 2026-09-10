@@ -31,13 +31,23 @@ def _rule(width: int) -> Text:
     return Text("-" * max(16, width), style=DIM)
 
 
-def _shield_a(compact: bool = False) -> Text:
-    """ASCII-safe terminal interpretation of the Shield A brand mark."""
+def _falcon(compact: bool = False) -> Text:
+    """ASCII-safe front-facing falcon mark for Windows terminals."""
     mark = Text()
     if compact:
-        mark.append("/A\\", style=f"bold {ACCENT}")
+        mark.append("<F>", style=f"bold {ACCENT}")
         return mark
-    for index, line in enumerate(("   /\\", "  /  \\", " / /\\ \\", "| /__\\ |", " \\____/")):
+    lines = (
+        "\\\\          //",
+        " \\\\  .--.  //",
+        "  \\\\/ /\\ \\\\//",
+        "   / /  \\ \\",
+        "  | | /\\ | |",
+        "   \\ \\__/ /",
+        "    '.__.'",
+        "      \\/",
+    )
+    for index, line in enumerate(lines):
         if index:
             mark.append("\n")
         mark.append(line, style=f"bold {ACCENT}")
@@ -45,22 +55,22 @@ def _shield_a(compact: bool = False) -> Text:
 
 
 def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> RenderableType:
-    """Render the Shield A identity with version/status anchored to one bounded frame."""
+    """Render the front-facing Falcon identity with version/status in one bounded frame."""
     width = _frame_width(screen_width)
     if compact or width < _NARROW_BREAKPOINT:
         brand = Text()
-        brand.append("/A\\  AEGISLOG", style=f"bold {ACCENT}")
+        brand.append("<F>  AEGISLOG", style=f"bold {ACCENT}")
         brand.append(f"   VERSION v{__version__}\n", style=MUTED)
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
-        brand.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-        brand.append("   + SYSTEM READY", style=f"bold {SUCCESS}")
+        brand.append("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)
+        brand.append("   [ SYSTEM READY ]", style=f"bold {SUCCESS}")
         return brand
 
-    left_width = 12
+    left_width = 18
     details = Table.grid(padding=0)
     details.add_column(width=left_width)
     details.add_column(ratio=1)
-    details.add_row(_shield_a(), _brand_text(width - left_width))
+    details.add_row(_falcon(), _brand_text(width - left_width))
     return details
 
 
@@ -69,15 +79,19 @@ def _brand_text(width: int) -> RenderableType:
     status = Text()
     status.append(f"VERSION v{__version__}", style=MUTED)
     status.append("    ")
-    status.append("+ SYSTEM READY", style=f"bold {SUCCESS}")
+    status.append("[ SYSTEM READY ]", style=f"bold {SUCCESS}")
     top = Table.grid(expand=True, padding=(0, 2))
     top.add_column(ratio=1)
     top.add_column(no_wrap=True)
     top.add_row(name, status)
     subtitle = Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
-    signature = Text("|---/\\_/\\---|", style=ACCENT_SOFT)
-    posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    return Group(top, subtitle, signature, posture)
+    posture = Text("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)
+    mantra = Text("\nINVEST\nDETECT\nUNDERSTAND\nSTAY AHEAD", style=MUTED)
+    body = Table.grid(expand=True, padding=(0, 2))
+    body.add_column(ratio=1)
+    body.add_column(width=12)
+    body.add_row(Group(subtitle, Text(""), posture), mantra)
+    return Group(top, body)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
@@ -100,7 +114,7 @@ def _operation_header(
 ) -> RenderableType:
     width = _frame_width(screen_width)
     heading = Text()
-    heading.append("/A\\ AEGISLOG", style=f"bold {NEUTRAL}")
+    heading.append("<F> AEGISLOG", style=f"bold {NEUTRAL}")
     heading.append("  //  ", style=MUTED)
     heading.append(title.upper(), style=f"bold {accent}")
     context = Text(subtitle, style=NEUTRAL, overflow="fold")

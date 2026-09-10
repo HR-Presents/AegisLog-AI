@@ -175,10 +175,10 @@ def test_report_ready_panel_is_clear_and_operator_focused() -> None:
     output = console.export_text()
 
     assert "REPORT READY" in output
-    assert "LOCATION" in output
+    assert "REPORT" in output
     assert "aegislog-reports/auth-aegislog-report.html" in output
     assert "Generated locally / source unchanged" in output
-    assert "Open in a browser to review, print, or save as PDF." in output
+    assert "Open in a browser for the complete evidence, timeline, and printable report." in output
 
 
 def test_dashboard_command_is_registered_and_analyze_is_replaced():

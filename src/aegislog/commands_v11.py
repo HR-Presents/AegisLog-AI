@@ -3,15 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
-from .dashboard import DashboardData, analyze_dashboard, render_dashboard
+from .dashboard_v213 import DashboardData, analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
 from .reporting import write_html_report
-from .theme import ACCENT, MUTED, SUCCESS, WARNING
+from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
 from .ui import bounded
 
 console = Console()
@@ -31,20 +32,21 @@ def _analysis_complete_line(data: DashboardData) -> Text:
 
 
 def _report_ready_panel(report_path: Path) -> Panel:
-    """Render a concise, operator-focused handoff after report generation."""
+    """Render a concise, Windows-safe handoff after report generation."""
     body = Text()
-    body.append("LOCATION  ", style=MUTED)
+    body.append("REPORT    ", style=MUTED)
     body.append(str(report_path), style=f"bold {ACCENT}")
     body.append("\nSTATUS    ", style=MUTED)
     body.append("Generated locally / source unchanged", style=SUCCESS)
     body.append("\nNEXT      ", style=MUTED)
-    body.append("Open in a browser to review, print, or save as PDF.", style="white")
+    body.append("Open in a browser for the complete evidence, timeline, and printable report.", style="white")
     return Panel(
         body,
         title=Text(" REPORT READY ", style=f"bold {SUCCESS}"),
         title_align="left",
-        border_style=SUCCESS,
-        padding=(1, 2),
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(0, 1),
         expand=True,
     )
 
@@ -59,7 +61,7 @@ def dashboard(
         help="Year to apply to RFC3164/syslog timestamps that omit a year. Never inferred automatically.",
     ),
 ) -> None:
-    """Open the full terminal investigation dashboard for one log file."""
+    """Open the compact terminal investigation summary for one log file."""
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -68,7 +70,7 @@ def dashboard(
     ) as progress:
         task = progress.add_task(f"Analyzing {path.name}...", total=None)
         data = analyze_dashboard(path, timestamp_year_hint=timestamp_year)
-        progress.update(task, description="Building investigation dashboard...")
+        progress.update(task, description="Building investigation summary...")
     console.print(_analysis_complete_line(data))
     console.print()
     console.print(bounded(render_dashboard(data, screen_width=console.size.width)))
@@ -92,7 +94,7 @@ def analyze_dashboard_command(
         help="Year to apply to RFC3164/syslog timestamps that omit a year. Never inferred automatically.",
     ),
 ) -> None:
-    """Analyze a log and open the complete AegisLog terminal dashboard."""
+    """Analyze a log and open the compact AegisLog terminal summary."""
     dashboard(path, timestamp_year=timestamp_year)
     if plugins:
         rules, errors = load_rules()
