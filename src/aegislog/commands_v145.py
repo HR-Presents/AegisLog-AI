@@ -12,25 +12,25 @@ _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 
 
 def _rule(width: int) -> Text:
-    return Text("━" * max(28, width - 2), style=DIM)
+    return Text("-" * max(28, width - 2), style=DIM)
 
 
 def _brand_lockup(compact: bool = False) -> RenderableType:
-    """Terminal-safe AegisLog identity; no Unicode art that breaks legacy consoles."""
+    """Terminal-safe AegisLog identity that remains readable on legacy Windows code pages."""
     if compact:
         line = Text()
-        line.append("◆ ", style=f"bold {ACCENT}")
+        line.append("<> ", style=f"bold {ACCENT}")
         line.append("AEGISLOG", style=f"bold {NEUTRAL}")
         return line
 
     mark = Text()
-    mark.append("   ╱╲    ", style=ACCENT)
+    mark.append("   /\\    ", style=ACCENT)
     mark.append("  A E G I S L O G", style=f"bold {NEUTRAL}")
     pulse = Text()
-    pulse.append("  ╱  ╲   ", style=ACCENT)
+    pulse.append("  /  \\   ", style=ACCENT)
     pulse.append("  DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
     base = Text()
-    base.append("  ╲╱╲╱   ", style=ACCENT)
+    base.append("  \\/\\/   ", style=ACCENT)
     base.append("  LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
     return Group(mark, pulse, base)
 
@@ -40,9 +40,9 @@ def _header(screen_width: int | None = None) -> RenderableType:
     frame_width = legacy._frame_width(screen_width)
     version = Text()
     version.append("  VERSION ", style=DIM)
-    version.append(f"{__version__}", style=MUTED)
+    version.append(f"v{__version__}", style=MUTED)
     status = Text()
-    status.append("  ● ", style=SUCCESS)
+    status.append("  + ", style=SUCCESS)
     status.append("SYSTEM READY", style=f"bold {SUCCESS}")
     return Group(_brand_lockup(), Text(""), _rule(frame_width), version, status)
 
@@ -130,7 +130,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 def _home(screen_width: int | None = None) -> RenderableType:
     footer = Text()
     footer.append("  SELECT", style=f"bold {NEUTRAL}")
-    footer.append("  ›  ", style=f"bold {ACCENT}")
+    footer.append("  >  ", style=f"bold {ACCENT}")
     footer.append("01-09", style=NEUTRAL)
     footer.append("     C command mode     Q exit", style=MUTED)
     return Group(_header(screen_width), Text(""), _menu(screen_width), Text(""), footer)
