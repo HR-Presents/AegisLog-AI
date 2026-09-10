@@ -9,7 +9,7 @@ runner = CliRunner()
 def test_version_flag():
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == f"AegisLog AI {__version__}"
+    assert result.stdout.strip() == f"AegisLog {__version__}"
 
 
 def test_doctor():
