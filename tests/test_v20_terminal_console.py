@@ -22,7 +22,7 @@ def test_wide_home_is_bounded_and_uses_two_operator_work_areas() -> None:
     assert "MONITOR" in output
     assert "ANALYZE LOG" in output
     assert "LIVE MONITOR" in output
-    assert "+ READY" in output
+    assert "SYSTEM READY" in output
     assert "INV  " not in output
     assert "ACTION" not in output
     assert "PURPOSE" not in output
