@@ -50,7 +50,7 @@ The current published stable release is **v2.1.3**.
 
 The published v2.1.3 executable is functionally released, but its Mission Control presentation did **not** pass subsequent real-Windows visual acceptance. A later unreleased UI experiment on `main` also failed visual review. Those attempts are not being promoted as a finished visual design, and no newer release should be inferred from development-branch or CI artifacts.
 
-Public product screenshots should come from a verified build and should not be presented as accepted product imagery until a real Windows capture has been reviewed.
+Public product screenshots should come from a verified build and should not be presented as accepted product imagery until a real Windows capture has been reviewed. The interactive shell uses the real `aegis@console >` prompt as the authoritative command entry point.
 
 ---
 
