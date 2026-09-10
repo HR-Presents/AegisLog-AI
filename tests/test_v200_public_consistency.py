@@ -31,25 +31,25 @@ def test_customer_bundle_has_no_stale_ai_branding() -> None:
         assert "AEGISLOG AI" not in text, path
 
 
-def test_readme_matches_current_v20_mission_control() -> None:
+def test_readme_matches_current_v2_mission_control() -> None:
     readme = _text("README.md")
-    assert "v2.0.1" in readme
+    assert "v2.1.0" in readme
     assert "VERSION 1.7" not in readme
     assert "SELECT  ›" not in readme
     assert "01-09 select" in readme
     assert "real `aegis@console >` shell prompt" in readme
 
 
-def test_current_docs_identify_v201_as_stable() -> None:
+def test_current_docs_identify_v210_as_stable() -> None:
     docs_index = _text("docs/README.md")
     project_status = _text("docs/PROJECT_STATUS.md")
     roadmap = _text("docs/ROADMAP.md")
 
-    assert "Published stable:** [v2.0.1" in docs_index
-    assert "current published stable release is **v2.0.1**" in project_status
-    assert "currently released as **v2.0.1**" in roadmap
-    assert "Published stable:** [v2.0.0" not in docs_index
-    assert "current published stable release is **v2.0.0**" not in project_status
-    assert "currently released as **v2.0.0**" not in roadmap
-    assert "RELEASE_V2.0.1.md" in docs_index
-    assert "RELEASE_V2.0.1.md" in project_status
+    assert "Published stable:** [v2.1.0" in docs_index
+    assert "current published stable release is **v2.1.0**" in project_status
+    assert "currently released as **v2.1.0**" in roadmap
+    assert "Published stable:** [v2.0.1" not in docs_index
+    assert "current published stable release is **v2.0.1**" not in project_status
+    assert "currently released as **v2.0.1**" not in roadmap
+    assert "RELEASE_V2.1.0.md" in docs_index
+    assert "RELEASE_V2.1.0.md" in project_status
