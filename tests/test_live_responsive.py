@@ -1,10 +1,19 @@
-from collections import Counter
 from pathlib import Path
 
 from rich.console import Console
 
-from aegislog.multisource import MultiSourceState, _alerts_table as multi_alerts_table, _summary_table as multi_summary_table, render_multisource
-from aegislog.realtime import RealtimeState, _recent_table, _summary_table as realtime_summary_table, render_realtime
+from aegislog.multisource import (
+    MultiSourceState,
+    _alerts_table as multi_alerts_table,
+    _summary_table as multi_summary_table,
+    render_multisource,
+)
+from aegislog.realtime import (
+    RealtimeState,
+    _recent_table,
+    _summary_table as realtime_summary_table,
+    render_realtime,
+)
 
 
 def _render(value, width: int) -> str:
@@ -55,11 +64,18 @@ def test_multisource_alerts_use_single_column_when_narrow() -> None:
 
 
 def test_live_headers_use_aegislog_without_ai_branding(monkeypatch) -> None:
-    monkeypatch.setattr("aegislog.realtime.shutil.get_terminal_size", lambda fallback: type("Size", (), {"columns": 80})())
-    monkeypatch.setattr("aegislog.multisource.shutil.get_terminal_size", lambda fallback: type("Size", (), {"columns": 80})())
+    class Size:
+        columns = 80
+
+    def fake_size(_fallback):
+        return Size()
+
+    monkeypatch.setattr("aegislog.realtime.shutil.get_terminal_size", fake_size)
+    monkeypatch.setattr("aegislog.multisource.shutil.get_terminal_size", fake_size)
 
     realtime_output = _render(render_realtime(RealtimeState(source="example.log")), 80)
-    multi_output = _render(render_multisource(MultiSourceState(sources=(Path("a.log"), Path("b.log")))), 80)
+    multisource_state = MultiSourceState(sources=(Path("a.log"), Path("b.log")))
+    multi_output = _render(render_multisource(multisource_state), 80)
 
     assert "AEGISLOG AI" not in realtime_output
     assert "AEGISLOG AI" not in multi_output
