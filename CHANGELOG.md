@@ -4,6 +4,16 @@
 
 - No unreleased changes yet.
 
+## 2.1.3 - 2026-09-11
+
+- Replaced the generic Shield-A terminal mark with the approved front-facing Falcon identity based on real Windows acceptance feedback.
+- Removed the competing legacy masthead signature so Mission Control presents one clear brand identity.
+- Reworked Analyze Log into a compact prioritized summary with source context, core metrics, top findings, Analyst Focus, next actions, and report handoff.
+- Stopped dumping the full investigation timeline, findings table, anomaly table, telemetry context, and raw evidence into the default terminal view; deep evidence remains available through the generated HTML report and incident investigation commands.
+- Bounded wide-terminal Analyze rendering to prevent ultra-wide Windows consoles from stretching the interface into a 140+ column wall.
+- Added regression coverage for Falcon branding, legacy-signature removal, compact Analyze output, bounded width, and Windows-safe ASCII rendering.
+- Preserved detection rules, parser semantics, streaming behavior, authentication correlation, incident-correlation semantics, evidence handling, and the local-first/read-only security model.
+
 ## 2.1.2 - 2026-09-10
 
 - Evolved the existing terminal interface into a more polished security command center without replacing AegisLog architecture or commands.
