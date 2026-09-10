@@ -31,7 +31,7 @@ def _rule(width: int) -> Text:
 
 
 def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> RenderableType:
-    """Render a compact identity with status anchored to the same visual frame."""
+    """Render an ASCII-safe identity with status anchored to the same visual frame."""
     width = _frame_width(screen_width)
     if compact or width < _NARROW_BREAKPOINT:
         brand = Text()
@@ -39,24 +39,25 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
         brand.append(f"   VERSION v{__version__}\n", style=MUTED)
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
         brand.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-        brand.append("   + READY", style=f"bold {SUCCESS}")
+        brand.append("   + SYSTEM READY", style=f"bold {SUCCESS}")
         return brand
 
-    grid = Table.grid(padding=0)
-    grid.add_column(width=8, no_wrap=True)
-    grid.add_column(width=max(24, width - 26), no_wrap=True)
-    grid.add_column(width=18, justify="right", no_wrap=True)
+    left1 = "  /\\    A E G I S L O G"
+    left2 = " /  \\   DEFENSIVE LOG INVESTIGATION"
+    left3 = "/____\\  |---/\\_/\\---|  LOCAL-FIRST / READ-ONLY / DETERMINISTIC"
+    right1 = f"VERSION v{__version__}"
+    right2 = "+ SYSTEM READY"
 
-    mark = Text("  /\\\n /  \\\n/____\\", style=f"bold {ACCENT}")
-    identity = Text()
-    identity.append("A E G I S L O G\n", style=f"bold {NEUTRAL}")
-    identity.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {ACCENT}")
-    identity.append("|---/\\_/\\---|  LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    status = Text()
-    status.append(f"VERSION v{__version__}\n", style=MUTED)
-    status.append("+ READY", style=f"bold {SUCCESS}")
-    grid.add_row(mark, identity, status)
-    return grid
+    line1 = Text(left1, style=f"bold {NEUTRAL}")
+    line1.append(" " * max(2, width - len(left1) - len(right1)), style=MUTED)
+    line1.append(right1, style=MUTED)
+
+    line2 = Text(left2, style=f"bold {ACCENT}")
+    line2.append(" " * max(2, width - len(left2) - len(right2)), style=MUTED)
+    line2.append(right2, style=f"bold {SUCCESS}")
+
+    line3 = Text(left3, style=MUTED, overflow="fold")
+    return Group(line1, line2, line3)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
@@ -159,13 +160,9 @@ def _menu(screen_width: int | None = None) -> RenderableType:
     ]
 
     title = Text("MISSION CONTROL", style=f"bold {ACCENT}")
+    hierarchy = Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED)
     if width < _NARROW_BREAKPOINT:
-        return Group(
-            title,
-            Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
-            Text(""),
-            _compact_menu(investigation + monitoring + system),
-        )
+        return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
 
     if width >= _WIDE_BREAKPOINT:
         gap = 5
@@ -175,9 +172,9 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         top.add_column(width=gap)
         top.add_column(width=column_width)
         top.add_row(
-            _menu_column("INVESTIGATION", investigation, column_width),
+            _menu_column("INVESTIGATE", investigation, column_width),
             Text(""),
-            _menu_column("MONITORING", monitoring, column_width),
+            _menu_column("MONITOR", monitoring, column_width),
         )
         system_line = Text()
         system_line.append("SYSTEM", style=f"bold {ACCENT}")
@@ -187,14 +184,9 @@ def _menu(screen_width: int | None = None) -> RenderableType:
                 system_line.append("      ")
             system_line.append(f"[{key}] ", style=f"bold {ACCENT}")
             system_line.append(label, style=f"bold {NEUTRAL}")
-        return Group(title, Text(""), top, Text(""), system_line)
+        return Group(title, hierarchy, Text(""), top, Text(""), system_line)
 
-    return Group(
-        title,
-        Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
-        Text(""),
-        _compact_menu(investigation + monitoring + system),
-    )
+    return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
 
 
 def _footer(screen_width: int | None = None) -> Text:
@@ -218,8 +210,6 @@ def _home(screen_width: int | None = None) -> RenderableType:
         _rule(width),
         _footer(screen_width),
     )
-    # A bounded frame makes very wide Windows Terminal windows look intentional.
-    # pad=False prevents Rich from filling the unused right side of a wide console.
     return Align.left(content, width=width, pad=False)
 
 
