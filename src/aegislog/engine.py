@@ -54,6 +54,12 @@ RFC3164_TIMESTAMP_RE = re.compile(
     r"(?P<day>\d{1,2})\s+(?P<clock>\d{2}:\d{2}:\d{2})\b",
     re.I,
 )
+RFC3164_HOST_RE = re.compile(
+    r"^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+"
+    r"\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+(?P<host>[A-Za-z0-9._-]+)\s+"
+    r"(?:sshd|sudo|pam)(?:\[\d+\])?:",
+    re.I,
+)
 
 
 def redact(text: str) -> str:
@@ -121,12 +127,20 @@ class AuthEvent:
     evidence: str
 
 
+def _auth_host(line: str) -> str | None:
+    explicit = _first_match(HOST_PATTERNS, line, "host")
+    if explicit:
+        return explicit
+    match = RFC3164_HOST_RE.search(line)
+    return match.group("host") if match else None
+
+
 def _auth_event(line: str, year_hint: int | None = None) -> AuthEvent:
     return AuthEvent(
         _parse_timestamp(line, year_hint),
         _valid_ip(_first_match(SOURCE_IP_PATTERNS, line, "ip")),
         _first_match(ACCOUNT_PATTERNS, line, "account"),
-        _first_match(HOST_PATTERNS, line, "host"),
+        _auth_host(line),
         line[:500],
     )
 
