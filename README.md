@@ -40,35 +40,37 @@ No AI Analyst, remote model workflow, auto-remediation, exploitation, persistenc
 
 ## Terminal experience
 
-AegisLog uses one visual hierarchy throughout the console: **brand → workspace → priority information → action → metadata**. Blue identifies the product and navigation; green, amber, and red are reserved for real system/security state.
+AegisLog v2.0 uses one visual hierarchy throughout Mission Control: **brand → workspace → priority information → action → metadata**. Blue identifies the product and navigation; green, amber, and red are reserved for real system/security state.
 
 ```text
-   ╱╲      A E G I S L O G
-  ╱  ╲     DEFENSIVE LOG INVESTIGATION
-  ╲╱╲╱     LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC
+   /\      A E G I S L O G
+  /  \     DEFENSIVE LOG INVESTIGATION
+  \/\/     LOCAL-FIRST / READ-ONLY / DETERMINISTIC
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  VERSION 1.7.x
-  ● SYSTEM READY
+--------------------------------------------------------------------------------
+MISSION CONTROL                                                     v2.0.0
+                                                            + SYSTEM READY
 
-INVESTIGATION
-01   ANALYZE              Investigate a log and generate an evidence report
-06   INCIDENTS            Review correlated evidence chains
-04   NATIVE LOGS          Inspect operating-system or container telemetry
+INVESTIGATION                              MONITORING
+01  ANALYZE                                02  LIVE MONITOR
+    Investigate a log and generate             Watch one log source
+    an evidence report                         continuously
 
-MONITORING
-02   LIVE MONITOR         Watch one log source continuously
-03   MULTI-SOURCE         Correlate activity across live sources
-05   NATIVE MONITOR       Watch native telemetry read-only
+06  INCIDENTS                              03  MULTI-SOURCE
+    Review correlated evidence chains          Correlate live sources
+
+04  NATIVE LOGS                            05  NATIVE MONITOR
+    Inspect OS/container telemetry              Watch native telemetry
 
 SYSTEM
-07   DEMO                  Run the built-in investigation dataset
-08   HEALTH                Check engine and collector readiness
-09   HELP                  Open the command reference
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  SELECT  ›  01-09     C command mode     Q exit
+07  DEMO        Run the built-in investigation dataset
+08  HEALTH      Check engine and collector readiness
+09  HELP        Open the command reference
+--------------------------------------------------------------------------------
+01-09 select    Q EXIT    C command mode    CTRL+C STOPS LIVE VIEWS
 ```
+
+The rendered layout adapts to terminal width: wide terminals use balanced Investigation and Monitoring areas, while medium and narrow terminals collapse without horizontal overflow. The real `aegis@console >` shell prompt is the only authoritative input prompt.
 
 ---
 
