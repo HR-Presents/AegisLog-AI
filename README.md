@@ -32,7 +32,7 @@ AegisLog turns raw logs into structured investigation context while keeping anal
 | **05** | **INCIDENTS** | Review evidence chains, severity, confidence, and investigation context. |
 | **06** | **REPORTING** | Produce analyst-oriented HTML evidence reports that stay local. |
 
-No AI Analyst, remote model workflow, auto-remediation, exploitation, persistence, credential theft, or silent host modification is part of the supported product surface.
+AI Analyst is not part of the supported public product surface. No remote model workflow, auto-remediation, exploitation, persistence, credential theft, or silent host modification is part of the supported product surface.
 
 ---
 
@@ -50,7 +50,7 @@ The current published stable release is **v2.1.3**.
 
 The published v2.1.3 executable is functionally released, but its Mission Control presentation did **not** pass subsequent real-Windows visual acceptance. A later unreleased UI experiment on `main` also failed visual review. Those attempts are not being promoted as a finished visual design, and no newer release should be inferred from development-branch or CI artifacts.
 
-Public product screenshots should come from a verified build and should not be presented as accepted product imagery until a real Windows capture has been reviewed. The interactive shell uses the real `aegis@console >` prompt as the authoritative command entry point.
+Public product screenshots should come from a verified build and should not be presented as accepted product imagery until a real Windows capture has been reviewed.
 
 ---
 
@@ -67,7 +67,7 @@ Public product screenshots should come from a verified build and should not be p
 .\AegisLog.exe start
 ```
 
-Windows SmartScreen or endpoint-security reputation warnings may appear because the executable is unsigned, even when the published checksum matches.
+The interactive shell uses the authoritative `aegis@console >` prompt. Windows SmartScreen or endpoint-security reputation warnings may appear because the executable is unsigned, even when the published checksum matches.
 
 ### Python 3.10+
 
