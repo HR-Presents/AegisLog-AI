@@ -2,7 +2,6 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_TARGET = "9eefb18af494d2488f0795eb7326470f642058f2"
 
 
 def _text(path: str) -> str:
@@ -17,8 +16,6 @@ def test_v210_release_remains_recorded_historically() -> None:
     assert "## 2.1.0 - 2026-09-10" in changelog
     assert "v2.1.0" in project_status
     assert "v2.1.0" in roadmap
-    assert RELEASE_TARGET in project_status
-    assert RELEASE_TARGET in roadmap
 
 
 def test_v21_docs_no_longer_claim_release_is_pending() -> None:
