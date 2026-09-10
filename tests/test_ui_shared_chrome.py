@@ -32,6 +32,7 @@ def test_console_title_has_product_page_and_status_hierarchy() -> None:
 def test_compact_footer_is_low_chrome_guidance() -> None:
     output = _render(compact_footer("Press Enter to continue"))
 
-    assert "›" in output
+    assert ">" in output
+    assert "›" not in output
     assert "Press Enter to continue" in output
     assert "NEXT" not in output
