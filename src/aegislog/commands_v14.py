@@ -7,8 +7,9 @@ import typer
 from rich.console import Console
 from rich.live import Live
 
+from .command_center_ui import render_multisource_command_center
 from .live_ux import live_initial_status, live_source_status, live_startup_panel, live_stopped_status
-from .multisource import MultiSourceState, initial_cursors, poll_sources, render_multisource
+from .multisource import MultiSourceState, initial_cursors, poll_sources
 from .ui import bounded
 from .watch_profiles import get_profile
 
@@ -16,7 +17,7 @@ console = Console()
 
 
 def _view(state: MultiSourceState):
-    return bounded(render_multisource(state))
+    return bounded(render_multisource_command_center(state))
 
 
 def live_multi(
@@ -60,7 +61,6 @@ def live_multi(
         )
     )
     if from_start:
-        # Initial snapshot contract: console.print(render_multisource(state))
         console.print(_view(state))
         console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
 
