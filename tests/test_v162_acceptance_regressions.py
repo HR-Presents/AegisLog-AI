@@ -22,10 +22,11 @@ def test_mission_control_brand_matches_falcon_identity_and_stays_ascii_safe() ->
     assert "A E G I S L O G" in rendered
     assert "DEFENSIVE LOG INVESTIGATION" in rendered
     assert "LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC" in rendered
-    assert "INVEST" in rendered
-    assert "DETECT" in rendered
-    assert "UNDERSTAND" in rendered
-    assert "STAY AHEAD" in rendered
+    assert "__/\\__" in rendered
+    assert "INVEST\n" not in rendered
+    assert "DETECT\n" not in rendered
+    assert "UNDERSTAND" not in rendered
+    assert "STAY AHEAD" not in rendered
     assert "|---/\\_/\\---|" not in rendered
     rendered.encode("ascii")
 

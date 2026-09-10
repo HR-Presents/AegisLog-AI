@@ -26,8 +26,11 @@ def test_wide_home_is_bounded_and_uses_two_operator_work_areas() -> None:
     assert "INV  " not in output
     assert "ACTION" not in output
     assert "PURPOSE" not in output
-    assert max(map(len, lines)) <= 112
-    assert max(map(len, lines)) >= 100
+    # The workspace is intentionally centered inside a wide terminal. Measure the
+    # rendered working block without its centering indentation.
+    assert max(len(line.lstrip()) for line in lines) <= 98
+    assert max(len(line.lstrip()) for line in lines) >= 90
+    assert any(line.startswith(" " * 20) for line in lines if line.strip())
 
 
 def test_wide_home_descriptions_do_not_wrap_like_table_cells() -> None:
