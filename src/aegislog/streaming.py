@@ -26,13 +26,16 @@ def analyze_stream(
     max_auth_events: int = 10_000,
     max_auth_sources: int = 2_048,
     max_line_bytes: int = 1_000_000,
+    timestamp_year_hint: int | None = None,
 ) -> StreamSummary:
     """Analyze incrementally with shared bounded correlation state.
 
     ``chunk_size`` controls progress batching only; detection state is shared so findings do
     not depend on chunk boundaries. Oversized lines are explicitly truncated before analysis.
     Correlation sources, retained auth events, and non-auth findings are bounded while ingesting.
-    Severity totals still include findings dropped after the retention cap.
+    ``timestamp_year_hint`` gives RFC3164/syslog timestamps the same explicit year context
+    supported by full-file analysis. Severity totals still include findings dropped after the
+    retention cap.
     """
     if chunk_size < 1 or max_findings < 0 or max_line_bytes < 1 or max_auth_sources < 1:
         raise ValueError("stream limits must be valid positive values")
@@ -42,6 +45,7 @@ def analyze_stream(
         max_auth_events=max_auth_events,
         max_auth_sources=max_auth_sources,
         max_findings=max_findings,
+        timestamp_year_hint=timestamp_year_hint,
     )
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
