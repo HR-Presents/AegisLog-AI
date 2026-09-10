@@ -14,10 +14,11 @@ from .ui import bounded
 from .watch_profiles import get_profile
 
 console = Console()
+render_realtime = render_realtime_command_center
 
 
 def _view(state: RealtimeState):
-    return bounded(render_realtime_command_center(state))
+    return bounded(render_realtime(state))
 
 
 def live_dashboard(
@@ -51,7 +52,7 @@ def live_dashboard(
         )
     )
     if from_start:
-        console.print(_view(state))
+        console.print(render_realtime(state))
         console.print(live_initial_status("file", prefix="Initial scan complete."))
 
     source_missing = False
