@@ -13,7 +13,7 @@ def _render(renderable) -> str:
 
 def test_mission_control_header_uses_runtime_package_version() -> None:
     rendered = _render(_header(120))
-    assert f"v{__version__}" in rendered
+    assert f"VERSION {__version__}" in rendered
     assert "v1.6.1" not in rendered
 
 
