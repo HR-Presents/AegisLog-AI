@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from rich import box
 from rich.console import Group, RenderableType
 from rich.table import Table
 from rich.text import Text
@@ -9,69 +10,54 @@ from . import commands_v144 as legacy
 from .theme import ACCENT, DIM, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
-_NARROW_BREAKPOINT = 64
-_COMPACT_BRAND_BREAKPOINT = 54
+_NARROW_BREAKPOINT = 72
+_WIDE_BREAKPOINT = 112
+
+
+def _frame_width(screen_width: int | None = None) -> int:
+    return legacy._frame_width(screen_width)
 
 
 def _rule(width: int) -> Text:
-    return Text("-" * max(1, width - 2), style=DIM)
+    return Text("-" * max(16, width), style=DIM)
 
 
 def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> RenderableType:
-    """README-aligned AegisLog identity with responsive, Windows-safe ASCII layouts."""
-    frame_width = legacy._frame_width(screen_width)
+    """A compact, Windows-safe product identity that scales with the viewport."""
+    width = _frame_width(screen_width)
     if compact:
         line = Text()
-        line.append("<> ", style=f"bold {ACCENT}")
+        line.append("/\\ ", style=f"bold {ACCENT}")
         line.append("AEGISLOG", style=f"bold {NEUTRAL}")
         return line
 
-    if frame_width < _COMPACT_BRAND_BREAKPOINT:
-        mark = Text(" /\\\n|-/\\-|\n \\__/", style=ACCENT)
-        name = Text("A E G I S L O G", style=f"bold {NEUTRAL}")
-        subtitle = Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
-        if frame_width >= 36:
-            posture = Text("LOCAL / READ-ONLY / DETERMINISTIC", style=MUTED)
-        else:
-            posture = Text("LOCAL / READ-ONLY\nDETERMINISTIC", style=MUTED)
-        return Group(mark, name, subtitle, posture)
+    if width < _NARROW_BREAKPOINT:
+        brand = Text()
+        brand.append("/\\  AEGISLOG\n", style=f"bold {ACCENT}")
+        brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
+        brand.append("LOCAL-FIRST / READ-ONLY / DETERMINISTIC", style=MUTED)
+        return brand
 
-    crown = Text()
-    crown.append("       /\\       ", style=ACCENT)
-    crown.append("A E G I S L O G", style=f"bold {NEUTRAL}")
+    grid = Table.grid(expand=True, padding=(0, 2))
+    grid.add_column(width=16, no_wrap=True)
+    grid.add_column(ratio=1)
+    grid.add_column(width=24, justify="right", no_wrap=True)
 
-    shoulder = Text()
-    shoulder.append("      /  \\      ", style=ACCENT)
-    shoulder.append("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
-
-    body = Text()
-    body.append("     /    \\     ", style=ACCENT)
-    body.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-
-    pulse = Text()
-    pulse.append("    |---/\\_/\\---|", style=f"bold {NEUTRAL}")
-
-    lower = Text("     \\      /    ", style=ACCENT)
-    base = Text("      \\____/     ", style=ACCENT)
-    return Group(crown, shoulder, body, pulse, lower, base)
+    mark = Text("    /\\\n   /  \\\n  |---/\\_/\\---|\n    \\____/", style=f"bold {ACCENT}")
+    identity = Text()
+    identity.append("A E G I S L O G\n", style=f"bold {NEUTRAL}")
+    identity.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {ACCENT}")
+    identity.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+    status = Text()
+    status.append(f"VERSION v{__version__}\n", style=MUTED)
+    status.append("+ SYSTEM READY", style=f"bold {SUCCESS}")
+    grid.add_row(mark, identity, status)
+    return grid
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
-    """Startup identity that scales from narrow consoles to wide terminals."""
-    frame_width = legacy._frame_width(screen_width)
-    version = Text()
-    version.append("VERSION ", style=DIM)
-    version.append(f"v{__version__}", style=MUTED)
-    status = Text()
-    status.append("+ ", style=SUCCESS)
-    status.append("SYSTEM READY", style=f"bold {SUCCESS}")
-    return Group(
-        _brand_lockup(screen_width=screen_width),
-        Text(""),
-        _rule(frame_width),
-        version,
-        status,
-    )
+    width = _frame_width(screen_width)
+    return Group(_brand_lockup(screen_width=screen_width), Text(""), _rule(width))
 
 
 def _operation_header(
@@ -81,20 +67,14 @@ def _operation_header(
     *,
     screen_width: int | None = None,
 ) -> RenderableType:
-    """Prominent workspace heading with compact brand signature."""
-    frame_width = legacy._frame_width(screen_width)
-    heading = Text(title.upper(), style=f"bold {accent}")
+    width = _frame_width(screen_width)
+    heading = Text()
+    heading.append("/\\ AEGISLOG", style=f"bold {NEUTRAL}")
+    heading.append("  //  ", style=MUTED)
+    heading.append(title.upper(), style=f"bold {accent}")
     context = Text(subtitle, style=NEUTRAL, overflow="fold")
-    state = Text("LOCAL / READ-ONLY", style=MUTED)
-    return Group(
-        _brand_lockup(compact=True, screen_width=screen_width),
-        Text(""),
-        heading,
-        context,
-        Text(""),
-        _rule(frame_width),
-        state,
-    )
+    posture = Text("LOCAL / READ-ONLY  /  DETERMINISTIC", style=MUTED)
+    return Group(heading, context, _rule(width), posture)
 
 
 def _input_panel(
@@ -105,88 +85,129 @@ def _input_panel(
     screen_width: int | None = None,
     primary_label: str | None = None,
 ) -> RenderableType:
-    """Responsive task guidance that folds metadata instead of clipping it."""
-    frame_width = legacy._frame_width(screen_width)
-    padding = (0, 1) if frame_width < _NARROW_BREAKPOINT else (0, 2)
-    label_width = 8 if frame_width < 44 else 10 if frame_width < 60 else 14
-    grid = Table.grid(expand=True, padding=padding)
-    grid.add_column(width=label_width, no_wrap=True)
-    grid.add_column(ratio=1, overflow="fold")
+    width = _frame_width(screen_width)
+    compact = width < _NARROW_BREAKPOINT
+    grid = Table(
+        box=box.ASCII,
+        expand=True,
+        padding=(0, 1),
+        border_style=DIM,
+        show_header=True,
+        header_style=f"bold {accent}",
+    )
+    grid.add_column(title.upper(), width=12 if compact else 16, no_wrap=True)
+    grid.add_column("DETAIL", ratio=1, overflow="fold")
     for label, value in lines:
-        is_primary = primary_label is not None and label == primary_label
+        primary = primary_label is not None and label == primary_label
         grid.add_row(
-            Text(label.upper(), style=f"bold {ACCENT}" if is_primary else MUTED, overflow="ellipsis"),
-            Text(value, style=NEUTRAL if is_primary else MUTED, overflow="fold"),
+            Text(label.upper(), style=f"bold {accent}" if primary else MUTED),
+            Text(value, style=NEUTRAL if primary else MUTED, overflow="fold"),
         )
-    return Group(Text(title.upper(), style=f"bold {NEUTRAL}"), Text(""), grid)
+    return grid
 
 
-def _menu_row(key: str, label: str, description: str, *, compact: bool) -> RenderableType:
-    row = Table.grid(expand=True, padding=(0, 1))
-    row.add_column(width=4, no_wrap=True)
-    if compact:
-        row.add_column(ratio=1, overflow="fold")
-        body = Text(label.upper(), style=f"bold {NEUTRAL}")
+def _menu_table(rows: list[tuple[str, str, str]], heading: str) -> Table:
+    table = Table(
+        box=box.ASCII,
+        expand=True,
+        padding=(0, 1),
+        border_style=DIM,
+        show_header=True,
+        header_style=f"bold {ACCENT}",
+    )
+    table.add_column(heading, width=5, justify="center", no_wrap=True)
+    table.add_column("ACTION", width=18, no_wrap=True)
+    table.add_column("PURPOSE", ratio=1, overflow="fold")
+    for key, label, description in rows:
+        table.add_row(
+            Text(key, style=f"bold {ACCENT}"),
+            Text(label, style=f"bold {NEUTRAL}"),
+            Text(description, style=MUTED),
+        )
+    return table
+
+
+def _compact_menu(rows: list[tuple[str, str, str]]) -> Table:
+    table = Table(box=box.ASCII, expand=True, padding=(0, 1), border_style=DIM, show_header=False)
+    table.add_column(width=4, no_wrap=True)
+    table.add_column(ratio=1, overflow="fold")
+    for key, label, description in rows:
+        body = Text(label, style=f"bold {NEUTRAL}")
         body.append("\n")
         body.append(description, style=MUTED)
-        row.add_row(Text(key, style=f"bold {ACCENT}"), body)
-    else:
-        row.add_column(width=18, no_wrap=True)
-        row.add_column(ratio=1, overflow="fold")
-        row.add_row(
-            Text(key, style=f"bold {ACCENT}"),
-            Text(label.upper(), style=f"bold {NEUTRAL}"),
-            Text(description, style=MUTED, overflow="fold"),
-        )
-    return row
+        table.add_row(Text(key, style=f"bold {ACCENT}"), body)
+    return table
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
-    """Professional command index with compact fallback for narrow terminals."""
-    frame_width = legacy._frame_width(screen_width)
-    compact = frame_width < _NARROW_BREAKPOINT
-    rows: list[RenderableType] = [
-        Text("INVESTIGATION", style=f"bold {ACCENT}"),
-        _menu_row("01", "Analyze", "Investigate a log and generate an evidence report", compact=compact),
-        _menu_row("06", "Incidents", "Review correlated evidence chains", compact=compact),
-        _menu_row("04", "Native logs", "Inspect operating-system or container telemetry", compact=compact),
-        Text(""),
-        Text("MONITORING", style=f"bold {ACCENT}"),
-        _menu_row("02", "Live monitor", "Watch one log source continuously", compact=compact),
-        _menu_row("03", "Multi-source", "Correlate activity across live sources", compact=compact),
-        _menu_row("05", "Native monitor", "Watch native telemetry read-only", compact=compact),
-        Text(""),
-        Text("SYSTEM", style=f"bold {ACCENT}"),
-        _menu_row("07", "Demo", "Run the built-in investigation dataset", compact=compact),
-        _menu_row("08", "Health", "Check engine and collector readiness", compact=compact),
-        _menu_row("09", "Help", "Open the command reference", compact=compact),
+    """Use the full viewport: two balanced work areas on wide terminals, one on narrow."""
+    width = _frame_width(screen_width)
+    investigation = [
+        ("01", "ANALYZE", "Analyze a log and generate an evidence report"),
+        ("06", "INCIDENTS", "Review correlated evidence chains"),
+        ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
     ]
-    return Group(*rows, _rule(frame_width))
+    monitoring = [
+        ("02", "LIVE MONITOR", "Watch one log source continuously"),
+        ("03", "MULTI-SOURCE", "Correlate activity across live sources"),
+        ("05", "NATIVE MONITOR", "Watch native telemetry read-only"),
+    ]
+    system = [
+        ("07", "DEMO", "Run the built-in investigation dataset"),
+        ("08", "HEALTH", "Check engine and collector readiness"),
+        ("09", "HELP", "Open the command reference"),
+    ]
+
+    if width < _NARROW_BREAKPOINT:
+        return Group(
+            Text("MISSION CONTROL", style=f"bold {ACCENT}"),
+            Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
+            _compact_menu(investigation + monitoring + system),
+        )
+
+    if width >= _WIDE_BREAKPOINT:
+        top = Table.grid(expand=True, padding=(0, 1))
+        top.add_column(ratio=1)
+        top.add_column(ratio=1)
+        top.add_row(_menu_table(investigation, "INV"), _menu_table(monitoring, "MON"))
+        return Group(
+            Text("MISSION CONTROL", style=f"bold {ACCENT}"),
+            Text("INVESTIGATION                         MONITORING", style=MUTED),
+            Text(""),
+            top,
+            Text(""),
+            Text("SYSTEM", style=MUTED),
+            _menu_table(system, "SYS"),
+        )
+
+    return Group(
+        Text("MISSION CONTROL", style=f"bold {ACCENT}"),
+        Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
+        Text(""),
+        _menu_table(investigation + monitoring + system, "KEY"),
+    )
 
 
 def _footer(screen_width: int | None = None) -> Text:
-    frame_width = legacy._frame_width(screen_width)
+    width = _frame_width(screen_width)
     footer = Text()
-    if frame_width < 38:
-        footer.append("01-09 SELECT", style=f"bold {NEUTRAL}")
-        footer.append("\nC COMMAND  Q EXIT", style=MUTED)
-    elif frame_width < _NARROW_BREAKPOINT:
-        footer.append("01-09 SELECT", style=f"bold {NEUTRAL}")
-        footer.append("  |  C COMMAND  |  Q EXIT", style=MUTED)
-    else:
-        footer.append("SELECT", style=f"bold {NEUTRAL}")
-        footer.append("  >  ", style=f"bold {ACCENT}")
-        footer.append("01-09", style=NEUTRAL)
-        footer.append("     C command mode     Q exit", style=MUTED)
+    footer.append("01-09 select", style=f"bold {ACCENT}")
+    footer.append("    Q EXIT", style=MUTED)
+    if width >= 44:
+        footer.append("    C command mode", style=MUTED)
+    if width >= 86:
+        footer.append("    CTRL+C STOPS LIVE VIEWS", style=MUTED)
     return footer
 
 
 def _home(screen_width: int | None = None) -> RenderableType:
+    width = _frame_width(screen_width)
     return Group(
         _header(screen_width),
         Text(""),
         _menu(screen_width),
         Text(""),
+        _rule(width),
         _footer(screen_width),
     )
 
@@ -202,7 +223,7 @@ def _run_inline_command(raw: str) -> None:
 
 
 def start() -> None:
-    """Run the branded terminal shell over the deterministic investigation engine."""
+    """Run the responsive terminal shell over the deterministic investigation engine."""
     original_home = legacy._home
     original_inline = legacy._run_inline_command
     original_input_panel = legacy._input_panel
