@@ -42,7 +42,7 @@ def test_home_has_one_navigation_hint_not_a_fake_second_prompt() -> None:
     footer = _render(_footer(160), 160)
     assert "01-09 select" in footer
     assert "C command mode" in footer
-    assert "Q quit" in footer
+    assert "Q EXIT" in footer
 
 
 def test_home_chrome_is_ascii_safe() -> None:
