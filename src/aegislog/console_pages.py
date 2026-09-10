@@ -19,7 +19,7 @@ _NARROW_PAGE_BREAKPOINT = 72
 def _health_summary(available_native: int, total_native: int) -> Text:
     line = Text()
     line.append("SYSTEM", style=MUTED)
-    line.append("  ● READY", style=f"bold {SUCCESS}")
+    line.append("  + READY", style=f"bold {SUCCESS}")
     line.append("    NATIVE SOURCES ", style=MUTED)
     line.append(f"{available_native}/{total_native}", style=f"bold {ACCENT}")
     line.append("    READ-ONLY", style=MUTED)
