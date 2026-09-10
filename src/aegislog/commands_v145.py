@@ -16,23 +16,35 @@ def _rule(width: int) -> Text:
 
 
 def _brand_lockup(compact: bool = False) -> RenderableType:
-    """Terminal-safe AegisLog identity that remains readable on legacy Windows code pages."""
+    """README-aligned AegisLog identity using legacy-Windows-safe ASCII only."""
     if compact:
         line = Text()
         line.append("<> ", style=f"bold {ACCENT}")
         line.append("AEGISLOG", style=f"bold {NEUTRAL}")
         return line
 
-    mark = Text()
-    mark.append("   /\\    ", style=ACCENT)
-    mark.append("  A E G I S L O G", style=f"bold {NEUTRAL}")
+    crown = Text()
+    crown.append("       /\\       ", style=ACCENT)
+    crown.append("A E G I S L O G", style=f"bold {NEUTRAL}")
+
+    shoulder = Text()
+    shoulder.append("      /  \\      ", style=ACCENT)
+    shoulder.append("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
+
+    body = Text()
+    body.append("     /    \\     ", style=ACCENT)
+    body.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+
     pulse = Text()
-    pulse.append("  /  \\   ", style=ACCENT)
-    pulse.append("  DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
+    pulse.append("    |---/\\_/\\---|", style=f"bold {NEUTRAL}")
+
+    lower = Text()
+    lower.append("     \\      /    ", style=ACCENT)
+
     base = Text()
-    base.append("  \\/\\/   ", style=ACCENT)
-    base.append("  LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
-    return Group(mark, pulse, base)
+    base.append("      \\____/     ", style=ACCENT)
+
+    return Group(crown, shoulder, body, pulse, lower, base)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
