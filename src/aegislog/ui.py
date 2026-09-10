@@ -23,7 +23,7 @@ def console_title(
     max_width: int = MAX_CONTENT_WIDTH,
     border_style: str = ACCENT,
 ) -> RenderableType:
-    """Render quiet shared page chrome without enclosing every page in a panel."""
+    """Render responsive, legacy-Windows-safe shared page chrome."""
     heading = Text()
     heading.append("AEGISLOG", style=f"bold {NEUTRAL}")
     heading.append(" / ", style=MUTED)
@@ -31,9 +31,10 @@ def console_title(
     if version:
         heading.append(f"  v{version}", style=MUTED)
 
-    rule = Text("─" * 48, style="grey35")
+    width = max_width if max_width and max_width > 0 else 48
+    rule = Text("-" * max(16, min(width, 72)), style="grey35")
     status = Text()
-    status.append("● ", style=SUCCESS)
+    status.append("+ ", style=SUCCESS)
     status.append("READY", style=f"bold {SUCCESS}")
     status.append("   LOCAL-FIRST   READ-ONLY", style=MUTED)
 
@@ -45,8 +46,8 @@ def console_title(
 
 
 def compact_footer(text: str, *, max_width: int = MAX_CONTENT_WIDTH) -> RenderableType:
-    """Render low-emphasis operator guidance."""
+    """Render low-emphasis operator guidance using ASCII-safe chrome."""
     footer = Text()
-    footer.append("›  ", style=f"bold {ACCENT}")
+    footer.append(">  ", style=f"bold {ACCENT}")
     footer.append(text, style=MUTED)
     return Align.left(footer)

@@ -36,7 +36,7 @@ def test_workspace_keeps_compact_brand_signature() -> None:
     assert "AEGISLOG" in text
     assert "ANALYZE" in text
     assert "Investigate retained evidence" in text
-    assert "LOCAL  /  READ-ONLY" in text
+    assert "LOCAL / READ-ONLY" in text
 
 
 def test_palette_uses_controlled_blue_identity() -> None:

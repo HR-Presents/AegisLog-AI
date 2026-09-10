@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from shutil import get_terminal_size
+
 from rich.console import Group, RenderableType
 from rich.table import Table
 from rich.text import Text
@@ -19,17 +21,22 @@ def triage_priority(incident: InvestigationIncident) -> tuple[str, str]:
 
 
 def incident_triage_panel(incident: InvestigationIncident) -> RenderableType:
-    """Summarize triage with a flat evidence-first layout."""
+    """Summarize triage with a width-aware, evidence-first layout."""
     priority, style = triage_priority(incident)
+    width = max(32, get_terminal_size((80, 24)).columns)
+    narrow = width < 60
 
     heading = Text("Analyst triage", style=f"bold {MUTED}")
     priority_line = Text("Priority: ", style=MUTED)
     priority_line.append(priority, style=f"bold {style}")
-    priority_line.append(f"   Confidence: {incident.confidence}%", style=MUTED)
+    if narrow:
+        priority_line.append(f"\nConfidence: {incident.confidence}%", style=MUTED)
+    else:
+        priority_line.append(f"   Confidence: {incident.confidence}%", style=MUTED)
 
-    metrics = Table.grid(padding=(0, 2))
-    metrics.add_column(style=MUTED)
-    metrics.add_column(style=NEUTRAL)
+    metrics = Table.grid(padding=(0, 1 if narrow else 2), expand=narrow)
+    metrics.add_column(style=MUTED, min_width=8 if narrow else 12, overflow="fold")
+    metrics.add_column(style=NEUTRAL, ratio=1, overflow="fold")
     metrics.add_row("Findings", str(len(incident.findings)))
     metrics.add_row("Timeline events", str(len(incident.timeline)))
     metrics.add_row("Associated entities", str(len(incident.entities)))
@@ -52,7 +59,7 @@ def incident_triage_panel(incident: InvestigationIncident) -> RenderableType:
 
     return Group(
         heading,
-        Text("─" * 48, style="grey35"),
+        Text("-" * max(20, min(width - 2, 48)), style="grey35"),
         priority_line,
         Text(""),
         metrics,

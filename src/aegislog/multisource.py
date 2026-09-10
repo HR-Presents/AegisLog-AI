@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import time
 from collections import Counter, deque
 from dataclasses import dataclass, field
@@ -20,6 +21,8 @@ from .realtime import FileCursor, initial_cursor, read_new_lines, read_new_lines
 from .theme import ACCENT, ACCENT_SOFT, ANOMALY, INCIDENT, INFO, MUTED, SUCCESS, WARNING, risk_style, severity_text
 from .trends import TrendSnapshot, TrendTracker, render_trends
 from .watch_profiles import WatchProfile, filter_events, filter_findings, get_profile
+
+_NARROW_BREAKPOINT = 72
 
 
 @dataclass(frozen=True)
@@ -60,7 +63,7 @@ class MultiSourceState:
         if self.max_arrival_buckets < 2:
             raise ValueError("max_arrival_buckets must be at least 2")
         if self.max_seen_fingerprints < 1:
-            raise ValueError("max_seen_fingerprints must be at least 1")
+            raise ValueError("max_seen_fingerprints must be positive")
         get_profile(self.watch_profile)
         self._lines = deque(self._lines, maxlen=self.window_size)
         if self.trend_tracker.window_seconds != self.trend_seconds:
@@ -223,7 +226,6 @@ def poll_sources(
 
 
 def initial_offsets(paths: tuple[Path, ...], from_start: bool) -> dict[Path, int]:
-    """Compatibility helper retained for callers that only need starting byte offsets."""
     return {path: 0 if from_start else path.stat().st_size for path in paths}
 
 
@@ -237,69 +239,86 @@ def _risk(counts: Counter[str]) -> str:
     return "CLEAR"
 
 
-def _summary_table(rows: list[tuple[str, str, str, str]]) -> Table:
-    """Render dashboard metrics vertically so ordinary terminals never squeeze cards off-screen."""
+def _summary_table(rows: list[tuple[str, str, str, str]], screen_width: int) -> Table:
+    compact = screen_width < _NARROW_BREAKPOINT
     table = Table(title="SOC summary", expand=True, border_style=ACCENT_SOFT, show_header=True)
-    table.add_column("Metric", min_width=15, ratio=2, style=ACCENT)
-    table.add_column("Value", min_width=8, ratio=1, justify="right")
-    table.add_column("Context", min_width=18, ratio=4, style=MUTED)
-    for label, value, context, style in rows:
-        table.add_row(Text(label), Text(value, style=style), Text(context))
+    if compact:
+        table.add_column("Metric", min_width=8, ratio=2, style=ACCENT, overflow="fold")
+        table.add_column("Value / Context", min_width=12, ratio=4, overflow="fold")
+        for label, value, context, style in rows:
+            body = Text(value, style=style)
+            body.append("\n")
+            body.append(context, style=MUTED)
+            table.add_row(Text(label), body)
+    else:
+        table.add_column("Metric", min_width=15, ratio=2, style=ACCENT)
+        table.add_column("Value", min_width=8, ratio=1, justify="right")
+        table.add_column("Context", min_width=18, ratio=4, style=MUTED, overflow="fold")
+        for label, value, context, style in rows:
+            table.add_row(Text(label), Text(value, style=style), Text(context))
     return table
 
 
-def _telemetry_table(sections: tuple[tuple[str, Counter[str]], ...], limit: int = 6) -> Table:
-    """Keep telemetry readable at narrow and wide widths by using one wrapping table."""
+def _telemetry_table(sections: tuple[tuple[str, Counter[str]], ...], screen_width: int, limit: int = 6) -> Table:
+    compact = screen_width < _NARROW_BREAKPOINT
     table = Table(title="Profile telemetry", expand=True, border_style=ACCENT_SOFT, show_lines=False)
-    table.add_column("Dimension", min_width=14, ratio=2, style=ACCENT)
-    table.add_column("Name", min_width=12, ratio=4)
-    table.add_column("Count", min_width=5, ratio=1, justify="right", style=ACCENT)
-    for label, values in sections:
-        items = values.most_common(limit)
-        if not items:
-            table.add_row(label, Text("None", style=MUTED), Text("0", style=MUTED))
-            continue
-        for index, (name, count) in enumerate(items):
-            table.add_row(label if index == 0 else "", Text(str(name)), str(count))
+    if compact:
+        table.add_column("Telemetry", min_width=10, ratio=1, overflow="fold")
+        table.add_column("Count", min_width=5, max_width=7, justify="right", style=ACCENT)
+        for label, values in sections:
+            items = values.most_common(limit)
+            if not items:
+                table.add_row(Text(f"{label}: None", style=MUTED), "0")
+                continue
+            for name, count in items:
+                table.add_row(Text(f"{label}: {name}"), str(count))
+    else:
+        table.add_column("Dimension", min_width=14, ratio=2, style=ACCENT)
+        table.add_column("Name", min_width=12, ratio=4, overflow="fold")
+        table.add_column("Count", min_width=5, ratio=1, justify="right", style=ACCENT)
+        for label, values in sections:
+            items = values.most_common(limit)
+            if not items:
+                table.add_row(label, Text("None", style=MUTED), Text("0", style=MUTED))
+                continue
+            for index, (name, count) in enumerate(items):
+                table.add_row(label if index == 0 else "", Text(str(name)), str(count))
     return table
 
 
-def _alerts_table(state: MultiSourceState) -> Table:
+def _alerts_table(state: MultiSourceState, screen_width: int) -> Table:
     profile = state.profile
-    table = Table(
-        title=f"Live security alert feed - {profile.label}",
-        expand=True,
-        show_lines=True,
-        border_style=INCIDENT,
-    )
-    table.add_column("#", justify="right", min_width=3, max_width=5, style=ACCENT, no_wrap=True)
-    table.add_column("Severity", min_width=8, max_width=10, no_wrap=True)
-    table.add_column("Source", min_width=10, ratio=2, overflow="fold")
-    table.add_column("Category", min_width=10, ratio=2, overflow="fold")
-    table.add_column("Alert", min_width=16, ratio=3, overflow="fold")
-    table.add_column("Evidence", min_width=20, ratio=5, overflow="fold")
-    for item in state.alerts[:10]:
-        table.add_row(
-            str(item.sequence),
-            severity_text(item.severity),
-            Text(item.source),
-            Text(item.category),
-            Text(item.title),
-            Text(item.evidence),
-        )
-    if not state.alerts:
-        table.add_row(
-            Text("-", style=MUTED),
-            Text("-", style=MUTED),
-            Text("-", style=MUTED),
-            Text("-", style=MUTED),
-            Text(f"No {profile.label.lower()} alerts yet", style=SUCCESS),
-            Text("All sources remain under local monitoring", style=MUTED),
-        )
+    compact = screen_width < _NARROW_BREAKPOINT
+    table = Table(title=f"Live security alert feed - {profile.label}", expand=True, show_lines=True, border_style=INCIDENT)
+    if compact:
+        table.add_column("Alert", min_width=10, ratio=1, overflow="fold")
+        for item in state.alerts[:10]:
+            body = Text()
+            body.append(f"#{item.sequence} ", style=ACCENT)
+            body.append_text(severity_text(item.severity))
+            body.append(f"  {item.source} / {item.category}\n", style=MUTED)
+            body.append(item.title, style="bold white")
+            body.append("\n")
+            body.append(item.evidence, style=MUTED)
+            table.add_row(body)
+        if not state.alerts:
+            table.add_row(Text(f"No {profile.label.lower()} alerts yet. All sources remain under local monitoring.", style=SUCCESS))
+    else:
+        table.add_column("#", justify="right", min_width=3, max_width=5, style=ACCENT, no_wrap=True)
+        table.add_column("Severity", min_width=8, max_width=10, no_wrap=True)
+        table.add_column("Source", min_width=10, ratio=2, overflow="fold")
+        table.add_column("Category", min_width=10, ratio=2, overflow="fold")
+        table.add_column("Alert", min_width=16, ratio=3, overflow="fold")
+        table.add_column("Evidence", min_width=20, ratio=5, overflow="fold")
+        for item in state.alerts[:10]:
+            table.add_row(str(item.sequence), severity_text(item.severity), Text(item.source), Text(item.category), Text(item.title), Text(item.evidence))
+        if not state.alerts:
+            table.add_row("-", "-", "-", "-", Text(f"No {profile.label.lower()} alerts yet", style=SUCCESS), Text("All sources remain under local monitoring", style=MUTED))
     return table
 
 
 def render_multisource(state: MultiSourceState) -> RenderableType:
+    screen_width = shutil.get_terminal_size((80, 24)).columns
     profile = state.profile
     events = state.focused_events
     findings = state.focused_findings
@@ -315,47 +334,30 @@ def render_multisource(state: MultiSourceState) -> RenderableType:
     focused_spikes = sum(1 for item in trend.metrics if item.name in allowed_metrics and item.state == "SPIKE")
     risk = _risk(severity)
 
-    header_text = Text(f"AEGISLOG AI  v{__version__}", style=f"bold {ACCENT}")
+    header_text = Text(f"AEGISLOG  v{__version__}", style=f"bold {ACCENT}")
     header_text.append("\nMULTI-SOURCE REAL-TIME SOC", style="bold white")
     header_text.append(f"\n{sources}", style=ACCENT_SOFT)
     header_text.append(f"\nPROFILE: {profile.label.upper()}", style=INFO)
-    header = Panel(
-        Align.center(header_text),
-        subtitle=f"{profile.description} | local/read-only | Ctrl+C to stop",
-        border_style=ACCENT,
-    )
+    subtitle = "Ctrl+C to stop" if screen_width < _NARROW_BREAKPOINT else f"{profile.description} | local/read-only | Ctrl+C to stop"
+    header = Panel(Align.center(header_text), subtitle=subtitle, border_style=ACCENT)
 
     summary = _summary_table(
         [
             ("Sources", str(len(state.sources)), f"{state.rolling_count:,}/{state.window_size:,} rolling lines", f"bold {ACCENT}"),
             ("Events", f"{state.total_lines:,}", "events ingested", f"bold {ACCENT}"),
             ("Live EPS", f"{state.recent_eps:.2f}/s", f"lifetime {state.lifetime_eps:.2f}/s", f"bold {INFO}"),
-            (
-                "Rate spikes",
-                str(focused_spikes),
-                f"{trend.window_seconds}s profile baseline",
-                f"bold {WARNING}" if focused_spikes else f"bold {SUCCESS}",
-            ),
+            ("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s profile baseline", f"bold {WARNING}" if focused_spikes else f"bold {SUCCESS}"),
             ("Profile findings", str(len(findings)), "focused detections", f"bold {WARNING}" if findings else f"bold {SUCCESS}"),
             ("Incidents", str(len(incidents)), "correlated findings", f"bold {INCIDENT}" if incidents else f"bold {SUCCESS}"),
             ("Anomalies", str(len(anomalies)), "behavioral deviations", f"bold {ANOMALY}" if anomalies else f"bold {SUCCESS}"),
             ("Risk", risk, "current local assessment", f"bold {risk_style(risk)}"),
-        ]
+        ],
+        screen_width,
     )
-    telemetry = _telemetry_table(
-        (
-            ("Events by source", state.source_counts),
-            ("Categories", categories),
-            ("Log levels", levels),
-            ("Services", services),
-        )
-    )
+    telemetry = _telemetry_table((("Events by source", state.source_counts), ("Categories", categories), ("Log levels", levels), ("Services", services)), screen_width)
     status_text = Text()
     status_text.append(f"{state.total_bytes:,} bytes ingested. ", style=ACCENT)
     status_text.append(f"The {profile.label} profile changes terminal emphasis only. ")
-    status_text.append(
-        f"Correlation remains local/read-only and rate baselines use the most recent {state.trend_seconds}s of arrivals.",
-        style=MUTED,
-    )
+    status_text.append(f"Correlation remains local/read-only and rate baselines use the most recent {state.trend_seconds}s of arrivals.", style=MUTED)
     status = Panel(status_text, title="Monitoring status", border_style=SUCCESS)
-    return Group(header, summary, telemetry, render_trends(trend, profile.trend_metrics), _alerts_table(state), status)
+    return Group(header, summary, telemetry, render_trends(trend, profile.trend_metrics), _alerts_table(state, screen_width), status)
