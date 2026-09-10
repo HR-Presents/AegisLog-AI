@@ -8,13 +8,13 @@ def _text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_v21_development_is_recorded_without_claiming_release() -> None:
+def test_v21_release_candidate_is_recorded_without_claiming_publication() -> None:
     changelog = _text("CHANGELOG.md")
     project_status = _text("docs/PROJECT_STATUS.md")
     roadmap = _text("docs/ROADMAP.md")
 
-    assert "### v2.1 development" in changelog
-    assert "No unreleased changes yet." not in changelog
+    assert "## 2.1.0 - 2026-09-10" in changelog
+    assert "No unreleased changes yet." in changelog
     assert "v2.1 development line is active" in project_status
     assert "v2.1 development line is active" in roadmap
     assert "not yet a published release" in project_status
