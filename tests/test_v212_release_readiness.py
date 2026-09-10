@@ -35,6 +35,11 @@ def test_v212_workflow_is_guarded_version_locked_and_smokes_new_ui() -> None:
     assert '--latest' in workflow
     assert '2\\.1\\.2' in workflow
     assert 'MISSION CONTROL' in workflow
+    # Release smoke checks must work at both narrow redirected-console widths
+    # and normal/wide terminals. Validate stable commands, not wide-only panel titles.
+    assert 'ANALYZE LOG' in workflow
+    assert 'LIVE MONITOR' in workflow
+    assert 'HEALTH' in workflow
     assert 'SECURITY METRICS' in workflow
     assert 'ANALYST FOCUS' in workflow
     assert 'RAW EVIDENCE' in workflow

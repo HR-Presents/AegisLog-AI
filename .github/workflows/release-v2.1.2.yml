@@ -120,7 +120,7 @@ jobs:
           $banner = "q" | .\dist\AegisLog.exe start | Out-String
           if ($banner -notmatch "v2\.1\.2") { throw "Mission Control banner did not report v2.1.2" }
           if ($banner -notmatch "MISSION CONTROL") { throw "Mission Control did not render" }
-          if ($banner -notmatch "INVESTIGATE" -or $banner -notmatch "MONITOR" -or $banner -notmatch "SYSTEM") { throw "Mission Control work areas missing" }
+          if ($banner -notmatch "ANALYZE LOG" -or $banner -notmatch "LIVE MONITOR" -or $banner -notmatch "HEALTH") { throw "Mission Control command groups missing" }
           if ($banner -match "AI ANALYST|OLLAMA|REMOTE AI") { throw "Removed AI surface reappeared in Mission Control" }
           $dashboard = .\dist\AegisLog.exe dashboard examples\auth.log | Out-String
           if ($dashboard -notmatch "SECURITY METRICS") { throw "Analyze Log command center metrics did not render" }
