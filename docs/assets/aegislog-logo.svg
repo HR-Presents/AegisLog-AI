@@ -1,12 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
   <title id="title">AegisLog</title>
-  <desc id="desc">AegisLog shield mark and wordmark</desc>
-  <rect width="720" height="180" rx="24" fill="#0b1220"/>
-  <g transform="translate(42 25)">
-    <path d="M65 2 118 22v38c0 35-21 57-53 70C33 117 12 95 12 60V22L65 2Z" fill="#111c30" stroke="#38bdf8" stroke-width="6"/>
-    <path d="M65 25 96 99H82L74 79H55l-8 20H33L65 25Zm0 25-6 16h12l-6-16Z" fill="#e6f6ff"/>
-    <circle cx="65" cy="112" r="5" fill="#38bdf8"/>
+  <desc id="desc">AegisLog angular shield and telemetry signal identity</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#080D14"/><stop offset="1" stop-color="#101927"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#78A8FF"/><stop offset="1" stop-color="#3E7CE8"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="240" rx="28" fill="url(#bg)"/>
+  <g transform="translate(58 36)">
+    <path d="M84 0 154 27v49c0 45-27 76-70 94C41 152 14 121 14 76V27L84 0Z" fill="#0D1623" stroke="#26364C" stroke-width="3"/>
+    <path d="M84 18 137 38v38c0 33-18 57-53 73-35-16-53-40-53-73V38L84 18Z" fill="none" stroke="url(#signal)" stroke-width="5"/>
+    <path d="M48 88h19l9-28 16 56 11-36 8 8h13" fill="none" stroke="#E7EDF6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="124" cy="88" r="5" fill="#4C8DFF"/>
   </g>
-  <text x="190" y="92" fill="#f8fafc" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="700" letter-spacing="2">AEGIS<tspan fill="#38bdf8">LOG</tspan></text>
-  <text x="194" y="126" fill="#94a3b8" font-family="Arial, Helvetica, sans-serif" font-size="17" letter-spacing="4">LOCAL-FIRST SECURITY LOG ANALYSIS</text>
+  <g transform="translate(260 68)">
+    <text x="0" y="62" fill="#E7EDF6" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="72" font-weight="750" letter-spacing="5">AEGIS<tspan fill="#5B93F5">LOG</tspan></text>
+    <text x="4" y="104" fill="#718096" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="17" font-weight="600" letter-spacing="5">DEFENSIVE LOG INVESTIGATION</text>
+    <path d="M4 127H604" stroke="#26364C"/>
+    <text x="4" y="154" fill="#53657E" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="13" font-weight="600" letter-spacing="3">LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC</text>
+  </g>
 </svg>

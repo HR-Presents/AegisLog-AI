@@ -70,7 +70,7 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
         "Analysis Profile",
         "Evidence limitations",
         "LOCAL / READ-ONLY",
-        "REMOTE AI NOT REQUIRED",
+        "DETERMINISTIC ANALYSIS",
         "Print / Save PDF",
     ):
         assert text in html
@@ -86,6 +86,10 @@ def test_html_report_is_self_contained_and_analyst_oriented() -> None:
         assert anchor in html
 
     assert 'class="telemetry-grid"' in html
+    assert '<svg viewBox="0 0 46 52"' in html
+    assert "#4C8DFF" in html
+    assert 'content="dark"' in html
+    assert "REMOTE AI" not in html
     assert "@media print" in html
     assert "break-inside:avoid" in html
     assert "window.print()" in html

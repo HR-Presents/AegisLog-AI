@@ -2,20 +2,21 @@ from __future__ import annotations
 
 from rich.text import Text
 
-# Restrained terminal palette. Navigation stays neutral; color is reserved for
-# selection, state, and security severity so it carries meaning instead of
-# becoming decoration.
-ACCENT = "#5fb3a6"
-ACCENT_SOFT = "#3f7f78"
-MUTED = "#8b949e"
-SUCCESS = "#56a36c"
-INFO = "#6f93b5"
-WARNING = "#d4a72c"
-HIGH = "#d96767"
-CRITICAL = "bold #ff6b6b"
-INCIDENT = "#8fa6c9"
-ANOMALY = "#8497b0"
-NEUTRAL = "#e6edf3"
+# AegisLog visual system: midnight surfaces, cool steel text and one controlled
+# blue identity accent. Semantic colors are reserved for actual system state.
+ACCENT = "#4C8DFF"
+ACCENT_SOFT = "#315A9E"
+MUTED = "#718096"
+SUCCESS = "#4FAE86"
+INFO = "#78A6D8"
+WARNING = "#D6A85F"
+HIGH = "#D96B72"
+CRITICAL = "bold #F07178"
+INCIDENT = "#8FA7C7"
+ANOMALY = "#7F91AA"
+NEUTRAL = "#E7EDF6"
+DIM = "#46556B"
+SURFACE = "#101722"
 
 SEVERITY_STYLES = {
     "CRITICAL": CRITICAL,
