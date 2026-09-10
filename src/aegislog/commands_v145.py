@@ -39,17 +39,17 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
         return brand
 
     grid = Table.grid(expand=True, padding=(0, 2))
-    grid.add_column(width=12, no_wrap=True)
+    grid.add_column(width=16, no_wrap=True)
     grid.add_column(ratio=1)
-    grid.add_column(width=22, justify="right", no_wrap=True)
+    grid.add_column(width=24, justify="right", no_wrap=True)
 
-    mark = Text("    /\\\n   /  \\\n  /_/\\_\\\n    \\/", style=f"bold {ACCENT}")
+    mark = Text("    /\\\n   /  \\\n  |---/\\_/\\---|\n    \\____/", style=f"bold {ACCENT}")
     identity = Text()
     identity.append("A E G I S L O G\n", style=f"bold {NEUTRAL}")
     identity.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {ACCENT}")
     identity.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
     status = Text()
-    status.append(f"v{__version__}\n", style=MUTED)
+    status.append(f"VERSION v{__version__}\n", style=MUTED)
     status.append("+ SYSTEM READY", style=f"bold {SUCCESS}")
     grid.add_row(mark, identity, status)
     return grid
@@ -73,7 +73,7 @@ def _operation_header(
     heading.append("  //  ", style=MUTED)
     heading.append(title.upper(), style=f"bold {accent}")
     context = Text(subtitle, style=NEUTRAL, overflow="fold")
-    posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+    posture = Text("LOCAL / READ-ONLY  /  DETERMINISTIC", style=MUTED)
     return Group(heading, context, _rule(width), posture)
 
 
@@ -161,6 +161,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
     if width < _NARROW_BREAKPOINT:
         return Group(
             Text("MISSION CONTROL", style=f"bold {ACCENT}"),
+            Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
             _compact_menu(investigation + monitoring + system),
         )
 
@@ -169,10 +170,19 @@ def _menu(screen_width: int | None = None) -> RenderableType:
         top.add_column(ratio=1)
         top.add_column(ratio=1)
         top.add_row(_menu_table(investigation, "INV"), _menu_table(monitoring, "MON"))
-        return Group(Text("MISSION CONTROL", style=f"bold {ACCENT}"), Text(""), top, Text(""), _menu_table(system, "SYS"))
+        return Group(
+            Text("MISSION CONTROL", style=f"bold {ACCENT}"),
+            Text("INVESTIGATION                         MONITORING", style=MUTED),
+            Text(""),
+            top,
+            Text(""),
+            Text("SYSTEM", style=MUTED),
+            _menu_table(system, "SYS"),
+        )
 
     return Group(
         Text("MISSION CONTROL", style=f"bold {ACCENT}"),
+        Text("INVESTIGATION / MONITORING / SYSTEM", style=MUTED),
         Text(""),
         _menu_table(investigation + monitoring + system, "KEY"),
     )
@@ -181,12 +191,12 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
     footer = Text()
-    footer.append("01-09", style=f"bold {ACCENT}")
-    footer.append(" select", style=MUTED)
+    footer.append("01-09 SELECT", style=f"bold {ACCENT}")
+    footer.append("    Q EXIT", style=MUTED)
     if width >= 44:
-        footer.append("    C command mode    Q quit", style=MUTED)
+        footer.append("    C COMMAND MODE", style=MUTED)
     if width >= 86:
-        footer.append("    Ctrl+C stops live views", style=MUTED)
+        footer.append("    CTRL+C STOPS LIVE VIEWS", style=MUTED)
     return footer
 
 
