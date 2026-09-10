@@ -4,6 +4,15 @@
 
 - No unreleased changes yet.
 
+## 2.0.0 - 2026-09-10
+
+- Rebuilt Mission Control into a responsive, full-width terminal workspace with balanced investigation and monitoring panels on wide terminals and clean single-column fallbacks on narrow terminals.
+- Reworked startup branding, hierarchy, status placement, menu grouping, rules, footer hints, and shared input/operation chrome while preserving the terminal-first product identity.
+- Removed the duplicate fake `SELECT >` prompt so the shell presents one authoritative command input path.
+- Added regression coverage for wide-screen utilization, narrow-screen fit, ASCII-safe Windows rendering, and prompt/footer behavior across common terminal widths.
+- Preserved the v1.9 streaming, authentication, timestamp-window, parser-accuracy, and synthetic detection-regression hardening without changing detection semantics in this UI-focused release.
+- Kept AI Analyst removed from the public product surface; deterministic local detection, correlation, and read-only investigation remain authoritative.
+
 ## 1.9.0 - 2026-09-10
 
 - Made streaming authentication correlation independent of chunk boundaries by preserving one bounded correlation state across the full stream.
