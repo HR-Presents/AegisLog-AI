@@ -30,7 +30,7 @@ def _sample_lines() -> list[str]:
 
 def test_mission_control_keeps_shield_a_and_existing_commands() -> None:
     output = _plain(_home(120), width=120)
-    assert "AEGISLOG" in output
+    assert "A E G I S L O G" in output
     assert "/A\\" in output or "/\\" in output
     assert "MISSION CONTROL" in output
     assert "INVESTIGATE" in output
@@ -53,7 +53,7 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=120), width=120)
 
-    assert "INVESTIGATION CONTEXT" in output
+    assert "INVESTIGATION SUMMARY" in output
     assert "SECURITY METRICS" in output
     assert "EVENTS" in output and "6" in output
     assert "SECURITY DISTRIBUTION" in output
