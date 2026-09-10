@@ -20,8 +20,10 @@ def test_mission_control_uses_front_falcon_identity() -> None:
     assert "INVESTIGATE" in output
     assert "MONITOR" in output
     assert "|---/\\_/\\---|" not in output
-    assert "\\\\          //" in output
-    assert "'.__.'" in output
+    assert "__/\\__" in output
+    assert "\\__/" in output
+    assert "UNDERSTAND" not in output
+    assert "STAY AHEAD" not in output
 
 
 def test_compact_analyze_does_not_dump_deep_tables() -> None:
