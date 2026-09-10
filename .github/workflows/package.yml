@@ -61,7 +61,7 @@ jobs:
         run: |
           set -eux
           test ! -e customer-dist/AegisLog-AI-Customer/.aegislog-venv
-          test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-1.9.0-py3-none-any.whl
+          test -f customer-dist/AegisLog-AI-Customer/package/aegislog_ai-2.0.0-py3-none-any.whl
           test -f customer-dist/AegisLog-AI-Customer/RUNTIME_LOCK.txt
           test "$(find customer-dist/AegisLog-AI-Customer/vendor -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 8
           test -f customer-dist/AegisLog-AI-Customer/START_AEGISLOG.bat
@@ -72,9 +72,9 @@ jobs:
       - name: Archive customer bundle
         run: |
           cd customer-dist
-          zip -r ../dist/AegisLog-AI-v1.9.0-Customer-Bundle.zip AegisLog-AI-Customer
+          zip -r ../dist/AegisLog-AI-v2.0.0-Customer-Bundle.zip AegisLog-AI-Customer
           cd ../dist
-          sha256sum AegisLog-AI-v1.9.0-Customer-Bundle.zip > AegisLog-AI-v1.9.0-Customer-Bundle.zip.sha256
+          sha256sum AegisLog-AI-v2.0.0-Customer-Bundle.zip > AegisLog-AI-v2.0.0-Customer-Bundle.zip.sha256
 
       - name: Attest tagged package artifacts
         if: startsWith(github.ref, 'refs/tags/v')
@@ -82,7 +82,7 @@ jobs:
         with:
           subject-path: |
             dist/aegislog_ai-*
-            dist/AegisLog-AI-v1.9.0-Customer-Bundle.zip
+            dist/AegisLog-AI-v2.0.0-Customer-Bundle.zip
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -95,8 +95,8 @@ jobs:
         with:
           name: customer-bundle
           path: |
-            dist/AegisLog-AI-v1.9.0-Customer-Bundle.zip
-            dist/AegisLog-AI-v1.9.0-Customer-Bundle.zip.sha256
+            dist/AegisLog-AI-v2.0.0-Customer-Bundle.zip
+            dist/AegisLog-AI-v2.0.0-Customer-Bundle.zip.sha256
 
   verify-windows-customer:
     runs-on: windows-2025
