@@ -2,33 +2,35 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_TARGET = "9eefb18af494d2488f0795eb7326470f642058f2"
 
 
 def _text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_v21_release_candidate_is_recorded_without_claiming_publication() -> None:
+def test_v21_release_is_recorded_as_published_stable() -> None:
     changelog = _text("CHANGELOG.md")
     project_status = _text("docs/PROJECT_STATUS.md")
     roadmap = _text("docs/ROADMAP.md")
 
     assert "## 2.1.0 - 2026-09-10" in changelog
-    assert "No unreleased changes yet." in changelog
-    assert "v2.1 development line is active" in project_status
-    assert "v2.1 development line is active" in roadmap
-    assert "not yet a published release" in project_status
-    assert "v2.1.0 has not yet been published" in roadmap
+    assert "current published stable release is **v2.1.0**" in project_status
+    assert "Published stable:** v2.1.0" in project_status
+    assert "currently released as **v2.1.0**" in roadmap
+    assert "v2.1.0 — current stable release" in roadmap
+    assert RELEASE_TARGET in project_status
+    assert RELEASE_TARGET in roadmap
 
 
-def test_current_published_stable_remains_v201_until_release() -> None:
+def test_v21_docs_no_longer_claim_release_is_pending() -> None:
     project_status = _text("docs/PROJECT_STATUS.md")
     roadmap = _text("docs/ROADMAP.md")
 
-    assert "current published stable release is **v2.0.1**" in project_status
-    assert "currently released as **v2.0.1**" in roadmap
-    assert "Published stable:** v2.1.0" not in project_status
-    assert "currently released as **v2.1.0**" not in roadmap
+    assert "not yet a published release" not in project_status
+    assert "v2.1.0 has not yet been published" not in roadmap
+    assert "current published stable release is **v2.0.1**" not in project_status
+    assert "currently released as **v2.0.1**" not in roadmap
 
 
 def test_v21_docs_keep_evidence_claims_scoped() -> None:
@@ -44,16 +46,12 @@ def test_v21_docs_keep_evidence_claims_scoped() -> None:
     assert "must not be fabricated as a release checkbox" in roadmap
 
 
-def test_v21_release_gate_names_all_required_checks() -> None:
+def test_v21_docs_record_release_verification_and_artifacts() -> None:
+    project_status = _text("docs/PROJECT_STATUS.md")
     roadmap = _text("docs/ROADMAP.md")
-    required = (
-        "CI",
-        "Security checks",
-        "Package build",
-        "Windows single executable",
-        "Runtime lock audit",
-        "Validation toolchain lock audit",
-        "Build toolchain lock audit",
-    )
-    for check in required:
-        assert check in roadmap
+
+    assert "guarded v2.1.0 release workflow completed successfully" in project_status
+    assert "AegisLog.exe.sha256" in project_status
+    assert "Passed the required exact-head CI" in roadmap
+    assert "Passed the guarded v2.1.0 release workflow" in roadmap
+    assert "matching SHA-256 checksum" in roadmap
