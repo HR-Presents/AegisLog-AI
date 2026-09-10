@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
 import time
 from collections import Counter, deque
 from dataclasses import dataclass, field
@@ -25,6 +26,7 @@ from .watch_profiles import WatchProfile, filter_events, filter_findings, get_pr
 _PREFIX_BYTES = 128
 _MAX_READ_BYTES = 4_000_000
 _MAX_PENDING_LINE_BYTES = 1_000_000
+_NARROW_BREAKPOINT = 72
 
 
 @dataclass(frozen=True)
@@ -66,7 +68,6 @@ def _bounded_complete_lines(
 ) -> tuple[list[str], bytes, bool, int]:
     """Return only newline-complete lines while bounding a partial line by bytes."""
     lines: list[str] = []
-
     if pending_truncated:
         newline = data.find(b"\n")
         if newline < 0:
@@ -76,7 +77,6 @@ def _bounded_complete_lines(
         data = data[newline + 1 :]
         pending = b""
         pending_truncated = False
-
     buffer = pending + data
     while True:
         newline = buffer.find(b"\n")
@@ -89,7 +89,6 @@ def _bounded_complete_lines(
             dropped_bytes += max(0, len(raw_line) - len(keep) - 1)
             raw_line = keep + b" [TRUNCATED]\n"
         lines.append(raw_line.decode("utf-8", errors="replace"))
-
     if len(buffer) > _MAX_PENDING_LINE_BYTES:
         dropped_bytes += len(buffer) - _MAX_PENDING_LINE_BYTES
         return lines, buffer[:_MAX_PENDING_LINE_BYTES], True, dropped_bytes
@@ -169,10 +168,7 @@ class RealtimeState:
         self._expire_seen(stamp)
         for finding in self._findings_cache:
             key = self._finding_key(finding)
-            self._recent_findings = deque(
-                (item for item in self._recent_findings if self._finding_key(item) != key),
-                maxlen=12,
-            )
+            self._recent_findings = deque((item for item in self._recent_findings if self._finding_key(item) != key), maxlen=12)
             self._recent_findings.appendleft(finding)
             self._seen_fingerprints[key] = stamp
         return len(lines)
@@ -253,66 +249,81 @@ def _risk(severities: Counter[str]) -> str:
     return "CLEAR"
 
 
-def _summary_table(rows: list[tuple[str, str, str]]) -> Table:
-    table = Table(
-        title="Live summary",
-        title_style=f"bold {ACCENT}",
-        expand=True,
-        border_style=ACCENT_SOFT,
-    )
-    table.add_column("Metric", min_width=14, ratio=2)
-    table.add_column("Value", min_width=10, ratio=1, justify="right", style=ACCENT)
-    table.add_column("Context", min_width=18, ratio=4, overflow="fold")
-    for metric, value, context in rows:
-        table.add_row(metric, value, context)
+def _summary_table(rows: list[tuple[str, str, str]], screen_width: int) -> Table:
+    compact = screen_width < _NARROW_BREAKPOINT
+    table = Table(title="Live summary", title_style=f"bold {ACCENT}", expand=True, border_style=ACCENT_SOFT)
+    if compact:
+        table.add_column("Metric", min_width=8, ratio=2, overflow="fold")
+        table.add_column("Value / Context", min_width=12, ratio=4, overflow="fold")
+        for metric, value, context in rows:
+            body = Text(value, style=ACCENT)
+            body.append("\n")
+            body.append(context, style=MUTED)
+            table.add_row(metric, body)
+    else:
+        table.add_column("Metric", min_width=14, ratio=2)
+        table.add_column("Value", min_width=10, ratio=1, justify="right", style=ACCENT)
+        table.add_column("Context", min_width=18, ratio=4, overflow="fold")
+        for metric, value, context in rows:
+            table.add_row(metric, value, context)
     return table
 
 
-def _telemetry_table(sections: list[tuple[str, Counter[str]]], limit: int = 6) -> Table:
-    table = Table(
-        title="Profile telemetry",
-        title_style=f"bold {ACCENT}",
-        expand=True,
-        border_style=ACCENT_SOFT,
-    )
-    table.add_column("Dimension", min_width=12, ratio=2)
-    table.add_column("Name", min_width=16, ratio=4, overflow="fold")
-    table.add_column("Count", min_width=6, max_width=8, justify="right", style=ACCENT)
-    for dimension, values in sections:
-        if values:
-            for name, count in values.most_common(limit):
-                table.add_row(dimension, str(name), str(count))
-                dimension = ""
-        else:
-            table.add_row(dimension, Text("None", style=MUTED), "0")
+def _telemetry_table(sections: list[tuple[str, Counter[str]]], screen_width: int, limit: int = 6) -> Table:
+    compact = screen_width < _NARROW_BREAKPOINT
+    table = Table(title="Profile telemetry", title_style=f"bold {ACCENT}", expand=True, border_style=ACCENT_SOFT)
+    if compact:
+        table.add_column("Telemetry", min_width=10, ratio=1, overflow="fold")
+        table.add_column("Count", min_width=5, max_width=7, justify="right", style=ACCENT)
+        for dimension, values in sections:
+            if values:
+                for name, count in values.most_common(limit):
+                    table.add_row(Text(f"{dimension}: {name}"), str(count))
+            else:
+                table.add_row(Text(f"{dimension}: None", style=MUTED), "0")
+    else:
+        table.add_column("Dimension", min_width=12, ratio=2)
+        table.add_column("Name", min_width=16, ratio=4, overflow="fold")
+        table.add_column("Count", min_width=6, max_width=8, justify="right", style=ACCENT)
+        for dimension, values in sections:
+            if values:
+                for name, count in values.most_common(limit):
+                    table.add_row(dimension, str(name), str(count))
+                    dimension = ""
+            else:
+                table.add_row(dimension, Text("None", style=MUTED), "0")
     return table
 
 
-def _recent_table(findings: list[Finding], profile: WatchProfile) -> Table:
-    table = Table(
-        title=f"Recent findings - {profile.label}",
-        title_style=f"bold {ACCENT}",
-        expand=True,
-        show_lines=True,
-        border_style=ACCENT_SOFT,
-    )
-    table.add_column("Severity", min_width=8, max_width=10, no_wrap=True)
-    table.add_column("Category", min_width=10, ratio=2, overflow="fold")
-    table.add_column("Finding", min_width=16, ratio=3, overflow="fold")
-    table.add_column("Evidence", min_width=20, ratio=5, overflow="fold")
-    for finding in findings[:8]:
-        table.add_row(severity_text(finding.severity), Text(finding.category), Text(finding.title), Text(finding.evidence))
-    if not findings:
-        table.add_row(
-            "-",
-            "-",
-            Text(f"No {profile.label.lower()} profile matches yet", style=SUCCESS),
-            Text("Waiting for matching activity; all incoming lines are still analyzed locally", style=MUTED),
-        )
+def _recent_table(findings: list[Finding], profile: WatchProfile, screen_width: int) -> Table:
+    compact = screen_width < _NARROW_BREAKPOINT
+    table = Table(title=f"Recent findings - {profile.label}", title_style=f"bold {ACCENT}", expand=True, show_lines=True, border_style=ACCENT_SOFT)
+    if compact:
+        table.add_column("Finding", min_width=10, ratio=1, overflow="fold")
+        for finding in findings[:8]:
+            body = Text()
+            body.append_text(severity_text(finding.severity))
+            body.append(f"  {finding.category}\n", style=MUTED)
+            body.append(finding.title, style="bold white")
+            body.append("\n")
+            body.append(finding.evidence, style=MUTED)
+            table.add_row(body)
+        if not findings:
+            table.add_row(Text(f"No {profile.label.lower()} profile matches yet. Waiting for matching activity.", style=SUCCESS))
+    else:
+        table.add_column("Severity", min_width=8, max_width=10, no_wrap=True)
+        table.add_column("Category", min_width=10, ratio=2, overflow="fold")
+        table.add_column("Finding", min_width=16, ratio=3, overflow="fold")
+        table.add_column("Evidence", min_width=20, ratio=5, overflow="fold")
+        for finding in findings[:8]:
+            table.add_row(severity_text(finding.severity), Text(finding.category), Text(finding.title), Text(finding.evidence))
+        if not findings:
+            table.add_row("-", "-", Text(f"No {profile.label.lower()} profile matches yet", style=SUCCESS), Text("Waiting for matching activity; all incoming lines are still analyzed locally", style=MUTED))
     return table
 
 
 def render_realtime(state: RealtimeState) -> RenderableType:
+    screen_width = shutil.get_terminal_size((80, 24)).columns
     profile = state.profile
     events = state.focused_events
     findings = state.focused_findings
@@ -337,38 +348,26 @@ def render_realtime(state: RealtimeState) -> RenderableType:
         activity = f"last activity {activity_age:.0f}s ago"
 
     header_text = Text(justify="center")
-    header_text.append("AEGISLOG AI", style=f"bold {ACCENT}")
+    header_text.append("AEGISLOG", style=f"bold {ACCENT}")
     header_text.append(f"  v{__version__}\n", style=MUTED)
     header_text.append("REAL-TIME DEFENSIVE MONITOR\n", style="bold white")
     header_text.append(state.source, style=ACCENT_SOFT)
     header_text.append("\nPROFILE: ", style=MUTED)
     header_text.append(profile.label.upper(), style=f"bold {ACCENT}")
-    header = Panel(
-        Align.center(header_text),
-        border_style=ACCENT,
-        subtitle=f"{profile.description} | Ctrl+C to stop",
-        subtitle_align="right",
-    )
+    subtitle = "Ctrl+C to stop" if screen_width < _NARROW_BREAKPOINT else f"{profile.description} | Ctrl+C to stop"
+    header = Panel(Align.center(header_text), border_style=ACCENT, subtitle=subtitle, subtitle_align="right")
 
     risk = _risk(severities)
-    summary = _summary_table(
-        [
-            ("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
-            ("Average rate", f"{state.lines_per_second:.1f}/s", activity),
-            ("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline"),
-            ("Profile findings", str(len(findings)), f"{critical} critical | {high} high | {medium} medium"),
-            ("Incidents", str(len(incidents)), "correlated findings"),
-            ("Anomalies", str(len(anomalies)), "event-level anomaly score"),
-            ("Risk", risk, "current profile-focused risk state"),
-        ]
-    )
-    telemetry = _telemetry_table(
-        [
-            ("Categories", categories),
-            ("Log levels", levels),
-            ("Services", services),
-        ]
-    )
+    summary = _summary_table([
+        ("Lines received", f"{state.total_lines:,}", f"window {state.rolling_count:,}/{state.window_size:,}"),
+        ("Average rate", f"{state.lines_per_second:.1f}/s", activity),
+        ("Rate spikes", str(focused_spikes), f"{trend.window_seconds}s rolling baseline"),
+        ("Profile findings", str(len(findings)), f"{critical} critical | {high} high | {medium} medium"),
+        ("Incidents", str(len(incidents)), "correlated findings"),
+        ("Anomalies", str(len(anomalies)), "event-level anomaly score"),
+        ("Risk", risk, "current profile-focused risk state"),
+    ], screen_width)
+    telemetry = _telemetry_table([("Categories", categories), ("Log levels", levels), ("Services", services)], screen_width)
     if state.total_lines == 0:
         mode_note = "Waiting for NEW lines appended after monitoring started. Existing file contents are intentionally skipped unless --from-start is used. "
         status_style = "yellow"
@@ -384,33 +383,15 @@ def render_realtime(state: RealtimeState) -> RenderableType:
         style="white",
     )
     status = Panel(status_text, title="Live status", title_align="left", border_style=status_style)
-    return Group(
-        header,
-        summary,
-        telemetry,
-        render_trends(trend, profile.trend_metrics),
-        _recent_table(list(state.recent_findings), profile),
-        status,
-    )
+    return Group(header, summary, telemetry, render_trends(trend, profile.trend_metrics), _recent_table(list(state.recent_findings), profile, screen_width), status)
 
 
 def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], FileCursor]:
-    """Read bounded appended bytes, retaining partial lines and detecting source resets/loss."""
     try:
         identity = _file_identity(path)
         size = path.stat().st_size
     except FileNotFoundError:
-        return [], FileCursor(
-            cursor.offset,
-            cursor.identity,
-            cursor.prefix_digest,
-            cursor.pending,
-            cursor.pending_truncated,
-            cursor.dropped_bytes,
-            False,
-            "source_missing",
-        )
-
+        return [], FileCursor(cursor.offset, cursor.identity, cursor.prefix_digest, cursor.pending, cursor.pending_truncated, cursor.dropped_bytes, False, "source_missing")
     offset = cursor.offset
     pending = cursor.pending
     pending_truncated = cursor.pending_truncated
@@ -418,47 +399,21 @@ def read_new_lines_cursor(path: Path, cursor: FileCursor) -> tuple[list[str], Fi
     current_prefix = _prefix_digest(path, min(cursor.offset, size))
     replaced = identity != cursor.identity or (cursor.prefix_digest and current_prefix != cursor.prefix_digest)
     if not cursor.source_available:
-        offset = 0
-        pending = b""
-        pending_truncated = False
-        reset_reason = "source_recovered"
+        offset = 0; pending = b""; pending_truncated = False; reset_reason = "source_recovered"
     elif replaced:
-        offset = 0
-        pending = b""
-        pending_truncated = False
-        reset_reason = "source_replaced"
+        offset = 0; pending = b""; pending_truncated = False; reset_reason = "source_replaced"
     elif size < offset:
-        offset = 0
-        pending = b""
-        pending_truncated = False
-        reset_reason = "source_truncated"
-
+        offset = 0; pending = b""; pending_truncated = False; reset_reason = "source_truncated"
     with path.open("rb") as handle:
         handle.seek(offset, os.SEEK_SET)
         data = handle.read(_MAX_READ_BYTES)
         new_offset = handle.tell()
-
-    lines, pending, pending_truncated, dropped_bytes = _bounded_complete_lines(
-        data,
-        pending,
-        pending_truncated,
-        cursor.dropped_bytes,
-    )
+    lines, pending, pending_truncated, dropped_bytes = _bounded_complete_lines(data, pending, pending_truncated, cursor.dropped_bytes)
     new_prefix = _prefix_digest(path, new_offset)
-    return lines, FileCursor(
-        new_offset,
-        identity,
-        new_prefix,
-        pending,
-        pending_truncated,
-        dropped_bytes,
-        True,
-        reset_reason,
-    )
+    return lines, FileCursor(new_offset, identity, new_prefix, pending, pending_truncated, dropped_bytes, True, reset_reason)
 
 
 def read_new_lines(path: Path, offset: int) -> tuple[list[str], int]:
-    """Backward-compatible appended-line reader; incomplete trailing data is retried next call."""
     cursor = FileCursor(offset, _file_identity(path), _prefix_digest(path, offset))
     lines, cursor = read_new_lines_cursor(path, cursor)
     if cursor.pending and not cursor.pending_truncated:
