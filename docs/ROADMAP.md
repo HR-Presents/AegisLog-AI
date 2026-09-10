@@ -1,6 +1,6 @@
 # Roadmap
 
-AegisLog is currently released as **v2.1.1**.
+AegisLog is currently released as **v2.1.3**.
 
 ## Completed foundation
 
@@ -8,64 +8,41 @@ The V0.1–V2.0 foundation delivered the terminal CLI, deterministic detections,
 
 ## Current stable line — v2.1.x
 
-### v2.1.1 — current stable release
+### v2.1.3 — current published release
 
-v2.1.1 is a focused Windows terminal UI polish patch built from real rendered output while preserving the v2.1 reliability and evidence hardening.
+v2.1.3 shipped a Windows presentation update while preserving the v2.1 correctness and evidence foundations.
 
-- Bounded Mission Control on wide Windows terminals instead of stretching across all available columns.
-- Reworked investigation and monitoring actions into separate operator work areas with clearer hierarchy and shorter descriptions.
-- Compressed System actions into a compact command row and simplified the navigation footer.
-- Preserved ASCII/cp1252-safe output, version/readiness status, the single authoritative prompt, and the public removal of AI Analyst.
-- Preserved detection, parsing, streaming, authentication, incident correlation, monitoring semantics, evidence handling, and read-only security behavior.
-- Passed the required exact-head CI, security, package-build, Windows executable, and dependency-lock checks before release preparation was merged.
-- Passed the guarded v2.1.1 release workflow on target commit `31dbb523bd79959738b3a5e2a7ffc0ec6f5ceea2` and published `AegisLog.exe` with its matching SHA-256 checksum.
+- Falcon/compact-Analyze presentation work was released without changing detection, parsing, streaming, authentication, incident-correlation, monitoring, evidence, or read-only security semantics.
+- The guarded v2.1.3 workflow published `AegisLog.exe` and its matching SHA-256 checksum from target commit `c01247b34a2dd54c863dd142c618f03e184af8f8`.
+- The released Windows EXE SHA-256 is `1ddda99e03fd36ba1816b1567a28b8cc23d410583f34771c1287f9e3c1a28155`.
+- The executable remains unsigned.
+- Synthetic benchmark results remain regression evidence only.
 
-### v2.1.0 — reliability and evidence foundation
+### Visual acceptance lesson
 
-v2.1.0 strengthened reliability and evaluation evidence without intentionally changing detection, parsing, streaming, authentication, monitoring, or read-only security semantics.
+Post-release review of v2.1.3 in a real maximized Windows Terminal showed that the Mission Control composition did **not** meet the desired visual standard. A subsequent unreleased UI experiment also failed review. Future presentation work should not be called visually accepted solely because automated rendering, package, or Windows build checks pass.
 
-- Added deterministic fuzz-style regressions around malformed input, randomized streaming chunk boundaries, authentication-event ordering, and bounded authentication-source floods.
-- Strengthened external detection evidence to schema v2 with explicit provenance fields, source types, collection period, sampling method, known exclusions, class balance, category counts, per-category metrics, and confidence intervals.
-- Added a broader representative synthetic benchmark corpus with benign controls, near-miss cases, authentication variants, and category coverage across audit, error, network, privilege, service, and web detections.
-- Kept the larger benchmark explicitly labeled as synthetic regression evidence rather than real-world effectiveness proof.
+No new UI release should be prepared unless there is a deliberate product decision to resume that work and a real-Windows capture has been reviewed first.
 
-Independent real-world evaluation remains valuable but must use genuinely authorized, sanitized, independently labeled external data. It must not be fabricated as a release checkbox or implied by the synthetic regression results.
+### v2.1.0–v2.1.2 — reliability and terminal hardening
 
-## Previous stable line — v2.0.x
-
-### v2.0.1 — public-surface consistency patch
-
-v2.0.1 kept the v2.0.0 Mission Control redesign and v1.9 correctness hardening unchanged while aligning the supported CLI, customer bundle, README examples, and current-status documentation with the AegisLog product identity.
-
-### v2.0.0 — terminal experience foundation
-
-v2.0.0 focused on the operator experience while preserving the deterministic investigation engine hardened in v1.9.0.
-
-- Rebuilt Mission Control as a responsive full-width workspace.
-- Added balanced Investigation and Monitoring areas for wide terminals with clear narrow/medium fallbacks.
-- Moved version and readiness status into the header hierarchy.
-- Removed the duplicate fake `SELECT >` prompt so the real shell prompt is authoritative.
-- Added explicit layout, Windows rendering, and ASCII-safety regression coverage.
-- Preserved v1.9 streaming-correlation, authentication-window, parser, IPv4/IPv6, bounded-state, and synthetic regression hardening without changing detection semantics.
-- Kept AI Analyst and remote-provider workflows out of the supported public product surface.
-- Published the standalone Windows `AegisLog.exe` and matching SHA-256 checksum through the guarded v2.0 release workflows.
+The earlier v2.1 releases strengthened deterministic fuzz regressions, external-evidence schema quality, representative synthetic benchmark coverage, Windows terminal bounds, and release engineering without intentionally rewriting core detection semantics.
 
 ## Near-term maintenance priorities
 
-The next work should be driven by operator feedback, measurable reliability needs, and evidence rather than version-number pressure.
-
 ### Reliability and correctness
 
-- Expand real-world, independently labeled evaluation beyond the maintained synthetic regression corpus when suitable authorized data is available.
+- Expand real-world, independently labeled evaluation when suitable authorized data is available.
 - Continue parser/correlation fuzz and property-style regression coverage where concrete edge cases are identified.
 - Keep streaming results independent of chunk boundaries and maintain bounded state under long-running workloads.
 - Profile performance before making optimizations that could alter detection semantics.
 
 ### Analyst workflow quality
 
-- Improve investigation readability, evidence navigation, and report ergonomics where verified user feedback identifies friction.
+- Improve evidence navigation and report ergonomics only where verified operator feedback identifies friction.
 - Keep incident priorities and explanations evidence-led, conservative, and explicitly non-attributive.
-- Preserve responsive terminal behavior across Windows, Linux, and macOS terminal environments.
+- Preserve responsive terminal behavior across supported environments.
+- Treat real terminal captures as the final visual-acceptance evidence for presentation changes.
 
 ### Native telemetry quality
 
