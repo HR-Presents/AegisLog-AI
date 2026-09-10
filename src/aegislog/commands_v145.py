@@ -44,7 +44,6 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
 
     left1 = "  /\\    A E G I S L O G"
     left2 = " /  \\   DEFENSIVE LOG INVESTIGATION"
-    left3 = "/____\\  |---/\\_/\\---|  LOCAL-FIRST / READ-ONLY / DETERMINISTIC"
     right1 = f"VERSION v{__version__}"
     right2 = "+ SYSTEM READY"
 
@@ -56,8 +55,9 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
     line2.append(" " * max(2, width - len(left2) - len(right2)), style=MUTED)
     line2.append(right2, style=f"bold {SUCCESS}")
 
-    line3 = Text(left3, style=MUTED, overflow="fold")
-    return Group(line1, line2, line3)
+    mark = Text("/____\\  |---/\\_/\\---|", style=f"bold {ACCENT}")
+    posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
+    return Group(line1, line2, mark, posture)
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
