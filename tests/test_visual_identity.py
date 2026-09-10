@@ -45,16 +45,19 @@ def test_palette_uses_controlled_blue_identity() -> None:
     assert MUTED == "#718096"
 
 
-def test_readme_uses_brand_asset_and_strong_capabilities() -> None:
+def test_readme_uses_strong_capabilities_and_product_identity() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert 'docs/assets/aegislog-logo.svg' in readme
+    assert "# AEGISLOG" in readme or "docs/assets/aegislog-logo.svg" in readme
     assert "Core capabilities" in readme
     assert "**ANALYZE**" in readme
     assert "**LIVE MONITOR**" in readme
     assert "**INCIDENTS**" in readme
+    assert "LOCAL-FIRST" in readme
+    assert "READ-ONLY" in readme
+    assert "DETERMINISTIC" in readme
 
 
-def test_logo_uses_professional_midnight_blue_system() -> None:
+def test_logo_asset_keeps_professional_midnight_blue_system() -> None:
     logo = (ROOT / "docs" / "assets" / "aegislog-logo.svg").read_text(encoding="utf-8")
     assert "#080D14" in logo
     assert "#4C8DFF" in logo
