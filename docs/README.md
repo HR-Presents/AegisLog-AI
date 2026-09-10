@@ -44,7 +44,7 @@ Older AI/provider documents may remain in repository history for traceability, b
 - [Community reviews](COMMUNITY_REVIEWS.md) — transparent public feedback policy
 - [Support](../SUPPORT.md) — choosing the right help or reporting path
 
-Public screenshots should come from a verified build and sanitized or synthetic telemetry. The project intentionally avoids publishing mock product screenshots as if they were real captures.
+Public screenshots should come from a verified build and sanitized or synthetic telemetry. Automated rendering checks do not, by themselves, establish visual acceptance on Windows.
 
 ## Engineering
 
@@ -59,16 +59,18 @@ Public screenshots should come from a verified build and sanitized or synthetic 
 - [Versioning](VERSIONING.md)
 - [Maintainer guide](MAINTAINERS.md)
 - [Release checklist](RELEASE_CHECKLIST.md)
-- [External evaluation runbook](EXTERNAL_EVALUATION.md) — prepare authorized, independently labeled evidence without overstating results
+- [External evaluation runbook](EXTERNAL_EVALUATION.md)
 
 ## Release status
 
-- **Published stable:** [v2.1.1 release notes](RELEASE_V2.1.1.md)
+- **Published stable:** [v2.1.3 release notes](RELEASE_V2.1.3.md)
+- **Release target commit:** `c01247b34a2dd54c863dd142c618f03e184af8f8`
+- **Windows EXE SHA-256:** `1ddda99e03fd36ba1816b1567a28b8cc23d410583f34771c1287f9e3c1a28155`
 - **Release history:** see the repository [CHANGELOG](../CHANGELOG.md) and [GitHub Releases](https://github.com/HR-Presents/AegisLog-AI/releases)
 - [Upgrading](UPGRADING.md)
 - [Latest GitHub release](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
 
-The `main` branch is the reviewed development baseline. Official customer downloads are GitHub Release assets; CI artifacts are validation outputs rather than the permanent distribution channel.
+The published v2.1.3 Windows UI did not pass later real-Windows visual acceptance, so no newer UI state should be described as accepted merely because a development build or CI render exists. Official customer downloads remain GitHub Release assets; CI artifacts are validation outputs rather than the permanent distribution channel.
 
 ## Contributing
 
