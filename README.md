@@ -48,7 +48,7 @@ AegisLog v2.0 uses one visual hierarchy throughout Mission Control: **brand → 
   \/\/     LOCAL-FIRST / READ-ONLY / DETERMINISTIC
 
 --------------------------------------------------------------------------------
-MISSION CONTROL                                                     v2.0.1
+MISSION CONTROL                                                     v2.1.0
                                                             + SYSTEM READY
 
 INVESTIGATION                              MONITORING
