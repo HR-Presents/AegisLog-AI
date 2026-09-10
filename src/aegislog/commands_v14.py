@@ -14,10 +14,11 @@ from .ui import bounded
 from .watch_profiles import get_profile
 
 console = Console()
+render_multisource = render_multisource_command_center
 
 
 def _view(state: MultiSourceState):
-    return bounded(render_multisource_command_center(state))
+    return bounded(render_multisource(state))
 
 
 def live_multi(
@@ -61,7 +62,7 @@ def live_multi(
         )
     )
     if from_start:
-        console.print(_view(state))
+        console.print(render_multisource(state))
         console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
 
     missing_sources: set[Path] = set()
