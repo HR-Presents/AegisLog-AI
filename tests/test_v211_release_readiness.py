@@ -9,11 +9,13 @@ def _text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_v211_version_metadata_is_consistent() -> None:
-    pyproject = _text("pyproject.toml")
-    init_text = _text("src/aegislog/__init__.py")
-    assert 'version = "2.1.1"' in pyproject
-    assert '__version__ = "2.1.1"' in init_text
+def test_v211_historical_release_metadata_is_preserved() -> None:
+    notes = _text("docs/RELEASE_V2.1.1.md")
+    workflow = _text(".github/workflows/release-v2.1.1.yml")
+    assert "# AegisLog v2.1.1" in notes
+    assert "name: Release v2.1.1" in workflow
+    assert 'RELEASE_TAG: v2.1.1' in workflow
+    assert 'RELEASE_VERSION: 2.1.1' in workflow
 
 
 def test_v211_release_notes_scope_patch_correctly() -> None:
@@ -24,11 +26,8 @@ def test_v211_release_notes_scope_patch_correctly() -> None:
     assert "AI Analyst remains removed" in notes
 
 
-def test_v211_workflow_is_guarded_and_version_locked() -> None:
+def test_v211_workflow_remains_guarded_and_version_locked() -> None:
     workflow = _text(".github/workflows/release-v2.1.1.yml")
-    assert "name: Release v2.1.1" in workflow
-    assert 'RELEASE_TAG: v2.1.1' in workflow
-    assert 'RELEASE_VERSION: 2.1.1' in workflow
     assert 'RELEASE-v2.1.1' in workflow
     assert 'refs/heads/main' in workflow
     assert '--title "AegisLog v2.1.1"' in workflow
