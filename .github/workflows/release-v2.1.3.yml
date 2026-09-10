@@ -1,0 +1,196 @@
+name: Release v2.1.3
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RELEASE-v2.1.3 to publish the v2.1.3 release"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-v2.1.3
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v2.1.3
+  RELEASE_VERSION: 2.1.3
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Require explicit main-branch dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.ref }}" = "refs/heads/main"
+          test "${{ inputs.confirmation }}" = "RELEASE-v2.1.3"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Fail-closed release preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/release_preflight.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF" \
+            --sha "$GITHUB_SHA" \
+            --release-tag "$RELEASE_TAG" \
+            --release-version "$RELEASE_VERSION" \
+            --confirmation "${{ inputs.confirmation }}"
+      - name: Verify version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib, re, tomllib
+          project = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          init_text = pathlib.Path("src/aegislog/__init__.py").read_text(encoding="utf-8")
+          match = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
+          assert project["project"]["version"] == "2.1.3"
+          assert match and match.group(1) == "2.1.3"
+          PY
+      - name: Refuse to mutate an existing release or tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then echo "Release exists; refusing mutation."; exit 1; fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then echo "Tag exists; refusing reuse."; exit 1; fi
+      - name: Run release-candidate quality gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes -r packaging/build-lock-linux.txt
+          python -m pip install --require-hashes -r packaging/validation-lock-py312-linux.txt
+          python -m pip install --require-hashes -r packaging/runtime-lock.txt
+          python -m pip install -e . --no-deps --no-build-isolation
+          ruff check .
+          pytest -q
+          python tools/evaluate_detections.py evaluation/labeled_events.jsonl --dataset-kind synthetic --min-precision 1.0 --min-recall 1.0 --min-case-accuracy 1.0 --max-fp 0 --max-fn 0
+          python tools/evaluate_detections.py evaluation/representative_synthetic_v21.jsonl --dataset-kind synthetic --min-precision 1.0 --min-recall 1.0 --min-case-accuracy 1.0 --max-fp 0 --max-fn 0
+          bandit -q -r src
+          pip-audit
+          python -m build --no-isolation
+          python -m twine check dist/*
+
+  build-windows-exe:
+    needs: validate
+    runs-on: windows-2025
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install locked build and runtime dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --require-hashes -r packaging/build-lock-windows.txt
+          python -m pip install --require-hashes -r packaging/runtime-lock.txt
+          python -m pip install -e . --no-deps --no-build-isolation
+      - name: Build one-file customer executable
+        shell: pwsh
+        run: pyinstaller --noconfirm --clean --onefile --console --name AegisLog packaging/aegislog_onefile.py
+      - name: Release smoke tests
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist\AegisLog.exe")) { throw "AegisLog.exe was not created" }
+          $files = Get-ChildItem "dist" -File
+          if ($files.Count -ne 1 -or $files[0].Name -ne "AegisLog.exe") { throw "Customer dist must contain exactly AegisLog.exe" }
+          $version = .\dist\AegisLog.exe --version | Out-String
+          if ($version -notmatch "2\.1\.3") { throw "--version did not report 2.1.3" }
+          .\dist\AegisLog.exe doctor
+          $help = .\dist\AegisLog.exe --help | Out-String
+          if ($help -match "ai-analyst|ollama|openai-compatible") { throw "Removed AI surface reappeared in public help" }
+          $banner = "q" | .\dist\AegisLog.exe start | Out-String
+          if ($banner -notmatch "v2\.1\.3") { throw "Mission Control banner did not report v2.1.3" }
+          if ($banner -notmatch "MISSION CONTROL") { throw "Mission Control did not render" }
+          if ($banner -notmatch "ANALYZE LOG" -or $banner -notmatch "LIVE MONITOR" -or $banner -notmatch "HEALTH") { throw "Mission Control command groups missing" }
+          if ($banner -notmatch "INVEST" -or $banner -notmatch "DETECT" -or $banner -notmatch "STAY AHEAD") { throw "Falcon command-center identity did not render" }
+          if ($banner -match "\|---/\\_/\\---\|") { throw "Legacy masthead signature reappeared" }
+          if ($banner -match "AI ANALYST|OLLAMA|REMOTE AI") { throw "Removed AI surface reappeared in Mission Control" }
+          $dashboard = .\dist\AegisLog.exe dashboard examples\auth.log | Out-String
+          if ($dashboard -notmatch "TOP FINDINGS") { throw "Compact Analyze top findings did not render" }
+          if ($dashboard -notmatch "ANALYST FOCUS") { throw "Compact Analyze analyst focus did not render" }
+          if ($dashboard -notmatch "Analysis complete") { throw "Compact Analyze completion handoff did not render" }
+          if ($dashboard -match "RAW EVIDENCE" -or $dashboard -match "INVESTIGATION TIMELINE") { throw "Deep evidence tables leaked back into compact Analyze output" }
+          .\dist\AegisLog.exe live --help
+          .\dist\AegisLog.exe live-multi --help
+          .\dist\AegisLog.exe native-sources
+          .\dist\AegisLog.exe native-analyze --help
+          .\dist\AegisLog.exe native-live --help
+          .\dist\AegisLog.exe incidents --help
+          .\dist\AegisLog.exe investigate --help
+          .\dist\AegisLog.exe explain --help
+          .\dist\AegisLog.exe mitre --help
+          .\dist\AegisLog.exe intel-entities --help
+      - name: Stage unsigned release assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "release-assets" | Out-Null
+          Copy-Item "dist\AegisLog.exe" "release-assets\AegisLog.exe"
+          $hash = (Get-FileHash "release-assets\AegisLog.exe" -Algorithm SHA256).Hash.ToLower()
+          "$hash  AegisLog.exe" | Set-Content -Encoding ascii "release-assets\AegisLog.exe.sha256"
+          $files = Get-ChildItem "release-assets" -File
+          if ($files.Count -ne 2) { throw "Release staging must contain exactly executable and checksum" }
+      - name: Attest executable provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: release-assets/AegisLog.exe
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AegisLog-v2.1.3-release-assets
+          if-no-files-found: error
+          retention-days: 30
+          path: release-assets/*
+
+  publish:
+    needs: build-windows-exe
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: AegisLog-v2.1.3-release-assets
+          path: release-assets
+      - name: Verify release asset checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-assets
+          test -f AegisLog.exe
+          test -f AegisLog.exe.sha256
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 2
+          sha256sum --check AegisLog.exe.sha256
+      - name: Re-check immutability immediately before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then echo "Release appeared; refusing mutation."; exit 1; fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then echo "Tag appeared; refusing reuse."; exit 1; fi
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" release-assets/AegisLog.exe release-assets/AegisLog.exe.sha256 --target "$GITHUB_SHA" --title "AegisLog v2.1.3" --notes-file docs/RELEASE_V2.1.3.md --latest
