@@ -2,13 +2,16 @@
 
 ## Unreleased
 
-### v2.1 development
+- No unreleased changes yet.
+
+## 2.1.0 - 2026-09-10
 
 - Added deterministic fuzz-style reliability regressions for malformed input, randomized streaming chunk boundaries, authentication event reordering, and bounded authentication-source floods.
 - Strengthened the external detection-evidence model with schema v2, including explicit source types, collection period, sampling method, known exclusions, class balance, expected-category counts, per-category metrics, and confidence intervals.
 - Expanded the maintained representative synthetic benchmark corpus beyond the core regression fixture with additional benign controls, near-miss cases, authentication variants, and coverage across audit, error, network, privilege, service, and web detections.
+- Added release-readiness regression coverage and synchronized development-state documentation before release preparation.
 - Kept synthetic benchmark claims explicitly scoped to regression consistency; no deployment-specific or real-world detection-effectiveness claim is made without independently labeled external evidence.
-- Preserved detection, parsing, streaming, authentication, CLI, monitoring, packaging, and read-only security semantics while preparing the v2.1 line for release-readiness review.
+- Preserved detection, parsing, streaming, authentication, CLI, monitoring, and read-only security semantics while hardening reliability and evaluation evidence.
 
 ## 2.0.1 - 2026-09-10
 
