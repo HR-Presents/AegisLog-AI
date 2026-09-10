@@ -1,16 +1,31 @@
 # Roadmap
 
-AegisLog is currently released as **v2.0.1**. The **v2.1 development line is active on `main`** and is in release-readiness review; v2.1.0 has not yet been published.
+AegisLog is currently released as **v2.1.0**.
 
 ## Completed foundation
 
 The V0.1–V2.0 foundation delivered the terminal CLI, deterministic detections, structured parsing, redaction, live monitoring, anomaly scoring, incident correlation, persistent investigation state, native collection, declarative rules, bounded-memory analysis, reporting, CI/security hardening, package validation, guarded release engineering, and a responsive Mission Control interface.
 
-## Current stable line — v2.0.x
+## Current stable line — v2.1.x
 
-### v2.0.1 — current stable release
+### v2.1.0 — current stable release
 
-v2.0.1 is the public-surface consistency patch for the v2 line. It keeps the v2.0.0 Mission Control redesign and v1.9 correctness hardening unchanged while aligning the supported CLI, customer bundle, README examples, and current-status documentation with the AegisLog product identity.
+v2.1.0 strengthens reliability and evaluation evidence without intentionally changing detection, parsing, streaming, authentication, monitoring, or read-only security semantics.
+
+- Added deterministic fuzz-style regressions around malformed input, randomized streaming chunk boundaries, authentication-event ordering, and bounded authentication-source floods.
+- Strengthened external detection evidence to schema v2 with explicit provenance fields, source types, collection period, sampling method, known exclusions, class balance, category counts, per-category metrics, and confidence intervals.
+- Added a broader representative synthetic benchmark corpus with benign controls, near-miss cases, authentication variants, and category coverage across audit, error, network, privilege, service, and web detections.
+- Kept the larger benchmark explicitly labeled as synthetic regression evidence rather than real-world effectiveness proof.
+- Passed the required exact-head CI, security, package-build, Windows executable, and dependency-lock checks before release.
+- Passed the guarded v2.1.0 release workflow on target commit `9eefb18af494d2488f0795eb7326470f642058f2` and published `AegisLog.exe` with its matching SHA-256 checksum.
+
+Independent real-world evaluation remains valuable but must use genuinely authorized, sanitized, independently labeled external data. It must not be fabricated as a release checkbox or implied by the synthetic regression results.
+
+## Previous stable line — v2.0.x
+
+### v2.0.1 — public-surface consistency patch
+
+v2.0.1 kept the v2.0.0 Mission Control redesign and v1.9 correctness hardening unchanged while aligning the supported CLI, customer bundle, README examples, and current-status documentation with the AegisLog product identity.
 
 ### v2.0.0 — terminal experience foundation
 
@@ -24,29 +39,6 @@ v2.0.0 focused on the operator experience while preserving the deterministic inv
 - Preserved v1.9 streaming-correlation, authentication-window, parser, IPv4/IPv6, bounded-state, and synthetic regression hardening without changing detection semantics.
 - Kept AI Analyst and remote-provider workflows out of the supported public product surface.
 - Published the standalone Windows `AegisLog.exe` and matching SHA-256 checksum through the guarded v2.0 release workflows.
-
-## Active development line — v2.1.x
-
-v2.1 is focused on reliability evidence and release confidence rather than expanding attack capability or silently changing detector semantics.
-
-### Completed v2.1 hardening
-
-- Added deterministic fuzz-style regressions around malformed input, randomized streaming chunk boundaries, authentication-event ordering, and bounded authentication-source floods.
-- Strengthened external detection evidence to schema v2 with explicit provenance fields, source types, collection period, sampling method, known exclusions, class balance, category counts, per-category metrics, and confidence intervals.
-- Added a broader representative synthetic benchmark corpus with benign controls, near-miss cases, authentication variants, and category coverage across audit, error, network, privilege, service, and web detections.
-- Kept the larger benchmark explicitly labeled as synthetic regression evidence rather than real-world effectiveness proof.
-
-### Release-readiness gate for v2.1.0
-
-Before v2.1.0 can be published:
-
-- synchronize package/version metadata, changelog, release notes, documentation, and workflow naming;
-- build the dedicated guarded v2.1.0 release workflow;
-- run the full required exact-head quality set: CI, Security checks, Package build, Windows single executable, Runtime lock audit, Validation toolchain lock audit, and Build toolchain lock audit;
-- verify the release candidate introduces no unintended detection, parsing, streaming, authentication, monitoring, or read-only security-model changes;
-- verify the Windows executable, checksum, smoke tests, and final GitHub Release assets after publication.
-
-Independent real-world evaluation remains valuable but must use genuinely authorized, sanitized, independently labeled external data. It must not be fabricated as a release checkbox.
 
 ## Near-term maintenance priorities
 
