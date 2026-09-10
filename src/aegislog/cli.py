@@ -27,13 +27,13 @@ from .parsers import parse_line
 from .plugins import apply_rules, load_rules, plugin_dir
 from .theme import ACCENT, MUTED, NEUTRAL, severity_text
 
-app = typer.Typer(help="AegisLog AI — deterministic defensive log intelligence in your terminal.", no_args_is_help=True)
+app = typer.Typer(help="AegisLog — deterministic defensive log investigation in your terminal.", no_args_is_help=True)
 console = Console()
 
 
 def _version_callback(value: bool) -> None:
     if value:
-        typer.echo(f"AegisLog AI {__version__}")
+        typer.echo(f"AegisLog {__version__}")
         raise typer.Exit()
 
 
@@ -44,7 +44,7 @@ def main(
         "--version",
         callback=_version_callback,
         is_eager=True,
-        help="Show the installed AegisLog AI version and exit.",
+        help="Show the installed AegisLog version and exit.",
     ),
 ) -> None:
     """Defensive log intelligence and investigation from the terminal."""
@@ -293,7 +293,7 @@ def report(path: Path = typer.Argument(..., exists=True, dir_okay=False), output
 @app.command()
 def doctor() -> None:
     """Check the local AegisLog runtime."""
-    console.print(f"AegisLog AI {__version__}")
+    console.print(f"AegisLog {__version__}")
     console.print(f"Python: {platform.python_version()}")
     console.print(f"Platform: {escape(platform.platform())}")
     console.print("Detection engine: ready")

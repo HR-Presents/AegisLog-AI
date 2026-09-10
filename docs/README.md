@@ -1,8 +1,8 @@
 # AegisLog documentation
 
-Welcome to the AegisLog documentation hub. Start with the user guide if you want the complete workflow, or jump directly to the area you need.
+Welcome to the AegisLog documentation hub. Start with the user guide for the complete workflow, or jump directly to the area you need.
 
-> **Project posture:** AegisLog is defensive, local-first, read-only by default, and does not require remote AI for its core investigation workflow.
+> **Project posture:** AegisLog is defensive, terminal-first, local-first, read-only by default, and deterministic for detection and correlation. AI Analyst and remote-provider workflows are not part of the supported public product surface.
 
 ## Start here
 
@@ -33,11 +33,8 @@ Welcome to the AegisLog documentation hub. Start with the user guide if you want
 - [Privacy](PRIVACY.md)
 - [Why local-first](WHY_LOCAL_FIRST.md)
 - [No automatic remediation](NO_AUTOREMEDIATION.md)
-- [AI safety](AI_SAFETY.md)
-- [AI providers](AI_PROVIDERS.md)
-- [Remote AI boundaries](REMOTE_AI.md)
 
-Remote AI is optional. Supplying provider credentials does not change the project’s core local-first model, and the normal deterministic analysis path remains available without a remote AI service.
+Older AI/provider documents may remain in repository history for traceability, but they do not define the supported v2.0 product surface.
 
 ## Product and operator experience
 
@@ -66,12 +63,12 @@ Public screenshots should come from a verified build and sanitized or synthetic 
 
 ## Release status
 
-- **Published stable:** [v1.6.0 release notes](RELEASE_V1.6.0.md)
-- **Current unreleased work:** [v1.6.1 release notes](RELEASE_V1.6.1.md)
+- **Published stable:** [v2.0.0 release notes](RELEASE_V2.0.0.md)
+- **Release history:** see the repository [CHANGELOG](../CHANGELOG.md) and [GitHub Releases](https://github.com/HR-Presents/AegisLog-AI/releases)
 - [Upgrading](UPGRADING.md)
 - [Latest GitHub release](https://github.com/HR-Presents/AegisLog-AI/releases/latest)
 
-The `main` branch can contain reviewed improvements newer than the current stable release. A v1.6.1 build should not be described as published until the release process is explicitly completed. CI artifacts are validation outputs; official customer downloads belong on GitHub Releases.
+The `main` branch is the reviewed development baseline. Official customer downloads are GitHub Release assets; CI artifacts are validation outputs rather than the permanent distribution channel.
 
 ## Contributing
 

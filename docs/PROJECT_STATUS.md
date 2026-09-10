@@ -1,34 +1,36 @@
 # Project status
 
-AegisLog is a released, terminal-first defensive security platform. The current published stable release is **v1.6.0**.
-
-The `main` branch contains reviewed improvements newer than that stable release, including the latest terminal UI and public documentation polish. Those changes remain **unreleased** until an explicit release is completed.
+AegisLog is a released, terminal-first defensive security platform. The current published stable release is **v2.0.0**.
 
 ## Current capabilities
 
 - Local-first log analysis with deterministic defensive detections.
-- Responsive terminal workflows for static analysis, live monitoring, and multi-source monitoring.
+- Responsive Mission Control workflows for static analysis, live monitoring, and multi-source monitoring.
 - Windows Event Log, journald, Docker, and file-based defensive collection workflows where supported.
 - Incident correlation, investigation timelines, entity intelligence, MITRE ATT&CK context, anomaly scoring, evidence-led explanations, and analyst triage summaries.
 - Persistent investigation/case history and bounded analysis workflows.
 - Declarative JSON detection rules and structured parsing.
 - Secret/privacy redaction, terminal sanitization, defensive data-handling boundaries, and read-only operation.
-- Optional compatible AI providers while keeping the core workflow usable without an external AI service.
 - Structured reports, baselines, behavior comparison, hunting, and indicator extraction.
-- Automated CI, security checks, package builds, Windows one-file executable builds, smoke tests, and release checksums.
+- Automated CI, security checks, package builds, Windows one-file executable builds, smoke tests, lock audits, checksums, and guarded release publication.
 
-## Current `main` UI
+AI Analyst and remote-provider workflows are not part of the supported public v2.0 product surface.
 
-Recent reviewed work on `main` improves the operator experience without changing the defensive analysis model:
+## Current v2.0 UI
 
-- full-width Mission Control layouts with narrow-terminal fallbacks;
+v2.0.0 rebuilt Mission Control around a clearer operator hierarchy without changing detection semantics:
+
+- responsive full-width layouts with narrow-terminal fallbacks;
+- balanced Investigation and Monitoring work areas on wide terminals;
+- System actions separated clearly below;
 - consistent AegisLog workspace headers and shared page chrome;
-- restrained structural colors with stronger severity emphasis;
-- clearer source-input hierarchy;
-- explicit analysis-completion status before investigation results;
-- compact report-ready handoff messaging;
-- clearer System Health and Command Reference status summaries;
-- responsive system/command tables on smaller terminals.
+- version and readiness status integrated into the header hierarchy;
+- the duplicate fake `SELECT >` prompt removed so the real shell prompt is authoritative;
+- ASCII-safe structural chrome with explicit Windows rendering regression coverage.
+
+## Correctness carried forward from v1.9
+
+v2.0.0 preserves the v1.9 hardening for streaming correlation, timestamp-based authentication windows, source/account/host parsing, IPv4/IPv6 validation, out-of-order events, bounded state, and synthetic regression evaluation. The maintained synthetic corpus is regression evidence only, not an independent real-world benchmark.
 
 ## Windows distribution
 
@@ -42,11 +44,12 @@ GitHub Actions artifacts are build/validation outputs rather than the permanent 
 
 AegisLog is defensive and read-only. Findings, anomaly scores, correlations, confidence values, incident priorities, and ATT&CK mappings are investigative signals rather than proof of compromise or attribution.
 
-The application does not automatically modify accounts, firewall rules, services, telemetry sources, or host configuration, and remote AI is not required for the core workflow.
+The application does not automatically modify accounts, firewall rules, services, telemetry sources, or host configuration.
 
 ## Release status
 
-- **Published stable:** v1.6.0
-- **Current newer work on `main`:** unreleased
+- **Published stable:** v2.0.0
+- **Release target commit:** `4432b2f5d6be53b261ac19b0f1a88a5f5f47991c`
+- **Windows artifacts:** `AegisLog.exe` and `AegisLog.exe.sha256`
 
-See [`RELEASE_V1.6.0.md`](RELEASE_V1.6.0.md), [`RELEASE_V1.6.1.md`](RELEASE_V1.6.1.md), [`ROADMAP.md`](ROADMAP.md), and the repository [`CHANGELOG.md`](../CHANGELOG.md) for details.
+See [`RELEASE_V2.0.0.md`](RELEASE_V2.0.0.md), [`ROADMAP.md`](ROADMAP.md), and the repository [`CHANGELOG.md`](../CHANGELOG.md) for details.

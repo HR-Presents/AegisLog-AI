@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 
 printf '\033[2J\033[H'
 printf '%s\n' '========================================'
-printf '%s\n' '             AegisLog AI'
+printf '%s\n' '               AegisLog'
 printf '%s\n' '      One-File Customer Launcher'
 printf '%s\n' '========================================'
 printf '\n'
@@ -23,7 +23,7 @@ if [ -z "$PYTHON" ]; then
 fi
 
 if [ ! -x ".aegislog-venv/bin/python" ]; then
-  echo "First run detected. Installing AegisLog AI locally..."
+  echo "First run detected. Installing AegisLog locally..."
   "$PYTHON" -m venv .aegislog-venv
   WHEEL=$(find package -maxdepth 1 -type f -name 'aegislog_ai-*.whl' | head -n 1)
   if [ -z "$WHEEL" ]; then
