@@ -52,7 +52,7 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
         brand.append("/A\\  AEGISLOG", style=f"bold {ACCENT}")
         brand.append(f"   VERSION v{__version__}\n", style=MUTED)
         brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
-        brand.append("LOCAL-FIRST / READ-ONLY / DETERMINISTIC", style=MUTED)
+        brand.append("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
         brand.append("   + SYSTEM READY", style=f"bold {SUCCESS}")
         return brand
 
@@ -70,12 +70,12 @@ def _brand_text(width: int) -> RenderableType:
     status.append(f"VERSION v{__version__}", style=MUTED)
     status.append("    ")
     status.append("+ SYSTEM READY", style=f"bold {SUCCESS}")
-    top = Table.grid(expand=True, padding=0)
+    top = Table.grid(expand=True, padding=(0, 2))
     top.add_column(ratio=1)
     top.add_column(no_wrap=True)
     top.add_row(name, status)
     subtitle = Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
-    posture = Text("LOCAL-FIRST / READ-ONLY / DETERMINISTIC", style=MUTED)
+    posture = Text("LOCAL-FIRST  /  READ-ONLY  /  DETERMINISTIC", style=MUTED)
     return Group(top, subtitle, Text(""), posture)
 
 
