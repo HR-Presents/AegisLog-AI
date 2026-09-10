@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rich import box
+from rich.align import Align
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
@@ -172,7 +173,7 @@ def render_dashboard(data: DashboardData, *, screen_width: int | None = None) ->
 
     footer = Text("Analysis complete. Full evidence remains in the local HTML report. Source unchanged.", style=f"bold {SUCCESS}")
     body.extend((Text(""), footer))
-    return Group(*body)
+    return Align.left(Group(*body), width=width, pad=False)
 
 
 __all__ = ["DashboardData", "analyze_dashboard", "render_dashboard"]
