@@ -110,7 +110,7 @@ def _input_panel(title: str, lines: list[tuple[str, str]], accent: str = ACCENT,
 
 
 def _action_line(key: str, label: str, description: str, *, primary: bool = False) -> Text:
-    line = Text(no_wrap=True, overflow="ellipsis")
+    line = Text(no_wrap=True, overflow="crop")
     line.append(f"[{key}] ", style=f"bold {ACCENT}")
     line.append(f"{label:<16}", style=f"bold {NEUTRAL}")
     line.append(description, style=NEUTRAL if primary else MUTED)
@@ -120,7 +120,7 @@ def _action_line(key: str, label: str, description: str, *, primary: bool = Fals
 def _primary_panel(width: int) -> Panel:
     body = Group(
         _action_line("01", "ANALYZE LOG", "Investigate a log file and create a report", primary=True),
-        Text("     Deterministic findings, incidents and evidence", style=MUTED, no_wrap=True, overflow="ellipsis"),
+        Text("     Deterministic findings, incidents and evidence", style=MUTED, no_wrap=True, overflow="crop"),
     )
     return Panel(body, title=Text(" INVESTIGATE ", style=f"bold {ACCENT}"), title_align="left", box=box.ASCII, border_style=ACCENT, padding=(1, 1), width=width)
 
@@ -144,7 +144,7 @@ def _utility_panel(width: int) -> Panel:
 def _status_panel(width: int) -> Panel:
     grid = Table.grid(expand=True, padding=(0, 1))
     grid.add_column(width=9, no_wrap=True)
-    grid.add_column(ratio=1, overflow="ellipsis", no_wrap=True)
+    grid.add_column(ratio=1, overflow="crop", no_wrap=True)
     grid.add_row(Text("STATUS", style=MUTED), Text("SYSTEM READY", style=f"bold {SUCCESS}"))
     grid.add_row(Text("MODE", style=MUTED), Text("LOCAL", style=NEUTRAL))
     grid.add_row(Text("DATA", style=MUTED), Text("READ-ONLY", style=NEUTRAL))
@@ -155,9 +155,9 @@ def _status_panel(width: int) -> Panel:
 def _quick_info_panel(width: int) -> Panel:
     grid = Table.grid(expand=True, padding=(0, 1))
     grid.add_column(width=9, no_wrap=True)
-    grid.add_column(ratio=1, no_wrap=True, overflow="ellipsis")
+    grid.add_column(ratio=1, no_wrap=True, overflow="crop")
     for label, value in (("REPORTS", "./reports/"), ("CONFIG", "./config/"), ("PROJECT", "HR-Presents/AegisLog-AI"), ("OWNER", "HR-PRESENTS")):
-        grid.add_row(Text(label, style=MUTED), Text(value, style=ACCENT if label != "OWNER" else NEUTRAL, no_wrap=True, overflow="ellipsis"))
+        grid.add_row(Text(label, style=MUTED), Text(value, style=ACCENT if label != "OWNER" else NEUTRAL, no_wrap=True, overflow="crop"))
     return Panel(grid, title=Text(" QUICK INFO ", style=f"bold {ACCENT}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(1, 1), width=width)
 
 
@@ -190,7 +190,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
-    footer = Text(overflow="ellipsis", no_wrap=True)
+    footer = Text(overflow="crop", no_wrap=True)
     footer.append("[01-09] Select", style=f"bold {ACCENT}")
     footer.append("   |   type a command", style=NEUTRAL)
     footer.append("   |   Q Exit", style=MUTED)
