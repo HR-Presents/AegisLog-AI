@@ -60,7 +60,7 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     output = _plain(render_dashboard(data, screen_width=120), width=120)
     for label in (
         "ANALYZE",
-        "INVESTIGATION PULSE",
+        "INVESTIGATION TICKER",
         "EVENT TREND",
         "SEVERITY MIX",
         "SERVICE LOAD",
@@ -80,7 +80,7 @@ def test_analysis_dashboard_uses_real_positions_when_timestamps_are_missing(tmp_
     path.write_text("error service failed\ninfo service started\n", encoding="utf-8")
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=80), width=80)
-    assert "INVESTIGATION PULSE" in output
+    assert "INVESTIGATION TICKER" in output
     assert "EVENT TREND" in output
     assert "1-1" in output and "2-2" in output
     assert "EVENT ACTIVITY" not in output
