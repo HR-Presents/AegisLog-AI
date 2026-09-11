@@ -36,7 +36,17 @@ def test_home_uses_final_wordmark_and_existing_commands() -> None:
     assert "INVESTIGATE" in output
     assert "MONITOR & INVESTIGATE" in output
     assert "UTILITIES" in output
-    for label in ("[01] ANALYZE LOG", "[02] LIVE MONITOR", "[03] MULTI-SOURCE", "[04] NATIVE LOGS", "[05] NATIVE MONITOR", "[06] INCIDENTS", "[07] DEMO", "[08] HEALTH", "[09] HELP"):
+    for label in (
+        "[01] ANALYZE LOG",
+        "[02] LIVE MONITOR",
+        "[03] MULTI-SOURCE",
+        "[04] NATIVE LOGS",
+        "[05] NATIVE MONITOR",
+        "[06] INCIDENTS",
+        "[07] DEMO",
+        "[08] HEALTH",
+        "[09] HELP",
+    ):
         assert label in output
     assert "VERSION" not in output
     assert "<F>" not in output
@@ -48,28 +58,39 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     path.write_text("".join(_sample_lines()), encoding="utf-8")
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=120), width=120)
-    assert "ANALYZE" in output
-    assert "INVESTIGATION PULSE" in output
-    assert "SOURCE CONTEXT" in output
-    assert "SEVERITY PROFILE" in output
-    assert "INVESTIGATION FOCUS" in output
-    assert "PRIORITY FINDINGS" in output
+    for label in (
+        "ANALYZE",
+        "INVESTIGATION PULSE",
+        "EVENT TREND",
+        "SEVERITY MIX",
+        "SERVICE LOAD",
+        "FINDING CATEGORIES",
+        "ANALYST FOCUS",
+        "LIVE EVIDENCE BOARD",
+        "SOURCE PROFILE",
+    ):
+        assert label in output
     assert "EVENTS" in output and "6" in output
     assert "Repeated authentication failures from 10.0.0.5" in output
-    assert "ANALYST FOCUS" not in output
+    assert "SOURCE UNCHANGED" in output
 
 
-def test_analysis_dashboard_does_not_invent_timeline_without_timestamps(tmp_path: Path) -> None:
+def test_analysis_dashboard_uses_real_positions_when_timestamps_are_missing(tmp_path: Path) -> None:
     path = tmp_path / "untimed.log"
     path.write_text("error service failed\ninfo service started\n", encoding="utf-8")
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=80), width=80)
     assert "INVESTIGATION PULSE" in output
+    assert "EVENT TREND" in output
+    assert "1-1" in output and "2-2" in output
     assert "EVENT ACTIVITY" not in output
 
 
 def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
-    monkeypatch.setattr("aegislog.command_center_ui.shutil.get_terminal_size", lambda fallback: type("S", (), {"columns": 120})())
+    monkeypatch.setattr(
+        "aegislog.command_center_ui.shutil.get_terminal_size",
+        lambda fallback: type("S", (), {"columns": 120})(),
+    )
     state = RealtimeState(source="live.log", window_size=50, watch_profile="all")
     state.ingest(_sample_lines(), now=10.0)
     output = _plain(render_realtime_command_center(state), width=120)
@@ -85,7 +106,10 @@ def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
 
 
 def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr("aegislog.command_center_ui.shutil.get_terminal_size", lambda fallback: type("S", (), {"columns": 120})())
+    monkeypatch.setattr(
+        "aegislog.command_center_ui.shutil.get_terminal_size",
+        lambda fallback: type("S", (), {"columns": 120})(),
+    )
     first = tmp_path / "auth.log"
     second = tmp_path / "web.log"
     first.write_text("", encoding="utf-8")
