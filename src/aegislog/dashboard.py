@@ -30,6 +30,7 @@ from .theme import (
     SUCCESS,
     CYAN,
     VIOLET,
+    WARNING,
     risk_style,
     severity_style,
     severity_text,
@@ -372,20 +373,25 @@ def _activity_panel(data: DashboardData, *, compact: bool = False) -> Panel | No
     if not items:
         return None
     maximum = max(count for _, count in items)
-    table = Table.grid(expand=True, padding=(0, 1))
-    table.add_column(width=18 if not compact else 13, style=MUTED, no_wrap=True)
-    if not compact:
-        table.add_column(width=_MAX_BAR_WIDTH)
-    table.add_column(width=7, justify="right")
-    for label, count in items:
-        cells: list[RenderableType] = [Text(label, style=MUTED)]
-        if not compact:
-            cells.append(_bar(count, maximum))
-        cells.append(Text(str(count), style=f"bold {ACCENT}"))
-        table.add_row(*cells)
+    height = 5 if compact else 7
+    heights = [max(1, round(count / maximum * height)) for _, count in items]
+    table = Table.grid(padding=0)
+    table.add_column(width=5, justify="right")
+    table.add_column()
+    palette = (CYAN, ACCENT, VIOLET, SUCCESS, WARNING)
+    for level in range(height, 0, -1):
+        scale = str(round(maximum * level / height)) if level in {height, 1} else ""
+        columns = Text()
+        for index, bar_height in enumerate(heights):
+            columns.append("##" if bar_height >= level else "  ", style=palette[index % len(palette)])
+            columns.append(" ")
+        table.add_row(Text(scale, style=MUTED), columns)
+    axis = Text("     " + "--" * len(items), style=ACCENT_SOFT)
+    labels = Text(" ".join(label[-5:] for label, _ in items), style=MUTED, no_wrap=True, overflow="ellipsis")
+    values = Text(" ".join(f"{count:>2}" for _, count in items), style=NEUTRAL, no_wrap=True, overflow="ellipsis")
     return Panel(
-        table,
-        title=Text(f" {'EVENT ACTIVITY' if timestamped else 'EVENT CADENCE'} ", style=f"bold {CYAN}"),
+        Group(table, axis, labels, values),
+        title=Text(f" {'EVENT ACTIVITY // EVENT TREND' if timestamped else 'EVENT CADENCE // EVENT TREND'} ", style=f"bold {CYAN}"),
         subtitle=Text("timestamp buckets" if timestamped else "real event-position buckets", style=MUTED),
         title_align="left",
         box=box.ASCII,
