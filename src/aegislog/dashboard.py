@@ -28,6 +28,8 @@ from .theme import (
     MUTED,
     NEUTRAL,
     SUCCESS,
+    CYAN,
+    VIOLET,
     risk_style,
     severity_style,
     severity_text,
@@ -200,7 +202,7 @@ def _metric_strip(data: DashboardData, *, compact: bool = False) -> Panel:
         table.add_row(*(_metric_cell(*metric) for metric in metrics))
     return Panel(
         table,
-        title=Text(" SECURITY METRICS ", style=f"bold {ACCENT}"),
+        title=Text(" SECURITY METRICS // INVESTIGATION TICKER ", style=f"bold {CYAN}"),
         title_align="left",
         box=box.ASCII,
         border_style=ACCENT_SOFT,
@@ -277,6 +279,26 @@ def _bar(value: int, maximum: int, width: int = _MAX_BAR_WIDTH) -> Text:
     return bar
 
 
+def _ranked_panel(title: str, values: dict[str, int], *, compact: bool = False, tone: str = ACCENT) -> Panel:
+    items = sorted(values.items(), key=lambda item: (-item[1], item[0]))[:6]
+    if not items:
+        return Panel(Text("No data available for this dimension.", style=MUTED), title=Text(f" {title} ", style=f"bold {tone}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT)
+    maximum = max(count for _, count in items)
+    total = max(1, sum(values.values()))
+    table = Table.grid(expand=True, padding=(0, 1))
+    table.add_column(ratio=1, overflow="ellipsis")
+    if not compact:
+        table.add_column(width=18)
+    table.add_column(width=10, justify="right")
+    for name, count in items:
+        cells: list[RenderableType] = [Text(str(name).upper(), style=NEUTRAL)]
+        if not compact:
+            cells.append(_bar(count, maximum, width=18))
+        cells.append(Text(f"{count}  {count / total:>4.0%}", style=tone))
+        table.add_row(*cells)
+    return Panel(table, title=Text(f" {title} ", style=f"bold {tone}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1))
+
+
 def _distribution_panel(data: DashboardData, *, compact: bool = False) -> Panel:
     rows: list[tuple[str, str, int, str]] = []
     severity_order = ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")
@@ -341,9 +363,14 @@ def _activity_panel(data: DashboardData, *, compact: bool = False) -> Panel | No
         label = _timestamp_label(event.raw)
         if label:
             buckets[label] += 1
-    if len(buckets) < 2:
+    timestamped = len(buckets) >= 2
+    if timestamped:
+        items = list(buckets.items())[-8:]
+    else:
+        size = max(1, (len(data.events) + 7) // 8)
+        items = [(f"{start + 1}-{min(len(data.events), start + size)}", min(size, len(data.events) - start)) for start in range(0, len(data.events), size)][:8]
+    if not items:
         return None
-    items = list(buckets.items())[-8:]
     maximum = max(count for _, count in items)
     table = Table.grid(expand=True, padding=(0, 1))
     table.add_column(width=18 if not compact else 13, style=MUTED, no_wrap=True)
@@ -358,8 +385,8 @@ def _activity_panel(data: DashboardData, *, compact: bool = False) -> Panel | No
         table.add_row(*cells)
     return Panel(
         table,
-        title=Text(" EVENT ACTIVITY ", style=f"bold {ACCENT}"),
-        subtitle=Text("timestamped events / latest buckets", style=MUTED),
+        title=Text(f" {'EVENT ACTIVITY' if timestamped else 'EVENT CADENCE'} ", style=f"bold {CYAN}"),
+        subtitle=Text("timestamp buckets" if timestamped else "real event-position buckets", style=MUTED),
         title_align="left",
         box=box.ASCII,
         border_style=ACCENT_SOFT,
@@ -611,12 +638,13 @@ def _next_steps(data: DashboardData) -> Panel:
 def _visual_analysis(data: DashboardData, *, screen_width: int, compact: bool) -> RenderableType:
     distribution = _distribution_panel(data, compact=compact)
     activity = _activity_panel(data, compact=compact)
+    services = _ranked_panel("SERVICE LOAD", data.services, compact=compact, tone=VIOLET)
     if activity is None or screen_width < _WIDE_DASHBOARD_BREAKPOINT:
-        return Group(distribution, *((Text(""), activity) if activity is not None else ()))
+        return Group(distribution, *((Text(""), activity) if activity is not None else ()), Text(""), services)
     layout = Table.grid(expand=True, padding=(0, 1))
     layout.add_column(ratio=1)
     layout.add_column(ratio=1)
-    layout.add_row(distribution, activity)
+    layout.add_row(distribution, Group(activity, Text(""), services))
     return layout
 
 
