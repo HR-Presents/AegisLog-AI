@@ -11,7 +11,7 @@ from rich.text import Text
 
 from .dashboard_v213 import DashboardData, analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
-from .reporting import write_html_report
+from .reporting_sentrix import write_html_report
 from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
 from .ui import bounded
 
@@ -39,7 +39,7 @@ def _report_ready_panel(report_path: Path) -> Panel:
     body.append("\nSTATUS    ", style=MUTED)
     body.append("Generated locally / source unchanged", style=SUCCESS)
     body.append("\nNEXT      ", style=MUTED)
-    body.append("Open in a browser for the complete evidence, timeline, and printable report.", style="white")
+    body.append("Open in a browser for the complete evidence, visual analytics, and printable report.", style="white")
     return Panel(
         body,
         title=Text(" REPORT READY ", style=f"bold {SUCCESS}"),
