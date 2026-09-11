@@ -18,14 +18,16 @@ def test_wide_home_is_bounded_and_uses_final_operator_layout() -> None:
     output = _render(_home(180), 180)
     lines = output.splitlines()
     assert "DEFENSIVE LOG INVESTIGATION" in output
-    assert "MAIN MENU" in output
+    assert "INVESTIGATE" in output
+    assert "MONITOR & INVESTIGATE" in output
+    assert "UTILITIES" in output
     assert "QUICK INFO" in output
     assert "SYSTEM READY" in output
     assert "ANALYZE LOG" in output
     assert "LIVE MONITOR" in output
     assert "MADE BY HR-PRESENTS" in output
     assert "VERSION" not in output
-    assert max(len(line.lstrip()) for line in lines) <= 98
+    assert max(len(line.lstrip()) for line in lines) <= 112
     assert any(line.startswith(" " * 20) for line in lines if line.strip())
 
 
@@ -38,18 +40,18 @@ def test_wide_home_keeps_all_core_actions_visible() -> None:
 def test_narrow_home_collapses_without_losing_actions() -> None:
     output = _render(_home(52), 52)
     assert "AEGISLOG" in output
-    assert "MAIN MENU" in output
+    assert "COMMAND CENTER" in output
     assert "ANALYZE LOG" in output
     assert "MULTI-SOURCE" in output
     assert "HELP" in output
     assert all(len(line) <= 52 for line in output.splitlines())
 
 
-def test_home_has_one_real_prompt_and_clear_navigation_hint() -> None:
+def test_home_has_no_decorative_prompt_and_clear_navigation_hint() -> None:
     output = _render(_home(180), 180)
-    assert output.count("aegis@console") == 1
+    assert "aegis@console" not in output
     footer = _render(_footer(180), 180)
-    assert "Select [01-09]" in footer
+    assert "[01-09] Select" in footer
     assert "Q Exit" in footer
 
 
