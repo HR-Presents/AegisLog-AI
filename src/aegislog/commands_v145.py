@@ -191,9 +191,11 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
     footer = Text(overflow="crop", no_wrap=True)
-    footer.append("[01-09] Select", style=f"bold {ACCENT}")
-    footer.append("   |   type a command", style=NEUTRAL)
+    footer.append("[01-09]", style=f"bold {ACCENT}")
+    footer.append(" Select", style=NEUTRAL)
     footer.append("   |   Q Exit", style=MUTED)
+    if width >= 48:
+        footer.append("   |   type a command", style=NEUTRAL)
     if width >= 100:
         footer.append("   |   Ctrl+C stops live views", style=MUTED)
     return footer
