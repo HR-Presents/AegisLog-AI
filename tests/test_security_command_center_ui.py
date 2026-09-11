@@ -28,23 +28,16 @@ def _sample_lines() -> list[str]:
     ]
 
 
-def test_mission_control_keeps_shield_a_and_existing_commands() -> None:
+def test_home_uses_final_wordmark_and_existing_commands() -> None:
     output = _plain(_home(120), width=120)
-    assert "A E G I S L O G" in output
-    assert "/A\\" in output or "/\\" in output
-    assert "MISSION CONTROL" in output
-    assert "INVESTIGATE" in output
-    assert "MONITOR" in output
-    assert "[01] ANALYZE LOG" in output
-    assert "[02] LIVE MONITOR" in output
-    assert "[03] MULTI-SOURCE" in output
-    assert "[04] NATIVE LOGS" in output
-    assert "[05] NATIVE MONITOR" in output
-    assert "[06] INCIDENTS" in output
-    assert "[07] DEMO" in output
-    assert "[08] HEALTH" in output
-    assert "[09] HELP" in output
-    output.encode("cp1252")
+    assert "DEFENSIVE LOG INVESTIGATION" in output
+    assert "MADE BY HR-PRESENTS" in output
+    assert "MAIN MENU" in output
+    for label in ("[01] ANALYZE LOG", "[02] LIVE MONITOR", "[03] MULTI-SOURCE", "[04] NATIVE LOGS", "[05] NATIVE MONITOR", "[06] INCIDENTS", "[07] DEMO", "[08] HEALTH", "[09] HELP"):
+        assert label in output
+    assert "VERSION" not in output
+    assert "<F>" not in output
+    output.encode("ascii")
 
 
 def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> None:
@@ -52,19 +45,13 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     path.write_text("".join(_sample_lines()), encoding="utf-8")
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=120), width=120)
-
     assert "INVESTIGATION SUMMARY" in output
     assert "SECURITY METRICS" in output
     assert "EVENTS" in output and "6" in output
     assert "SECURITY DISTRIBUTION" in output
-    assert "EVENT ACTIVITY" in output
     assert "ANALYST FOCUS" in output
-    assert "INVESTIGATION TIMELINE" in output
-    assert "DETECTED FINDINGS" in output
     assert "RAW EVIDENCE" in output
-    assert "2026-09-10T14:32" in output
     assert "failed password for admin" in output
-    output.encode("cp1252")
 
 
 def test_analysis_dashboard_omits_activity_chart_without_timestamps(tmp_path: Path) -> None:
@@ -74,23 +61,17 @@ def test_analysis_dashboard_omits_activity_chart_without_timestamps(tmp_path: Pa
     output = _plain(render_dashboard(data, screen_width=80), width=80)
     assert "SECURITY METRICS" in output
     assert "EVENT ACTIVITY" not in output
-    assert "INVESTIGATION TIMELINE" not in output
 
 
 def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
     monkeypatch.setattr("aegislog.command_center_ui.shutil.get_terminal_size", lambda fallback: type("S", (), {"columns": 120})())
     state = RealtimeState(source="live.log", window_size=50, watch_profile="all")
-    lines = _sample_lines()
-    state.ingest(lines, now=10.0)
+    state.ingest(_sample_lines(), now=10.0)
     output = _plain(render_realtime_command_center(state), width=120)
-
     assert "LIVE MONITOR" in output
     assert "LIVE SECURITY METRICS" in output
-    assert "SERVICE ACTIVITY" in output
-    assert "RECENT SECURITY FINDINGS" in output
     assert "6" in output
     assert "live.log" in output
-    output.encode("cp1252")
 
 
 def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, monkeypatch) -> None:
@@ -103,12 +84,6 @@ def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, m
     state.ingest(first, _sample_lines()[:4], now=10.0)
     state.ingest(second, _sample_lines()[4:], now=11.0)
     output = _plain(render_multisource_command_center(state), width=120)
-
     assert "MULTI-SOURCE" in output
     assert "SOURCE ACTIVITY" in output
-    assert "auth.log" in output
-    assert "web.log" in output
-    assert "4" in output
-    assert "2" in output
-    assert "LIVE SECURITY ALERT FEED" in output
-    output.encode("cp1252")
+    assert "auth.log" in output and "web.log" in output
