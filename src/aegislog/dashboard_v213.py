@@ -5,7 +5,6 @@ from collections import Counter
 from pathlib import Path
 
 from rich import box
-from rich.align import Align
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
@@ -47,17 +46,27 @@ def _risk(data: DashboardData) -> str:
 
 
 def _panel(body: RenderableType, title: str, tone: str = ACCENT, *, padding=(0, 1)) -> Panel:
-    return Panel(body, title=Text(f" {title} ", style=f"bold {tone}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=padding)
+    return Panel(
+        body,
+        title=Text(f" {title} ", style=f"bold {tone}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=padding,
+    )
 
 
 def _header(data: DashboardData, width: int) -> Panel:
     left = Text()
     left.append("AEGISLOG", style=f"bold {ACCENT}")
-    left.append("  //  SECURITY INVESTIGATION", style=f"bold {NEUTRAL}")
+    left.append("  //  ANALYZE  //  SECURITY INVESTIGATION", style=f"bold {NEUTRAL}")
     left.append("\nLOCAL-FIRST  READ-ONLY  DETERMINISTIC", style=MUTED)
     right = Text(justify="right")
     posture = _risk(data)
-    right.append(f"POSTURE  {posture}", style=f"bold {severity_style(posture if posture != 'REVIEW' else 'MEDIUM')}")
+    right.append(
+        f"POSTURE  {posture}",
+        style=f"bold {severity_style(posture if posture != 'REVIEW' else 'MEDIUM')}",
+    )
     right.append("\nHR-PRESENTS", style=ACCENT)
     grid = Table.grid(expand=True)
     grid.add_column(ratio=2)
@@ -86,7 +95,7 @@ def _kpis(data: DashboardData) -> Panel:
         cell.append(str(value), style=f"bold {tone}")
         cells.append(cell)
     grid.add_row(*cells)
-    return _panel(grid, "INVESTIGATION TICKER", SKY)
+    return _panel(grid, "INVESTIGATION PULSE // LIVE TICKER", SKY)
 
 
 def _bar(value: int, maximum: int, *, width: int = 16, tone: str = ACCENT) -> Text:
@@ -109,7 +118,11 @@ def _distribution(title: str, values: dict[str, int], *, semantic: bool = False,
     grid.add_column(width=8, justify="right")
     for index, (label, count) in enumerate(items):
         color = severity_style(str(label)) if semantic else _PALETTE[index % len(_PALETTE)]
-        grid.add_row(Text(str(label).upper(), style=color), _bar(count, maximum, tone=color), Text(f"{count} {count / total * 100:.0f}%", style=MUTED))
+        grid.add_row(
+            Text(str(label).upper(), style=color),
+            _bar(count, maximum, tone=color),
+            Text(f"{count} {count / total * 100:.0f}%", style=MUTED),
+        )
     return _panel(grid, title, tone)
 
 
@@ -121,11 +134,15 @@ def _activity(data: DashboardData) -> Panel:
             buckets[match.group("iso") or match.group("sys")] += 1
     items = list(buckets.items())[-12:]
     if len(items) < 2:
-        # No invented timeline: show a deterministic event-position histogram from the real input.
+        # This is not a time axis. It is a deterministic histogram over real
+        # input positions when timestamps are unavailable.
         total = len(data.raw_lines)
         if total:
             size = max(1, (total + 7) // 8)
-            items = [(f"{start + 1}-{min(total, start + size)}", min(size, total - start)) for start in range(0, total, size)][:8]
+            items = [
+                (f"{start + 1}-{min(total, start + size)}", min(size, total - start))
+                for start in range(0, total, size)
+            ][:8]
     if not items:
         return _panel(Text("No event activity available", style=MUTED), "EVENT TREND", SKY)
     maximum = max(value for _, value in items)
@@ -135,11 +152,23 @@ def _activity(data: DashboardData) -> Panel:
     for row in range(chart_height, 0, -1):
         line = Text()
         for index, height in enumerate(cols):
-            line.append("##" if height >= row else "  ", style=_PALETTE[index % len(_PALETTE)] if height >= row else MUTED)
+            line.append(
+                "##" if height >= row else "  ",
+                style=_PALETTE[index % len(_PALETTE)] if height >= row else MUTED,
+            )
             line.append(" ")
         lines.append(line)
-    labels = Text(" ".join(label[-5:].center(2) for label, _ in items), style=MUTED, overflow="crop", no_wrap=True)
-    return _panel(Group(*lines, labels, Text(f"real events / {len(items)} latest buckets", style=MUTED)), "EVENT TREND", SKY)
+    labels = Text(
+        " ".join(label[-5:].center(2) for label, _ in items),
+        style=MUTED,
+        overflow="crop",
+        no_wrap=True,
+    )
+    return _panel(
+        Group(*lines, labels, Text(f"real events / {len(items)} latest buckets", style=MUTED)),
+        "EVENT TREND",
+        SKY,
+    )
 
 
 def _focus(data: DashboardData) -> Panel:
@@ -150,8 +179,17 @@ def _focus(data: DashboardData) -> Panel:
     grid.add_column(ratio=1, overflow="fold")
     if incidents:
         item = incidents[0]
-        grid.add_row(Text("PRIMARY", style=MUTED), Text(f"INC-{item.id.upper()[:8]}  {item.title}", style=f"bold {INCIDENT}"))
-        grid.add_row(Text("ACTION", style=MUTED), Text("Review correlated evidence and surrounding source, account, host, and time context.", style=NEUTRAL))
+        grid.add_row(
+            Text("PRIMARY", style=MUTED),
+            Text(f"INC-{item.id.upper()[:8]}  {item.title}", style=f"bold {INCIDENT}"),
+        )
+        grid.add_row(
+            Text("ACTION", style=MUTED),
+            Text(
+                "Review correlated evidence and surrounding source, account, host, and time context.",
+                style=NEUTRAL,
+            ),
+        )
     elif findings:
         item = findings[0]
         grid.add_row(Text("PRIMARY", style=MUTED), Text(item.title, style=f"bold {severity_style(item.severity)}"))
@@ -172,7 +210,11 @@ def _findings(data: DashboardData) -> Panel:
         detail = Text(item.title, style=f"bold {NEUTRAL}")
         detail.append("\n")
         detail.append(" ".join(item.evidence.split()), style=MUTED)
-        table.add_row(Text(item.severity, style=f"bold {severity_style(item.severity)}"), Text(item.category.upper(), style=SKY), detail)
+        table.add_row(
+            Text(item.severity, style=f"bold {severity_style(item.severity)}"),
+            Text(item.category.upper(), style=SKY),
+            detail,
+        )
     if not ordered:
         table.add_row("-", "-", Text("No rule-backed findings retained", style=SUCCESS))
     return _panel(table, "LIVE EVIDENCE BOARD", WARNING, padding=(0, 0))
@@ -197,19 +239,57 @@ def render_dashboard(data: DashboardData, *, screen_width: int | None = None) ->
         top = Table.grid(expand=True, padding=(0, 1))
         top.add_column(ratio=1)
         top.add_column(ratio=1)
-        top.add_row(_activity(data), _distribution("SEVERITY MIX", data.severities, semantic=True, tone=WARNING))
+        top.add_row(
+            _activity(data),
+            _distribution("SEVERITY MIX", data.severities, semantic=True, tone=WARNING),
+        )
         sections.extend((top, Text("")))
 
         middle = Table.grid(expand=True, padding=(0, 1))
         middle.add_column(ratio=1)
         middle.add_column(ratio=1)
-        middle.add_row(_distribution("SERVICE LOAD", data.services, tone=SKY), _distribution("FINDING CATEGORIES", data.categories, tone=SECONDARY))
+        middle.add_row(
+            _distribution("SERVICE LOAD", data.services, tone=SKY),
+            _distribution("FINDING CATEGORIES", data.categories, tone=SECONDARY),
+        )
         sections.extend((middle, Text("")))
     else:
-        sections.extend((_activity(data), Text(""), _distribution("SEVERITY MIX", data.severities, semantic=True, tone=WARNING), Text(""), _distribution("SERVICE LOAD", data.services, tone=SKY), Text(""), _distribution("FINDING CATEGORIES", data.categories, tone=SECONDARY), Text("")))
+        sections.extend(
+            (
+                _activity(data),
+                Text(""),
+                _distribution("SEVERITY MIX", data.severities, semantic=True, tone=WARNING),
+                Text(""),
+                _distribution("SERVICE LOAD", data.services, tone=SKY),
+                Text(""),
+                _distribution("FINDING CATEGORIES", data.categories, tone=SECONDARY),
+                Text(""),
+            )
+        )
 
-    sections.extend((_focus(data), Text(""), _findings(data), Text(""), _source(data), Text(""), Text("REPORT: generated locally  |  INCIDENTS: correlated from retained findings  |  SOURCE: unchanged", style=MUTED)))
-    return Align.center(Group(*sections), width=width, pad=False)
+    sections.extend(
+        (
+            _focus(data),
+            Text(""),
+            _findings(data),
+            Text(""),
+            _source(data),
+            Text(""),
+            Text(
+                "REPORT: generated locally  |  INCIDENTS: correlated from retained findings  |  SOURCE: unchanged",
+                style=MUTED,
+            ),
+        )
+    )
+
+    # A single fixed-width container constrains every expand=True child panel.
+    # Do not center inside a wider console here: left padding becomes part of
+    # the physical line length and breaks Windows width guarantees.
+    frame = Table.grid(width=width, padding=0)
+    frame.add_column(width=width)
+    for section in sections:
+        frame.add_row(section)
+    return frame
 
 
 __all__ = ["DashboardData", "analyze_dashboard", "render_dashboard"]
