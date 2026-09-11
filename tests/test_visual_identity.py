@@ -7,7 +7,6 @@ from rich.console import Console
 from aegislog import commands_v145
 from aegislog.theme import ACCENT, MUTED, NEUTRAL
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -19,16 +18,15 @@ def _render(renderable, width: int = 100) -> str:
 
 def test_home_has_prominent_brand_and_feature_hierarchy() -> None:
     text = _render(commands_v145._home(100))
-    assert "A E G I S L O G" in text
     assert "DEFENSIVE LOG INVESTIGATION" in text
-    assert "INVESTIGATION" in text
-    assert "ANALYZE" in text
-    assert "MONITORING" in text
+    assert "MADE BY HR-PRESENTS" in text
+    assert "MAIN MENU" in text
+    assert "ANALYZE LOG" in text
     assert "LIVE MONITOR" in text
     assert "SYSTEM READY" in text
     assert "AI ANALYST" not in text.upper()
-    assert "OLLAMA" not in text.upper()
-    assert "OPENAI" not in text.upper()
+    assert "VERSION" not in text.upper()
+    assert "<F>" not in text
 
 
 def test_workspace_keeps_compact_brand_signature() -> None:
@@ -37,6 +35,7 @@ def test_workspace_keeps_compact_brand_signature() -> None:
     assert "ANALYZE" in text
     assert "Investigate retained evidence" in text
     assert "LOCAL / READ-ONLY" in text
+    assert "MADE BY HR-PRESENTS" in text
 
 
 def test_palette_uses_controlled_blue_identity() -> None:

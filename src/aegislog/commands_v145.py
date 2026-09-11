@@ -7,13 +7,12 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from . import __version__
 from . import commands_v144 as legacy
 from .theme import ACCENT, ACCENT_SOFT, DIM, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 _NARROW_BREAKPOINT = 72
-_WIDE_BREAKPOINT = 92
+_WIDE_BREAKPOINT = 90
 _MAX_HOME_WIDTH = 98
 
 
@@ -23,7 +22,6 @@ def _screen_width(screen_width: int | None = None) -> int:
 
 
 def _frame_width(screen_width: int | None = None) -> int:
-    """Keep Mission Control compact enough to read as one deliberate workspace."""
     return min(_screen_width(screen_width), _MAX_HOME_WIDTH)
 
 
@@ -31,22 +29,18 @@ def _rule(width: int) -> Text:
     return Text("-" * max(16, width), style=DIM)
 
 
-def _falcon(compact: bool = False) -> Text:
-    """ASCII-safe, front-facing falcon/eagle head mark for Windows terminals."""
-    mark = Text()
+def _wordmark(compact: bool = False) -> Text:
+    mark = Text(justify="center")
     if compact:
-        mark.append("<F>", style=f"bold {ACCENT}")
+        mark.append("AEGISLOG", style=f"bold {ACCENT}")
         return mark
 
     lines = (
-        "     __/\\__",
-        "  __/  /\\  \\__",
-        " /    /  \\    \\",
-        "|  __/ /\\ \\__  |",
-        "| /  \\_\\/_/  \\ |",
-        " \\    /\\    /",
-        "  \\__/  \\__/",
-        "     \\__/",
+        r"    _    _____ ____ ___ ____  _     ___   ____ ",
+        r"   / \  | ____/ ___|_ _/ ___|| |   / _ \ / ___|",
+        r"  / _ \ |  _|| |  _ | |\___ \| |  | | | | |  _ ",
+        r" / ___ \| |__| |_| || | ___) | |__| |_| | |_| |",
+        r"/_/   \_\_____\____|___|____/|_____\___/ \____|",
     )
     for index, line in enumerate(lines):
         if index:
@@ -56,34 +50,21 @@ def _falcon(compact: bool = False) -> Text:
 
 
 def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> RenderableType:
-    """Render one compact Falcon identity block with integrated readiness state."""
     width = _frame_width(screen_width)
     if compact or width < _NARROW_BREAKPOINT:
-        brand = Text()
-        brand.append("<F>  AEGISLOG", style=f"bold {ACCENT}")
-        brand.append(f"   v{__version__}", style=MUTED)
-        brand.append("   [ READY ]\n", style=f"bold {SUCCESS}")
-        brand.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
-        brand.append("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)
-        return brand
+        body = Text(justify="center")
+        body.append("AEGISLOG\n", style=f"bold {ACCENT}")
+        body.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {NEUTRAL}")
+        body.append("MADE BY HR-PRESENTS\n", style=f"bold {ACCENT}")
+        body.append("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)
+        return body
 
-    left_width = 20
-    details = Table.grid(padding=(0, 2))
-    details.add_column(width=left_width)
-    details.add_column(ratio=1)
-    details.add_row(_falcon(), _brand_text())
-    return details
-
-
-def _brand_text() -> RenderableType:
-    name = Text("A E G I S L O G", style=f"bold {NEUTRAL}")
-    status = Text()
-    status.append(f"VERSION v{__version__}", style=MUTED)
-    status.append("    ")
-    status.append("[ SYSTEM READY ]", style=f"bold {SUCCESS}")
-    subtitle = Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {ACCENT}")
-    posture = Text("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)
-    return Group(name, status, Text(""), subtitle, posture)
+    return Group(
+        Align.center(_wordmark()),
+        Align.center(Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {NEUTRAL}")),
+        Align.center(Text("MADE BY HR-PRESENTS", style=f"bold {ACCENT}")),
+        Align.center(Text("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)),
+    )
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
@@ -92,7 +73,7 @@ def _header(screen_width: int | None = None) -> RenderableType:
         _brand_lockup(screen_width=screen_width),
         box=box.ASCII,
         border_style=ACCENT_SOFT,
-        padding=(0, 1),
+        padding=(1, 1),
         width=width,
     )
 
@@ -106,13 +87,14 @@ def _operation_header(
 ) -> RenderableType:
     width = _frame_width(screen_width)
     heading = Text()
-    heading.append("<F> AEGISLOG", style=f"bold {NEUTRAL}")
+    heading.append("AEGISLOG", style=f"bold {NEUTRAL}")
     heading.append("  //  ", style=MUTED)
     heading.append(title.upper(), style=f"bold {accent}")
     context = Text(subtitle, style=NEUTRAL, overflow="fold")
     posture = Text("LOCAL / READ-ONLY / DETERMINISTIC", style=MUTED)
+    maker = Text("MADE BY HR-PRESENTS", style=f"bold {ACCENT}")
     return Panel(
-        Group(heading, context, posture),
+        Group(heading, context, posture, maker),
         title=Text(" ACTIVE WORKSPACE ", style=f"bold {accent}"),
         title_align="left",
         box=box.ASCII,
@@ -153,115 +135,106 @@ def _input_panel(
 
 
 def _menu_item(key: str, label: str, description: str) -> Text:
-    item = Text()
+    item = Text(overflow="fold")
     item.append(f"[{key}] ", style=f"bold {ACCENT}")
-    item.append(label, style=f"bold {NEUTRAL}")
-    item.append("\n     ")
+    item.append(f"{label:<18}", style=f"bold {NEUTRAL}")
     item.append(description, style=MUTED)
     return item
 
 
 def _menu_panel(title: str, rows: list[tuple[str, str, str]], width: int) -> Panel:
-    body: list[RenderableType] = []
-    for index, row in enumerate(rows):
-        if index:
-            body.append(Text(""))
-        body.append(_menu_item(*row))
+    body = Group(*[_menu_item(*row) for row in rows])
     return Panel(
-        Group(*body),
+        body,
         title=Text(f" {title} ", style=f"bold {ACCENT}"),
         title_align="left",
         box=box.ASCII,
         border_style=ACCENT_SOFT,
-        padding=(0, 1),
+        padding=(1, 1),
         width=width,
     )
 
 
-def _compact_menu(rows: list[tuple[str, str, str]]) -> RenderableType:
-    body: list[RenderableType] = []
-    for index, row in enumerate(rows):
-        if index:
-            body.append(Text(""))
-        body.append(_menu_item(*row))
-    return Panel(
-        Group(*body),
-        box=box.ASCII,
-        border_style=ACCENT_SOFT,
-        padding=(0, 1),
-    )
-
-
-def _system_panel(system: list[tuple[str, str, str]], width: int) -> Panel:
+def _status_panel(width: int) -> Panel:
+    compact = width < 44
     grid = Table.grid(expand=True, padding=(0, 1))
-    for _ in system:
-        grid.add_column(ratio=1)
-    cells: list[Text] = []
-    for key, label, description in system:
-        cell = Text()
-        cell.append(f"[{key}] ", style=f"bold {ACCENT}")
-        cell.append(label, style=f"bold {NEUTRAL}")
-        cell.append("  ")
-        cell.append(description, style=MUTED)
-        cells.append(cell)
-    grid.add_row(*cells)
+    grid.add_column(width=9 if compact else 12, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
+    grid.add_row(Text("STATUS", style=MUTED), Text("SYSTEM READY", style=f"bold {SUCCESS}", overflow="fold"))
+    grid.add_row(Text("MODE", style=MUTED), Text("LOCAL ANALYSIS", style=NEUTRAL, overflow="fold"))
+    grid.add_row(Text("DATA", style=MUTED), Text("READ-ONLY", style=NEUTRAL, overflow="fold"))
+    grid.add_row(Text("ENGINE", style=MUTED), Text("DETERMINISTIC", style=NEUTRAL, overflow="fold"))
     return Panel(
         grid,
         title=Text(" SYSTEM ", style=f"bold {ACCENT}"),
         title_align="left",
         box=box.ASCII,
         border_style=ACCENT_SOFT,
-        padding=(0, 1),
+        padding=(1, 1),
+        width=width,
+    )
+
+
+def _quick_info_panel(width: int) -> Panel:
+    rows = (
+        ("REPORTS", "./reports/"),
+        ("CONFIG", "./config/"),
+        ("DOCS", "github.com/HR-Presents/AegisLog-AI"),
+        ("OWNER", "HR-PRESENTS"),
+    )
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(width=10)
+    grid.add_column(ratio=1, overflow="fold")
+    for label, value in rows:
+        grid.add_row(Text(label, style=MUTED), Text(value, style=ACCENT if label != "OWNER" else NEUTRAL, overflow="fold"))
+    return Panel(
+        grid,
+        title=Text(" QUICK INFO ", style=f"bold {ACCENT}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ACCENT_SOFT,
+        padding=(1, 1),
         width=width,
     )
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
-    """Render Mission Control as one compact, centered operator workspace."""
     width = _frame_width(screen_width)
-    investigation = [
+    rows = [
         ("01", "ANALYZE LOG", "Analyze evidence and generate a report"),
-        ("06", "INCIDENTS", "Review correlated evidence chains"),
-        ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
-    ]
-    monitoring = [
         ("02", "LIVE MONITOR", "Watch one log source continuously"),
         ("03", "MULTI-SOURCE", "Correlate activity across live sources"),
+        ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
         ("05", "NATIVE MONITOR", "Watch native telemetry read-only"),
-    ]
-    system = [
-        ("07", "DEMO", "Built-in dataset"),
-        ("08", "HEALTH", "Engine readiness"),
+        ("06", "INCIDENTS", "Review correlated evidence chains"),
+        ("07", "DEMO", "Built-in dataset for quick start"),
+        ("08", "HEALTH", "Engine readiness and diagnostics"),
         ("09", "HELP", "Command reference"),
     ]
 
-    title = Text("MISSION CONTROL", style=f"bold {ACCENT}")
-    hierarchy = Text("INVESTIGATION  /  MONITORING  /  SYSTEM", style=MUTED)
     if width < _NARROW_BREAKPOINT:
-        return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
+        return Group(_status_panel(width), Text(""), _menu_panel("MAIN MENU", rows, width))
 
     if width >= _WIDE_BREAKPOINT:
         gap = 2
-        column_width = (width - gap) // 2
-        top = Table.grid(padding=0)
-        top.add_column(width=column_width)
-        top.add_column(width=gap)
-        top.add_column(width=column_width)
-        top.add_row(
-            _menu_panel("INVESTIGATE", investigation, column_width),
-            Text(""),
-            _menu_panel("MONITOR", monitoring, column_width),
-        )
-        return Group(title, hierarchy, Text(""), top, _system_panel(system, width))
+        left_width = int((width - gap) * 0.60)
+        right_width = width - gap - left_width
+        right = Group(_status_panel(right_width), Text(""), _quick_info_panel(right_width))
+        layout = Table.grid(padding=0)
+        layout.add_column(width=left_width)
+        layout.add_column(width=gap)
+        layout.add_column(width=right_width)
+        layout.add_row(_menu_panel("MAIN MENU", rows, left_width), Text(""), right)
+        return layout
 
-    return Group(title, hierarchy, Text(""), _compact_menu(investigation + monitoring + system))
+    return Group(_status_panel(width), Text(""), _menu_panel("MAIN MENU", rows, width))
 
 
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
-    footer = Text()
-    footer.append("01-09 Select", style=f"bold {ACCENT}")
-    footer.append("   |   C Command Mode", style=MUTED)
+    footer = Text(overflow="fold")
+    footer.append("Select [01-09]", style=f"bold {ACCENT}")
+    footer.append(" or type a command", style=NEUTRAL)
     footer.append("   |   Q Exit", style=MUTED)
     if width >= 92:
         footer.append("   |   Ctrl+C stops live views", style=MUTED)
@@ -271,6 +244,9 @@ def _footer(screen_width: int | None = None) -> Text:
 def _home(screen_width: int | None = None) -> RenderableType:
     frame_width = _frame_width(screen_width)
     available = _screen_width(screen_width)
+    prompt = Text()
+    prompt.append("aegis@console", style=f"bold {ACCENT}")
+    prompt.append(" > ", style=NEUTRAL)
     content = Group(
         _header(screen_width),
         Text(""),
@@ -278,6 +254,7 @@ def _home(screen_width: int | None = None) -> RenderableType:
         Text(""),
         _rule(frame_width),
         _footer(screen_width),
+        prompt,
     )
     return Align.center(content, width=available, pad=False)
 

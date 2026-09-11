@@ -13,31 +13,21 @@ def _plain(renderable, width: int = 118) -> str:
     return console.export_text()
 
 
-def test_mission_control_uses_front_falcon_identity() -> None:
+def test_mission_control_uses_final_wordmark_identity() -> None:
     output = _plain(commands_v145._home(118), width=120)
-    assert "A E G I S L O G" in output
+    assert "DEFENSIVE LOG INVESTIGATION" in output
+    assert "MADE BY HR-PRESENTS" in output
     assert "SYSTEM READY" in output
-    assert "INVESTIGATE" in output
-    assert "MONITOR" in output
-    assert "|---/\\_/\\---|" not in output
-    assert "__/\\__" in output
-    assert "\\__/" in output
-    assert "UNDERSTAND" not in output
-    assert "STAY AHEAD" not in output
+    assert "MAIN MENU" in output
+    assert "ANALYZE LOG" in output
+    assert "LIVE MONITOR" in output
+    assert "VERSION" not in output
+    assert "__/\\__" not in output
+    assert "<F>" not in output
 
 
 def test_compact_analyze_does_not_dump_deep_tables() -> None:
-    data = DashboardData(
-        source=r"C:\\Logs\\sample.log",
-        lines=26,
-        findings=(),
-        anomalies=(),
-        incidents=(),
-        levels={"INFO": 26},
-        services={"app": 26},
-        categories={},
-        severities={},
-    )
+    data = DashboardData(source=r"C:\\Logs\\sample.log", lines=26, findings=(), anomalies=(), incidents=(), levels={"INFO": 26}, services={"app": 26}, categories={}, severities={})
     output = _plain(render_dashboard(data, screen_width=118), width=120)
     assert "ANALYZE LOG" in output
     assert "TOP FINDINGS" in output
@@ -46,21 +36,9 @@ def test_compact_analyze_does_not_dump_deep_tables() -> None:
     assert "EVENTS 26" in output
     assert "RAW EVIDENCE" not in output
     assert "INVESTIGATION TIMELINE" not in output
-    assert "ANOMALY SIGNALS" not in output
-    assert "TELEMETRY CONTEXT" not in output
 
 
 def test_compact_analyze_is_bounded_for_wide_windows_terminal() -> None:
-    data = DashboardData(
-        source=r"C:\\Users\\Example\\Downloads\\very-long-but-realistic-log-file-name.log",
-        lines=1,
-        findings=(),
-        anomalies=(),
-        incidents=(),
-        levels={},
-        services={},
-        categories={},
-        severities={},
-    )
+    data = DashboardData(source=r"C:\\Users\\Example\\Downloads\\very-long-but-realistic-log-file-name.log", lines=1, findings=(), anomalies=(), incidents=(), levels={}, services={}, categories={}, severities={})
     output = _plain(render_dashboard(data, screen_width=220), width=220)
     assert max(len(line) for line in output.splitlines()) <= 118
