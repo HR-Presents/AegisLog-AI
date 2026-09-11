@@ -111,14 +111,36 @@ def _event_cadence(lines: list[str]) -> Panel:
     if not items:
         return _panel(Text("Waiting for events.", style=MUTED), "EVENT CADENCE")
     maximum = max(value for _, value in items)
-    table = Table.grid(expand=True, padding=(0, 1))
-    table.add_column(width=8, style=MUTED)
-    table.add_column(ratio=1)
-    table.add_column(width=6, justify="right")
-    for index, (label, value) in enumerate(items):
-        tone = _PALETTE[index % len(_PALETTE)]
-        table.add_row(label[-8:], _bar(value, maximum, width=20, tone=tone), Text(str(value), style=tone))
-    return _panel(Group(table, Text(note, style=MUTED)), "EVENT CADENCE", CYAN)
+    height = 6
+    heights = [max(1, round(value / maximum * height)) for _, value in items]
+    chart = Table.grid(padding=0)
+    chart.add_column(width=5, justify="right")
+    chart.add_column()
+    for level in range(height, 0, -1):
+        scale = str(round(maximum * level / height)) if level in {height, 1} else ""
+        row = Text()
+        for index, item_height in enumerate(heights):
+            row.append("##" if item_height >= level else "  ", style=_PALETTE[index % len(_PALETTE)])
+            row.append(" ")
+        chart.add_row(Text(scale, style=MUTED), row)
+    axis = Text("--" * len(items), style=ACCENT_SOFT)
+    labels = Text(" ".join(label[-5:] for label, _ in items), style=MUTED, no_wrap=True, overflow="ellipsis")
+    values = Text(" ".join(f"{value:>2}" for _, value in items), style=NEUTRAL, no_wrap=True, overflow="ellipsis")
+    return _panel(Group(chart, Text("     ").append_text(axis), labels, values, Text(note, style=MUTED)), "EVENT TREND // VOLUME OVER TIME", CYAN)
+
+
+def _compare_bar(current: float, baseline: float, width: int = 14) -> Text:
+    maximum = max(current, baseline, 1.0)
+    current_width = round(current / maximum * width)
+    baseline_position = min(width - 1, max(0, round(baseline / maximum * (width - 1))))
+    plot = ["."] * width
+    for index in range(current_width):
+        plot[index] = "#"
+    plot[baseline_position] = "|"
+    text = Text()
+    for char in plot:
+        text.append(char, style=VIOLET if char == "|" else CYAN if char == "#" else ACCENT_SOFT)
+    return text
 
 
 def _trend_matrix(snapshot, metric_names: tuple[str, ...]) -> Panel:
@@ -126,6 +148,7 @@ def _trend_matrix(snapshot, metric_names: tuple[str, ...]) -> Panel:
     metrics = [item for item in snapshot.metrics if item.name in allowed]
     table = Table.grid(expand=True, padding=(0, 1))
     table.add_column("SIGNAL", ratio=1)
+    table.add_column("CURRENT # / BASE |", width=16)
     table.add_column("RATE", width=9, justify="right")
     table.add_column("BASE", width=8, justify="right")
     table.add_column("DELTA", width=7, justify="right")
@@ -133,10 +156,17 @@ def _trend_matrix(snapshot, metric_names: tuple[str, ...]) -> Panel:
     for item in metrics:
         tone = HIGH if item.state == "SPIKE" else WARNING if item.state == "ELEVATED" else SUCCESS
         ratio = f"{item.deviation_ratio:.1f}x" if item.deviation_ratio < 100 else ">99x"
-        table.add_row(item.name, f"{item.current_per_minute:.1f}/m", f"{item.baseline_per_minute:.1f}/m", ratio, Text(item.state, style=f"bold {tone}"))
+        table.add_row(
+            item.name,
+            _compare_bar(item.current_per_minute, item.baseline_per_minute),
+            f"{item.current_per_minute:.1f}/m",
+            f"{item.baseline_per_minute:.1f}/m",
+            ratio,
+            Text(item.state, style=f"bold {tone}"),
+        )
     if not metrics:
-        table.add_row("No profile signals", "0.0/m", "0.0/m", "1.0x", Text("NORMAL", style=SUCCESS))
-    return _panel(table, f"RATE & BASELINE INTELLIGENCE // {snapshot.window_seconds}s", VIOLET)
+        table.add_row("No profile signals", _compare_bar(0, 0), "0.0/m", "0.0/m", "1.0x", Text("NORMAL", style=SUCCESS))
+    return _panel(table, f"SIGNAL TREND // RATE & BASELINE INTELLIGENCE // {snapshot.window_seconds}s", VIOLET)
 
 
 def _finding_panel(findings, profile_label: str) -> Panel:
@@ -186,7 +216,7 @@ def render_realtime_command_center(state) -> RenderableType:
     ]
     severity_panel, service_panel = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True), _distribution("SERVICE ACTIVITY", services)
     sections.extend(
-        (_two(_event_cadence(state.lines), severity_panel), _two(service_panel, _trend_matrix(trend, profile.trend_metrics)))
+        (_two(_event_cadence(state.lines), severity_panel), service_panel, _trend_matrix(trend, profile.trend_metrics))
         if width >= _WIDE
         else (_event_cadence(state.lines), severity_panel, service_panel, _trend_matrix(trend, profile.trend_metrics))
     )
@@ -248,8 +278,13 @@ def render_multisource_command_center(state) -> RenderableType:
         _metric_strip(metrics, compact),
         _source_activity(state),
     ]
-    left, right = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True), _distribution("FINDINGS BY CATEGORY", categories)
-    sections.extend((_two(left, right),) if width >= _WIDE else (left, right))
+    severity_panel = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True)
+    category_panel = _distribution("FINDINGS BY CATEGORY", categories)
+    sections.extend(
+        (_two(_event_cadence(state.raw_lines), severity_panel), category_panel)
+        if width >= _WIDE
+        else (_event_cadence(state.raw_lines), severity_panel, category_panel)
+    )
     sections.extend(
         (
             _trend_matrix(trend, profile.trend_metrics),
