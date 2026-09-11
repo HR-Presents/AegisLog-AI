@@ -53,6 +53,7 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     assert "SECURITY DISTRIBUTION" in output
     assert "INVESTIGATION TICKER" in output
     assert "EVENT ACTIVITY" in output
+    assert "EVENT TREND" in output
     assert "SERVICE LOAD" in output
     assert "ANALYST FOCUS" in output
     assert "RAW EVIDENCE" in output
@@ -66,7 +67,7 @@ def test_analysis_dashboard_omits_activity_chart_without_timestamps(tmp_path: Pa
     output = _plain(render_dashboard(data, screen_width=80), width=80)
     assert "SECURITY METRICS" in output
     assert "EVENT ACTIVITY" not in output
-    assert "EVENT CADENCE" in output
+    assert "EVENT TREND" in output
     assert "real event-position buckets" in output
 
 
@@ -78,9 +79,10 @@ def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
     assert "LIVE MONITOR" in output
     assert "LIVE SECURITY METRICS" in output
     assert "TELEMETRY TICKER" in output
-    assert "EVENT CADENCE" in output
+    assert "EVENT TREND" in output
     assert "SERVICE ACTIVITY" in output
     assert "RATE & BASELINE INTELLIGENCE" in output
+    assert "SIGNAL TREND" in output
     assert "INVESTIGATION QUEUE" in output
     assert "6" in output
     assert "live.log" in output
@@ -99,6 +101,7 @@ def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, m
     assert "MULTI-SOURCE" in output
     assert "SOURCE ACTIVITY" in output
     assert "INGESTION PULSE" in output
+    assert "EVENT TREND" in output
     assert "FINDINGS BY CATEGORY" in output
     assert "SOC STATUS" in output
     assert "auth.log" in output and "web.log" in output
