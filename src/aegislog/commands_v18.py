@@ -3,15 +3,16 @@ from __future__ import annotations
 import time
 
 import typer
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.text import Text
 
+from .command_center_ui import render_realtime_command_center
 from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
 from .native_collectors import CollectorError
 from .native_diagnostics import failure_guidance
 from .native_live import NativeLivePoller
-from .realtime import RealtimeState, render_realtime
+from .realtime import RealtimeState
 from .theme import WARNING
 from .ui import bounded
 from .watch_profiles import get_profile
@@ -19,8 +20,22 @@ from .watch_profiles import get_profile
 console = Console()
 
 
-def _view(state: RealtimeState):
-    return bounded(render_realtime(state))
+def _view(state: RealtimeState, notice=None):
+    dashboard = bounded(render_realtime_command_center(state))
+    if notice is None:
+        return dashboard
+    return Group(dashboard, notice)
+
+
+def _live_options() -> dict[str, object]:
+    """Use one explicit full-screen redraw per poll for stable Windows rendering."""
+    return {
+        "console": console,
+        "auto_refresh": False,
+        "screen": True,
+        "transient": True,
+        "vertical_overflow": "crop",
+    }
 
 
 def native_live(
@@ -69,32 +84,29 @@ def native_live(
         )
     )
     if from_start:
-        # Initial snapshot contract: console.print(render_realtime(state))
-        console.print(_view(state))
-        console.print(live_initial_status("native", prefix="Initial native scan complete."))
+        console.print(live_initial_status("native", prefix="Initial native scan complete. Opening live workspace."))
 
+    notice = None
+    degraded = False
     try:
-        with Live(
-            _view(state),
-            console=console,
-            refresh_per_second=max(1, int(round(1 / refresh))),
-            screen=False,
-            transient=False,
-        ) as live:
+        with Live(_view(state), **_live_options()) as live:
+            live.refresh()
             while True:
                 try:
                     lines = poller.poll()
                     if lines:
                         state.ingest(lines)
+                    notice = None
+                    degraded = False
                 except CollectorError as exc:
-                    live.update(_view(state), refresh=True)
                     warning = Text("Native source temporarily unavailable: ", style=f"bold {WARNING}")
                     warning.append(str(exc))
-                    console.print(warning)
-                    console.print(failure_guidance(normalized, str(exc)))
+                    notice = Group(warning, failure_guidance(normalized, str(exc)))
+                    degraded = True
+                    live.update(_view(state, notice), refresh=True)
                     time.sleep(refresh)
                     continue
-                live.update(_view(state), refresh=True)
+                live.update(_view(state, notice), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
-        console.print(live_stopped_status("Native"))
+        console.print(live_stopped_status("Native", degraded=degraded))

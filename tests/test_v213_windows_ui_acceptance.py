@@ -28,21 +28,39 @@ def test_mission_control_uses_final_wordmark_identity() -> None:
     assert "<F>" not in output
 
 
-def test_compact_analyze_does_not_dump_deep_tables() -> None:
-    data = DashboardData(source=r"C:\\Logs\\sample.log", lines=26, findings=(), anomalies=(), incidents=(), levels={"INFO": 26}, services={"app": 26}, categories={}, severities={})
+def test_analyze_uses_dense_visual_soc_hierarchy() -> None:
+    data = DashboardData(
+        source=r"C:\\Logs\\sample.log",
+        lines=26,
+        findings=(),
+        anomalies=(),
+        incidents=(),
+        levels={"INFO": 20, "ERROR": 6},
+        services={"app": 18, "sshd": 8},
+        categories={},
+        severities={},
+        raw_lines=tuple(f"2026-09-11T10:{index:02d}:00 app INFO event" for index in range(26)),
+    )
     output = _plain(render_dashboard(data, screen_width=118), width=120)
-    assert "ANALYZE LOG" in output
-    assert "TOP FINDINGS" in output
-    assert "ANALYST FOCUS" in output
-    assert "NEXT" in output
-    assert "EVENTS 26" in output
-    assert "RAW EVIDENCE" not in output
-    assert "INVESTIGATION TIMELINE" not in output
+    for label in (
+        "SECURITY INVESTIGATION",
+        "INVESTIGATION TICKER",
+        "EVENT TREND",
+        "SEVERITY MIX",
+        "SERVICE LOAD",
+        "FINDING CATEGORIES",
+        "ANALYST FOCUS",
+        "LIVE EVIDENCE BOARD",
+        "SOURCE PROFILE",
+    ):
+        assert label in output
+    assert "26" in output
+    assert "app" in output.lower()
 
 
-def test_compact_analyze_is_bounded_for_wide_windows_terminal() -> None:
+def test_analyze_is_bounded_for_wide_windows_terminal() -> None:
     data = DashboardData(source=r"C:\\Users\\Example\\Downloads\\very-long-but-realistic-log-file-name.log", lines=1, findings=(), anomalies=(), incidents=(), levels={}, services={}, categories={}, severities={})
     output = _plain(render_dashboard(data, screen_width=220), width=220)
     meaningful = [line.rstrip() for line in output.splitlines() if line.strip()]
     assert meaningful
-    assert max(len(line) for line in meaningful) <= 144
+    assert max(len(line) for line in meaningful) <= 118

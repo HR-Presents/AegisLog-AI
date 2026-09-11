@@ -11,7 +11,7 @@ from rich.text import Text
 
 from .dashboard_v213 import DashboardData, analyze_dashboard, render_dashboard
 from .plugins import apply_rules, load_rules
-from .reporting import write_html_report
+from .reporting_sentrix import write_html_report
 from .theme import ACCENT, ACCENT_SOFT, MUTED, SUCCESS, WARNING
 from .ui import bounded
 
