@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import typer
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 
 from .command_center_ui import render_multisource_command_center
@@ -17,8 +17,22 @@ console = Console()
 render_multisource = render_multisource_command_center
 
 
-def _view(state: MultiSourceState):
-    return bounded(render_multisource(state))
+def _view(state: MultiSourceState, notice=None):
+    dashboard = bounded(render_multisource(state))
+    if notice is None:
+        return dashboard
+    return Group(dashboard, notice)
+
+
+def _live_options(refresh: float) -> dict[str, object]:
+    """Use one explicit full-screen redraw per poll for stable Windows rendering."""
+    return {
+        "console": console,
+        "auto_refresh": False,
+        "screen": True,
+        "transient": True,
+        "vertical_overflow": "crop",
+    }
 
 
 def live_multi(
@@ -62,30 +76,27 @@ def live_multi(
         )
     )
     if from_start:
-        console.print(render_multisource(state))
-        console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete."))
+        console.print(live_initial_status("multi-source", prefix="Initial multi-source scan complete. Opening live workspace."))
 
     missing_sources: set[Path] = set()
+    notice = None
     try:
-        with Live(
-            _view(state),
-            console=console,
-            refresh_per_second=max(1, int(round(1 / refresh))),
-            screen=False,
-            transient=False,
-        ) as live:
+        with Live(_view(state), **_live_options(refresh)) as live:
+            live.refresh()
             while True:
                 current_missing = {path for path in unique if not path.exists() or not path.is_file()}
+                changes = []
                 for path in sorted(current_missing - missing_sources, key=str):
-                    console.print(live_source_status(str(path), available=False))
+                    changes.append(live_source_status(str(path), available=False))
                 for path in sorted(missing_sources - current_missing, key=str):
-                    console.print(live_source_status(str(path), available=True))
+                    changes.append(live_source_status(str(path), available=True))
                 missing_sources = current_missing
+                notice = Group(*changes) if changes else None
 
                 batches, cursors = poll_sources(unique, cursors)
                 for path, lines in batches:
                     state.ingest(path, lines)
-                live.update(_view(state), refresh=True)
+                live.update(_view(state, notice), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         console.print(live_stopped_status("Multi-source", degraded=bool(missing_sources)))
