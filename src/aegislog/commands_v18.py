@@ -7,11 +7,12 @@ from rich.console import Console, Group
 from rich.live import Live
 from rich.text import Text
 
+from .command_center_ui import render_realtime_command_center
 from .live_ux import live_initial_status, live_startup_panel, live_stopped_status
 from .native_collectors import CollectorError
 from .native_diagnostics import failure_guidance
 from .native_live import NativeLivePoller
-from .realtime import RealtimeState, render_realtime
+from .realtime import RealtimeState
 from .theme import WARNING
 from .ui import bounded
 from .watch_profiles import get_profile
@@ -20,7 +21,7 @@ console = Console()
 
 
 def _view(state: RealtimeState, notice=None):
-    dashboard = bounded(render_realtime(state))
+    dashboard = bounded(render_realtime_command_center(state))
     if notice is None:
         return dashboard
     return Group(dashboard, notice)
