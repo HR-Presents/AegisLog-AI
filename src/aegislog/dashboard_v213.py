@@ -15,7 +15,6 @@ from .theme import ACCENT, ACCENT_SOFT, INCIDENT, MUTED, NEUTRAL, SUCCESS, WARNI
 
 _MAX_WIDTH = 144
 _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
-_BLOCKS = "▏▎▍▌▋▊▉█"
 
 
 def _rank(value: str) -> int: return _SEVERITY_RANK.get(value.upper(), 0)
@@ -29,8 +28,8 @@ def _risk(data: DashboardData) -> str:
 
 def _header(data: DashboardData, width: int) -> Panel:
     grid = Table.grid(expand=True, padding=(0, 1)); grid.add_column(ratio=1); grid.add_column(no_wrap=True)
-    title = Text("AEGISLOG", style=f"bold {NEUTRAL}"); title.append("  ◇  ANALYZE", style=f"bold {ACCENT}")
-    grid.add_row(title, Text("ANALYSIS COMPLETE", style=f"bold {SUCCESS}")); grid.add_row(Text("LOCAL-FIRST  ·  READ-ONLY  ·  DETERMINISTIC", style=MUTED), Text(f"POSTURE  {_risk(data)}", style=WARNING if _risk(data) != "CLEAR" else SUCCESS)); grid.add_row(Text("HR-PRESENTS", style=f"bold {ACCENT}"), Text("SOURCE UNCHANGED", style=MUTED))
+    title = Text("AEGISLOG", style=f"bold {NEUTRAL}"); title.append("  //  ANALYZE", style=f"bold {ACCENT}")
+    grid.add_row(title, Text("ANALYSIS COMPLETE", style=f"bold {SUCCESS}")); grid.add_row(Text("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED), Text(f"POSTURE  {_risk(data)}", style=WARNING if _risk(data) != "CLEAR" else SUCCESS)); grid.add_row(Text("HR-PRESENTS", style=f"bold {ACCENT}"), Text("SOURCE UNCHANGED", style=MUTED))
     return Panel(grid, box=box.ROUNDED, border_style=ACCENT_SOFT, padding=(0, 1), width=width)
 
 
@@ -55,8 +54,7 @@ def _severity_chart(data: DashboardData) -> Panel:
     for label in ("CRITICAL","HIGH","MEDIUM","LOW","INFO"):
         count=values.get(label,0)
         if not count: continue
-        width=24; units=(count/maximum)*width; full=int(units); frac=units-full; bar=Text("█"*full,style=severity_style(label))
-        if full<width and frac>0: bar.append(_BLOCKS[min(7,int(frac*8))],style=severity_style(label))
+        width=24; filled=max(1,round((count/maximum)*width)); bar=Text("="*filled,style=severity_style(label))
         table.add_row(Text(label,style=severity_style(label)),bar,Text(f"{count}  {count/total*100:.0f}%",style=MUTED))
     if not values: table.add_row(Text("CLEAR",style=SUCCESS),Text("No retained findings",style=MUTED),Text("0",style=MUTED))
     return Panel(table,title=Text(" SEVERITY PROFILE ",style=f"bold {ACCENT}"),title_align="left",box=box.ROUNDED,border_style=ACCENT_SOFT,padding=(0,1))
@@ -92,7 +90,7 @@ def render_dashboard(data:DashboardData,*,screen_width:int|None=None)->Renderabl
         overview=Table.grid(expand=True,padding=(0,2)); overview.add_column(ratio=1); overview.add_column(ratio=1); overview.add_row(_severity_chart(data),_investigation_focus(data)); body.extend((overview,Text("")))
         layout=Table.grid(expand=True,padding=(0,2)); layout.add_column(ratio=2); layout.add_column(ratio=1); layout.add_row(_top_findings(data),_next(data)); body.append(layout)
     else: body.extend((_severity_chart(data),Text(""),_top_findings(data),Text(""),_investigation_focus(data),Text(""),_next(data)))
-    body.extend((Text(""),Text("Analysis complete  ·  evidence retained in local HTML report  ·  source unchanged",style=MUTED))); return Align.left(Group(*body),width=width,pad=False)
+    body.extend((Text(""),Text("Analysis complete  |  evidence retained in local HTML report  |  source unchanged",style=MUTED))); return Align.left(Group(*body),width=width,pad=False)
 
 
 __all__=["DashboardData","analyze_dashboard","render_dashboard"]
