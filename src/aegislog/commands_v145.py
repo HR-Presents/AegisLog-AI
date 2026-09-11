@@ -8,21 +8,21 @@ from rich.table import Table
 from rich.text import Text
 
 from . import commands_v144 as legacy
-from .theme import ACCENT, BLUE, CYAN, DIM, LIME, MAGENTA, MUTED, NEUTRAL, ORANGE, SUCCESS, VIOLET, WARNING
+from .theme import ACCENT, ACCENT_BRIGHT, BLUE, CYAN, DIM, LIME, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 _NARROW_BREAKPOINT = 72
 _WIDE_BREAKPOINT = 96
 _MAX_HOME_WIDTH = 144
 _MENU_TONES = {
-    "01": MAGENTA,
+    "01": ACCENT_BRIGHT,
     "02": CYAN,
-    "03": VIOLET,
-    "04": LIME,
-    "05": ORANGE,
-    "06": WARNING,
+    "03": BLUE,
+    "04": ACCENT,
+    "05": CYAN,
+    "06": BLUE,
     "07": BLUE,
-    "08": SUCCESS,
+    "08": ACCENT_BRIGHT,
     "09": ACCENT,
 }
 
@@ -52,7 +52,7 @@ def _wordmark(compact: bool = False) -> Text:
         r" / ___ \| |__| |_| || | ___) | |__| |_| | |_| |",
         r"/_/   \_\_____\____|___|____/|_____\___/ \____|",
     )
-    tones = (MAGENTA, VIOLET, CYAN, BLUE, LIME)
+    tones = (BLUE, ACCENT_BRIGHT, ACCENT, CYAN, BLUE)
     for index, line in enumerate(lines):
         if index:
             mark.append("\n")
@@ -64,21 +64,21 @@ def _brand_lockup(compact: bool = False, *, screen_width: int | None = None) -> 
     width = _frame_width(screen_width)
     if compact or width < _NARROW_BREAKPOINT:
         body = Text(justify="center")
-        body.append("AEGISLOG\n", style=f"bold {MAGENTA}")
+        body.append("AEGISLOG\n", style=f"bold {ACCENT_BRIGHT}")
         body.append("DEFENSIVE LOG INVESTIGATION\n", style=f"bold {CYAN}")
-        body.append("MADE BY HR-PRESENTS\n", style=f"bold {LIME}")
+        body.append("MADE BY HR-PRESENTS\n", style=f"bold {BLUE}")
         body.append("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)
         return body
     return Group(
         Align.center(_wordmark()),
         Align.center(Text("DEFENSIVE LOG INVESTIGATION", style=f"bold {CYAN}")),
-        Align.center(Text("MADE BY HR-PRESENTS", style=f"bold {LIME}")),
+        Align.center(Text("MADE BY HR-PRESENTS", style=f"bold {BLUE}")),
         Align.center(Text("LOCAL-FIRST  |  READ-ONLY  |  DETERMINISTIC", style=MUTED)),
     )
 
 
 def _header(screen_width: int | None = None) -> RenderableType:
-    return Panel(_brand_lockup(screen_width=screen_width), box=box.ASCII, border_style=MAGENTA, padding=(1, 1), width=_frame_width(screen_width))
+    return Panel(_brand_lockup(screen_width=screen_width), box=box.ASCII, border_style=BLUE, padding=(1, 1), width=_frame_width(screen_width))
 
 
 def _operation_header(title: str, subtitle: str, accent: str = ACCENT, *, screen_width: int | None = None) -> RenderableType:
@@ -134,7 +134,7 @@ def _primary_panel(width: int) -> Panel:
         Text("     Deterministic findings, incidents and evidence", style=MUTED, no_wrap=True, overflow="crop"),
     )
     return Panel(
-        body, title=Text(" INVESTIGATE ", style=f"bold {MAGENTA}"), title_align="left", box=box.ASCII, border_style=MAGENTA, padding=(1, 1), width=width
+        body, title=Text(" INVESTIGATE ", style=f"bold {ACCENT_BRIGHT}"), title_align="left", box=box.ASCII, border_style=ACCENT, padding=(1, 1), width=width
     )
 
 
@@ -161,10 +161,10 @@ def _utility_panel(width: int) -> Panel:
     rows = (("07", "DEMO", "Quick start dataset"), ("08", "HEALTH", "Engine diagnostics"), ("09", "HELP", "Command reference"))
     return Panel(
         Group(*[_action_line(*row) for row in rows]),
-        title=Text(" UTILITIES ", style=f"bold {VIOLET}"),
+        title=Text(" UTILITIES ", style=f"bold {BLUE}"),
         title_align="left",
         box=box.ASCII,
-        border_style=VIOLET,
+        border_style=BLUE,
         padding=(1, 1),
         width=width,
     )
@@ -187,7 +187,7 @@ def _quick_info_panel(width: int) -> Panel:
     grid.add_column(ratio=1, no_wrap=True, overflow="crop")
     for label, value in (("REPORTS", "./reports/"), ("CONFIG", "./config/"), ("PROJECT", "HR-Presents/AegisLog-AI"), ("OWNER", "HR-PRESENTS")):
         grid.add_row(Text(label, style=MUTED), Text(value, style=ACCENT if label != "OWNER" else NEUTRAL, no_wrap=True, overflow="crop"))
-    return Panel(grid, title=Text(" QUICK INFO ", style=f"bold {ORANGE}"), title_align="left", box=box.ASCII, border_style=ORANGE, padding=(1, 1), width=width)
+    return Panel(grid, title=Text(" QUICK INFO ", style=f"bold {CYAN}"), title_align="left", box=box.ASCII, border_style=BLUE, padding=(1, 1), width=width)
 
 
 def _menu(screen_width: int | None = None) -> RenderableType:
@@ -209,10 +209,10 @@ def _menu(screen_width: int | None = None) -> RenderableType:
             Text(""),
             Panel(
                 Group(*[_action_line(*row) for row in rows]),
-                title=Text(" COMMAND CENTER ", style=f"bold {VIOLET}"),
+                title=Text(" COMMAND CENTER ", style=f"bold {ACCENT_BRIGHT}"),
                 title_align="left",
                 box=box.ASCII,
-                border_style=VIOLET,
+                border_style=BLUE,
                 padding=(1, 1),
                 width=width,
             ),

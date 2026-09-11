@@ -45,7 +45,7 @@ def test_palette_uses_high_contrast_multicolor_identity() -> None:
     assert NEUTRAL == "#F8FAFC"
     assert MUTED == "#94A3B8"
     assert len({ACCENT, BLUE, CYAN, LIME, MAGENTA, ORANGE, VIOLET}) == 7
-    assert len(set(commands_v145._MENU_TONES.values())) == 9
+    assert set(commands_v145._MENU_TONES.values()) <= {ACCENT, BLUE, CYAN, "#67E8F9"}
 
 
 def test_readme_uses_strong_capabilities_and_product_identity() -> None:

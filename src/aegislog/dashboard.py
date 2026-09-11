@@ -23,7 +23,6 @@ from .theme import (
     ACCENT,
     ACCENT_SOFT,
     ANOMALY,
-    DIM,
     INCIDENT,
     INFO,
     MUTED,
@@ -38,7 +37,7 @@ from .theme import (
     severity_style,
     severity_text,
 )
-from .terminal_charts import donut_chart, stacked_composition, vertical_histogram, wave_chart
+from .terminal_charts import donut_chart, horizontal_bar, radar_chart, stacked_composition, unicode_charts_supported, vertical_histogram, wave_chart
 
 _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
 _NARROW_DASHBOARD_BREAKPOINT = 72
@@ -270,12 +269,7 @@ def _analyst_focus(data: DashboardData) -> Panel:
 
 
 def _bar(value: int, maximum: int, width: int = _MAX_BAR_WIDTH) -> Text:
-    maximum = max(maximum, 1)
-    filled = 0 if value <= 0 else max(1, round((value / maximum) * width))
-    filled = min(width, filled)
-    bar = Text("#" * filled, style=ACCENT)
-    bar.append("." * (width - filled), style=DIM)
-    return bar
+    return horizontal_bar(value, maximum, width=width, tone=ACCENT)
 
 
 def _ranked_panel(title: str, values: dict[str, int], *, compact: bool = False, tone: str = ACCENT) -> Panel:
@@ -398,7 +392,7 @@ def _threat_wave_panel(data: DashboardData, *, compact: bool = False) -> Panel:
     size = max(1, (len(values) + buckets - 1) // buckets)
     energy = [sum(values[index : index + size]) for index in range(0, len(values), size)][:buckets]
     return Panel(
-        wave_chart(energy, width=24 if compact else 48, height=5 if compact else 7, tone=MAGENTA),
+        wave_chart(energy, width=24 if compact else 48, height=5 if compact else 7, tone=MAGENTA, fill=False),
         title=Text(" THREAT WAVE // EVENT ENERGY ", style=f"bold {MAGENTA}"),
         subtitle=Text("severity-weighted log activity", style=MUTED),
         title_align="left",
@@ -408,17 +402,42 @@ def _threat_wave_panel(data: DashboardData, *, compact: bool = False) -> Panel:
     )
 
 
+def _threat_radar_panel(data: DashboardData, *, compact: bool = False) -> Panel:
+    severity_weights = {"CRITICAL": 5, "HIGH": 4, "MEDIUM": 3, "LOW": 2, "INFO": 1}
+    alert_pressure = sum(data.severities.get(level, 0) * weight for level, weight in severity_weights.items())
+    error_count = sum(count for level, count in data.levels.items() if level.upper() in {"ERROR", "CRITICAL", "FATAL"})
+    auth_count = sum(count for category, count in data.categories.items() if "auth" in category.lower())
+    dimensions = {
+        "alert": alert_pressure,
+        "auth": auth_count,
+        "errors": error_count,
+        "incidents": len(data.incidents),
+        "anomalies": len(data.anomalies),
+        "services": len(data.services),
+    }
+    return Panel(
+        radar_chart(dimensions, width=23 if compact else 31, height=8 if compact else 10, tone=ORANGE),
+        title=Text(" THREAT RADAR // SIGNAL PROFILE ", style=f"bold {ORANGE}"),
+        subtitle=Text("normalized shape / exact values in legend", style=MUTED),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ORANGE,
+        padding=(0, 1),
+    )
+
+
 def _analysis_flow_panel(data: DashboardData) -> Panel:
+    arrow = "━━▶" if unicode_charts_supported() else "==>"
     grid = Table.grid(expand=True, padding=(0, 1))
     for ratio in (2, 1, 2, 1, 2, 1, 2):
         grid.add_column(ratio=ratio, justify="center")
     grid.add_row(
         Text(f"INPUT\n{data.lines:,} events", style=f"bold {CYAN}", justify="center"),
-        Text("==>", style=LIME),
+        Text(arrow, style=LIME),
         Text(f"SERVICES\n{len(data.services)} observed", style=f"bold {LIME}", justify="center"),
-        Text("==>", style=ORANGE),
+        Text(arrow, style=ORANGE),
         Text(f"FINDINGS\n{len(data.findings)} detected", style=f"bold {ORANGE}", justify="center"),
-        Text("==>", style=MAGENTA),
+        Text(arrow, style=MAGENTA),
         Text(f"INCIDENTS\n{len(data.incidents)} correlated", style=f"bold {MAGENTA}", justify="center"),
     )
     return Panel(
@@ -697,6 +716,8 @@ def render_dashboard(data: DashboardData, *, screen_width: int | None = None) ->
         _visual_analysis(data, screen_width=width, compact=compact),
         Text(""),
         _threat_wave_panel(data, compact=compact),
+        Text(""),
+        _threat_radar_panel(data, compact=compact),
         Text(""),
         _analysis_flow_panel(data),
         Text(""),

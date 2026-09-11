@@ -12,7 +12,7 @@ from rich.text import Text
 
 from .anomaly import score_events
 from .incidents import correlate
-from .terminal_charts import donut_chart, horizontal_bar, stacked_composition, vertical_histogram, wave_chart
+from .terminal_charts import donut_chart, horizontal_bar, radar_chart, stacked_composition, unicode_charts_supported, vertical_histogram, wave_chart
 from .theme import (
     ACCENT,
     ACCENT_BRIGHT,
@@ -140,20 +140,35 @@ def _activity_wave(lines: list[str]) -> Panel:
         weights = [0.0]
     bucket_size = max(1, (len(weights) + 11) // 12)
     energy = [sum(weights[index : index + bucket_size]) for index in range(0, len(weights), bucket_size)][:12]
-    return _panel(wave_chart(energy, width=48, height=7, tone=MAGENTA), "THREAT WAVE // SEVERITY ENERGY", MAGENTA)
+    return _panel(wave_chart(energy, width=48, height=7, tone=MAGENTA, fill=False), "THREAT WAVE // SEVERITY ENERGY", MAGENTA)
+
+
+def _threat_radar(lines: list[str], findings, incidents, anomalies, services: Counter[str]) -> Panel:
+    severity_weights = {"CRITICAL": 5, "HIGH": 4, "MEDIUM": 3, "LOW": 2, "INFO": 1}
+    alert_pressure = sum(severity_weights.get(item.severity.upper(), 1) for item in findings)
+    dimensions = {
+        "alert": alert_pressure,
+        "auth": sum("auth" in line.lower() or "password" in line.lower() for line in lines),
+        "errors": sum("error" in line.lower() or "failed" in line.lower() for line in lines),
+        "incidents": len(incidents),
+        "anomalies": len(anomalies),
+        "services": len(services),
+    }
+    return _panel(radar_chart(dimensions, width=31, height=10, tone=ORANGE), "THREAT RADAR // SIGNAL PROFILE", ORANGE)
 
 
 def _flow_panel(source_count: int, event_count: int, finding_count: int, incident_count: int) -> Panel:
+    arrow = "━━▶" if unicode_charts_supported() else "==>"
     grid = Table.grid(expand=True, padding=(0, 1))
     for ratio in (2, 1, 2, 1, 2, 1, 2):
         grid.add_column(ratio=ratio, justify="center")
     grid.add_row(
         Text(f"SOURCES\n{source_count}", style=f"bold {CYAN}", justify="center"),
-        Text("==>", style=LIME),
+        Text(arrow, style=LIME),
         Text(f"EVENTS\n{event_count:,}", style=f"bold {LIME}", justify="center"),
-        Text("==>", style=ORANGE),
+        Text(arrow, style=ORANGE),
         Text(f"FINDINGS\n{finding_count}", style=f"bold {ORANGE}", justify="center"),
-        Text("==>", style=MAGENTA),
+        Text(arrow, style=MAGENTA),
         Text(f"INCIDENTS\n{incident_count}", style=f"bold {MAGENTA}", justify="center"),
     )
     return _panel(grid, "DETECTION FLOW // CORRELATION DIAGRAM", LIME)
@@ -246,9 +261,22 @@ def render_realtime_command_center(state) -> RenderableType:
     ]
     severity_panel, service_panel = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True), _distribution("SERVICE ACTIVITY", services)
     sections.extend(
-        (_two(_event_cadence(state.lines), severity_panel), service_panel, _activity_wave(state.lines), _trend_matrix(trend, profile.trend_metrics))
+        (
+            _two(_event_cadence(state.lines), severity_panel),
+            service_panel,
+            _activity_wave(state.lines),
+            _threat_radar(state.lines, findings, incidents, anomalies, services),
+            _trend_matrix(trend, profile.trend_metrics),
+        )
         if width >= _WIDE
-        else (_event_cadence(state.lines), severity_panel, service_panel, _activity_wave(state.lines), _trend_matrix(trend, profile.trend_metrics))
+        else (
+            _event_cadence(state.lines),
+            severity_panel,
+            service_panel,
+            _activity_wave(state.lines),
+            _threat_radar(state.lines, findings, incidents, anomalies, services),
+            _trend_matrix(trend, profile.trend_metrics),
+        )
     )
     sections.extend(
         (
@@ -292,6 +320,8 @@ def render_multisource_command_center(state) -> RenderableType:
     severities = Counter(item.severity for item in findings)
     categories = Counter(item.category for item in findings)
     incidents = correlate(findings)
+    anomalies = score_events(state.events)
+    services = Counter(event.service or "unknown" for event in state.events if event.message)
     trend = state.trends
     spikes = sum(item.state == "SPIKE" for item in trend.metrics if item.name in set(profile.trend_metrics))
     metrics = [
@@ -312,9 +342,20 @@ def render_multisource_command_center(state) -> RenderableType:
     severity_panel = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True)
     category_panel = _distribution("FINDINGS BY CATEGORY", categories)
     sections.extend(
-        (_two(_event_cadence(state.raw_lines), severity_panel), category_panel, _activity_wave(state.raw_lines))
+        (
+            _two(_event_cadence(state.raw_lines), severity_panel),
+            category_panel,
+            _activity_wave(state.raw_lines),
+            _threat_radar(state.raw_lines, findings, incidents, anomalies, services),
+        )
         if width >= _WIDE
-        else (_event_cadence(state.raw_lines), severity_panel, category_panel, _activity_wave(state.raw_lines))
+        else (
+            _event_cadence(state.raw_lines),
+            severity_panel,
+            category_panel,
+            _activity_wave(state.raw_lines),
+            _threat_radar(state.raw_lines, findings, incidents, anomalies, services),
+        )
     )
     sections.extend(
         (
