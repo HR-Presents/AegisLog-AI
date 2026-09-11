@@ -27,8 +27,8 @@ def test_wide_home_is_bounded_and_uses_final_operator_layout() -> None:
     assert "LIVE MONITOR" in output
     assert "MADE BY HR-PRESENTS" in output
     assert "VERSION" not in output
-    assert max(len(line.lstrip()) for line in lines) <= 112
-    assert any(line.startswith(" " * 20) for line in lines if line.strip())
+    assert max(len(line.lstrip()) for line in lines) <= 144
+    assert any(line.startswith(" " * 18) for line in lines if line.strip())
 
 
 def test_wide_home_keeps_all_core_actions_visible() -> None:

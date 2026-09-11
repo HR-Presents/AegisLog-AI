@@ -41,9 +41,9 @@ def test_workspace_keeps_compact_brand_signature() -> None:
 
 
 def test_palette_uses_controlled_blue_identity() -> None:
-    assert ACCENT == "#4C8DFF"
-    assert NEUTRAL == "#E7EDF6"
-    assert MUTED == "#718096"
+    assert ACCENT == "#5B8CFF"
+    assert NEUTRAL == "#E8EDF5"
+    assert MUTED == "#8391A6"
 
 
 def test_readme_uses_strong_capabilities_and_product_identity() -> None:

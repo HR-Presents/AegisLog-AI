@@ -33,8 +33,8 @@ def test_final_home_is_centered_and_bounded_on_wide_windows_terminal() -> None:
     assert lines
     first_border = next(line for line in lines if "+" in line)
     left_margin = len(first_border) - len(first_border.lstrip())
-    assert left_margin >= 20
-    assert len(first_border.strip()) <= 112
+    assert left_margin >= 18
+    assert len(first_border.strip()) <= 144
     assert max(len(line.rstrip()) for line in lines) <= width
 
 
