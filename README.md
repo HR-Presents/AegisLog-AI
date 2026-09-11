@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/aegislog-logo.svg" alt="AegisLog — defensive log investigation" width="820" />
-
-<br/>
+# AEGISLOG
 
 **Terminal-first defensive log investigation for analysts who want evidence, not noise.**
 
@@ -34,43 +32,25 @@ AegisLog turns raw logs into structured investigation context while keeping anal
 | **05** | **INCIDENTS** | Review evidence chains, severity, confidence, and investigation context. |
 | **06** | **REPORTING** | Produce analyst-oriented HTML evidence reports that stay local. |
 
-No AI Analyst, remote model workflow, auto-remediation, exploitation, persistence, credential theft, or silent host modification is part of the supported product surface.
+AI Analyst is not part of the supported public product surface. No remote model workflow, auto-remediation, exploitation, persistence, credential theft, or silent host modification is part of the supported product surface.
 
 ---
 
-## Terminal experience
+## Current release
 
-AegisLog v2.0 uses one visual hierarchy throughout Mission Control: **brand → workspace → priority information → action → metadata**. Blue identifies the product and navigation; green, amber, and red are reserved for real system/security state.
+The current published stable release is **v2.1.3**.
 
-```text
-   /\      A E G I S L O G
-  /  \     DEFENSIVE LOG INVESTIGATION
-  \/\/     LOCAL-FIRST / READ-ONLY / DETERMINISTIC
+- Release target commit: `c01247b34a2dd54c863dd142c618f03e184af8f8`
+- Windows artifacts: `AegisLog.exe` and `AegisLog.exe.sha256`
+- Windows EXE SHA-256: `1ddda99e03fd36ba1816b1567a28b8cc23d410583f34771c1287f9e3c1a28155`
+- The Windows executable is currently unsigned.
+- Maintained benchmark results are synthetic regression evidence only, not independently validated real-world effectiveness evidence.
 
---------------------------------------------------------------------------------
-MISSION CONTROL                                                     v2.1.0
-                                                            + SYSTEM READY
+### Windows visual-status note
 
-INVESTIGATION                              MONITORING
-01  ANALYZE                                02  LIVE MONITOR
-    Investigate a log and generate             Watch one log source
-    an evidence report                         continuously
+The published v2.1.3 executable is functionally released, but its Mission Control presentation did **not** pass subsequent real-Windows visual acceptance. A later unreleased UI experiment on `main` also failed visual review. Those attempts are not being promoted as a finished visual design, and no newer release should be inferred from development-branch or CI artifacts.
 
-06  INCIDENTS                              03  MULTI-SOURCE
-    Review correlated evidence chains          Correlate live sources
-
-04  NATIVE LOGS                            05  NATIVE MONITOR
-    Inspect OS/container telemetry              Watch native telemetry
-
-SYSTEM
-07  DEMO        Run the built-in investigation dataset
-08  HEALTH      Check engine and collector readiness
-09  HELP        Open the command reference
---------------------------------------------------------------------------------
-01-09 select    Q EXIT    C command mode    CTRL+C STOPS LIVE VIEWS
-```
-
-The rendered layout adapts to terminal width: wide terminals use balanced Investigation and Monitoring areas, while medium and narrow terminals collapse without horizontal overflow. The real `aegis@console >` shell prompt is the only authoritative input prompt.
+Public product screenshots should come from a verified build and should not be presented as accepted product imagery until a real Windows capture has been reviewed.
 
 ---
 
@@ -87,7 +67,7 @@ The rendered layout adapts to terminal width: wide terminals use balanced Invest
 .\AegisLog.exe start
 ```
 
-The Windows executable is currently unsigned, so SmartScreen or endpoint-security reputation warnings may appear even when the published checksum matches.
+The interactive shell uses the authoritative `aegis@console >` prompt. Windows SmartScreen or endpoint-security reputation warnings may appear because the executable is unsigned, even when the published checksum matches.
 
 ### Python 3.10+
 
@@ -107,23 +87,23 @@ aegislog start
 
 ```text
 TELEMETRY
-   │
-   ▼
+   |
+   v
 PARSE + NORMALIZE
-   │
-   ▼
+   |
+   v
 DETERMINISTIC DETECTIONS
-   │
-   ▼
+   |
+   v
 CORRELATION + ANOMALY CONTEXT
-   │
-   ▼
+   |
+   v
 INCIDENT QUEUE
-   │
-   ▼
+   |
+   v
 EVIDENCE-LED REVIEW
-   │
-   ▼
+   |
+   v
 LOCAL HTML REPORT
 ```
 
@@ -151,12 +131,6 @@ AegisLog.exe --help
 ```
 
 See the complete [Command Reference](docs/COMMANDS.md).
-
----
-
-## Reports
-
-Static investigations can produce a self-contained HTML report with executive assessment, case metadata, severity distribution, incident queue, retained evidence, recommendations, anomaly context, telemetry distribution, and processing limitations. Reports remain local and read-only and can be printed or saved as PDF from the browser.
 
 ---
 
@@ -210,6 +184,6 @@ AegisLog is released under the [MIT License](LICENSE).
 
 <div align="center">
 
-**AEGISLOG**  ·  Investigate locally. Preserve evidence. Keep the analyst in control.
+**AEGISLOG** · Investigate locally. Preserve evidence. Keep the analyst in control.
 
 </div>

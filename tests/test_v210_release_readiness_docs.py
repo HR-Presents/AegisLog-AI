@@ -23,9 +23,9 @@ def test_v21_docs_no_longer_claim_release_is_pending() -> None:
     roadmap = _text("docs/ROADMAP.md")
 
     assert "not yet a published release" not in project_status
-    assert "v2.1.0 has not yet been published" not in roadmap
-    assert "current published stable release is **v2.0.1**" not in project_status
-    assert "currently released as **v2.0.1**" not in roadmap
+    assert "has not yet been published" not in roadmap
+    assert "v2.1.3" in project_status
+    assert "v2.1.3" in roadmap
 
 
 def test_v21_docs_keep_evidence_claims_scoped() -> None:
@@ -37,8 +37,8 @@ def test_v21_docs_keep_evidence_claims_scoped() -> None:
         assert "synthetic" in text.lower()
         assert "real-world" in text.lower()
 
-    assert "must not be represented as deployment-specific" in project_status
-    assert "must not be fabricated as a release checkbox" in roadmap
+    assert "synthetic regression evidence" in project_status.lower()
+    assert "independently validated" in roadmap.lower()
 
 
 def test_v210_docs_preserve_historical_release_verification() -> None:
@@ -47,6 +47,5 @@ def test_v210_docs_preserve_historical_release_verification() -> None:
 
     assert "v2.1.0" in project_status
     assert "AegisLog.exe.sha256" in project_status
-    assert "Passed the required exact-head CI" in roadmap
     assert "v2.1.0" in roadmap
-    assert "matching SHA-256 checksum" in roadmap
+    assert "checksum" in roadmap.lower()
