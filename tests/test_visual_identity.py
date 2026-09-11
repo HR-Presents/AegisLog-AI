@@ -20,7 +20,9 @@ def test_home_has_prominent_brand_and_feature_hierarchy() -> None:
     text = _render(commands_v145._home(100))
     assert "DEFENSIVE LOG INVESTIGATION" in text
     assert "MADE BY HR-PRESENTS" in text
-    assert "MAIN MENU" in text
+    assert "INVESTIGATE" in text
+    assert "MONITOR & INVESTIGATE" in text
+    assert "UTILITIES" in text
     assert "ANALYZE LOG" in text
     assert "LIVE MONITOR" in text
     assert "SYSTEM READY" in text
