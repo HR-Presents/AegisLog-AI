@@ -55,7 +55,7 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     assert "INVESTIGATION FOCUS" in output
     assert "PRIORITY FINDINGS" in output
     assert "EVENTS" in output and "6" in output
-    assert "failed password for admin" in output
+    assert "Repeated authentication failures from 10.0.0.5" in output
     assert "ANALYST FOCUS" not in output
 
 
