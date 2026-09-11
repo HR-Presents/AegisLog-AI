@@ -18,7 +18,9 @@ def test_mission_control_uses_final_wordmark_identity() -> None:
     assert "DEFENSIVE LOG INVESTIGATION" in output
     assert "MADE BY HR-PRESENTS" in output
     assert "SYSTEM READY" in output
-    assert "MAIN MENU" in output
+    assert "INVESTIGATE" in output
+    assert "MONITOR & INVESTIGATE" in output
+    assert "UTILITIES" in output
     assert "ANALYZE LOG" in output
     assert "LIVE MONITOR" in output
     assert "VERSION" not in output

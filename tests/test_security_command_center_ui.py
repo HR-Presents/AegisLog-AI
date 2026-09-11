@@ -32,7 +32,9 @@ def test_home_uses_final_wordmark_and_existing_commands() -> None:
     output = _plain(_home(120), width=120)
     assert "DEFENSIVE LOG INVESTIGATION" in output
     assert "MADE BY HR-PRESENTS" in output
-    assert "MAIN MENU" in output
+    assert "INVESTIGATE" in output
+    assert "MONITOR & INVESTIGATE" in output
+    assert "UTILITIES" in output
     for label in ("[01] ANALYZE LOG", "[02] LIVE MONITOR", "[03] MULTI-SOURCE", "[04] NATIVE LOGS", "[05] NATIVE MONITOR", "[06] INCIDENTS", "[07] DEMO", "[08] HEALTH", "[09] HELP"):
         assert label in output
     assert "VERSION" not in output
