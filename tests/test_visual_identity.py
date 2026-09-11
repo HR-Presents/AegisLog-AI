@@ -5,7 +5,7 @@ from pathlib import Path
 from rich.console import Console
 
 from aegislog import commands_v145
-from aegislog.theme import ACCENT, MUTED, NEUTRAL
+from aegislog.theme import ACCENT, MUTED, NEUTRAL, SURFACE
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,10 +40,11 @@ def test_workspace_keeps_compact_brand_signature() -> None:
     assert "MADE BY HR-PRESENTS" in text
 
 
-def test_palette_uses_controlled_blue_identity() -> None:
-    assert ACCENT == "#5B8CFF"
-    assert NEUTRAL == "#E8EDF5"
-    assert MUTED == "#8391A6"
+def test_palette_uses_hybrid_soc_identity() -> None:
+    assert ACCENT == "#4FD1C5"
+    assert NEUTRAL == "#F2F5F4"
+    assert MUTED == "#AAB8BD"
+    assert SURFACE == "#263236"
 
 
 def test_readme_uses_strong_capabilities_and_product_identity() -> None:
