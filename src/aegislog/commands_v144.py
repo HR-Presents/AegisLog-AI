@@ -24,11 +24,16 @@ from .console_pages import commands_reference, system_check
 from .theme import (
     ACCENT,
     ACCENT_SOFT,
+    CYAN,
     HIGH,
     INCIDENT,
     INFO,
+    LIME,
+    MAGENTA,
     MUTED,
+    ORANGE,
     SUCCESS,
+    VIOLET,
     WARNING,
     severity_text,
 )
@@ -560,7 +565,7 @@ def start() -> None:
                 path = _choose_single_file_workspace(
                     "ANALYZE LOG",
                     "Run a static defensive investigation.",
-                    ACCENT,
+                    MAGENTA,
                     output_note="HTML report generated after analysis",
                 )
                 if path is not None:
@@ -568,13 +573,13 @@ def start() -> None:
                         path,
                         "ANALYZE LOG",
                         "Static defensive investigation.",
-                        ACCENT,
+                        MAGENTA,
                     )
             elif choice in {"2", "02"}:
                 path = _choose_single_file_workspace(
                     "LIVE MONITOR",
                     "Watch one log continuously in read-only mode.",
-                    INFO,
+                    CYAN,
                     output_note="Live terminal view; Ctrl+C stops monitoring",
                 )
                 if path is not None:
@@ -582,7 +587,7 @@ def start() -> None:
                         "LIVE MONITOR",
                         f"Configure detection for {path.name}.",
                         default="security",
-                        accent=INFO,
+                        accent=CYAN,
                     )
                     console.clear()
                     _launch_live_file(path, profile)
@@ -593,7 +598,7 @@ def start() -> None:
                         "MULTI-SOURCE SOC",
                         f"Configure correlation across {len(paths)} sources.",
                         default="security",
-                        accent=INCIDENT,
+                        accent=VIOLET,
                     )
                     console.clear()
                     _launch_live_multi_current(paths, profile)
@@ -601,7 +606,7 @@ def start() -> None:
                 native_choice = _choose_native_workspace(
                     "NATIVE LOGS",
                     "Inspect supported OS or container telemetry.",
-                    INCIDENT,
+                    LIME,
                 )
                 if native_choice is not None:
                     console.clear()
@@ -609,7 +614,7 @@ def start() -> None:
                         _operation_header(
                             "NATIVE LOGS",
                             "Collecting a bounded read-only snapshot.",
-                            INCIDENT,
+                            LIME,
                         )
                     )
                     console.print()
@@ -618,7 +623,7 @@ def start() -> None:
                 native_choice = _choose_native_workspace(
                     "NATIVE MONITOR",
                     "Watch supported native telemetry continuously.",
-                    INFO,
+                    ORANGE,
                 )
                 if native_choice is not None:
                     source = native_choice[0]
@@ -626,7 +631,7 @@ def start() -> None:
                         "NATIVE MONITOR",
                         f"Configure the live {source} telemetry workspace.",
                         default="docker" if source == "docker" else "security",
-                        accent=INFO,
+                        accent=ORANGE,
                     )
                     console.clear()
                     _launch_native_live(native_choice, profile)

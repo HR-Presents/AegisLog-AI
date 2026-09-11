@@ -3,13 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from rich import box
-from rich.align import Align
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .dashboard import DashboardData, analyze_dashboard
+from .dashboard import DashboardData, analyze_dashboard, render_dashboard as _render_visual_dashboard
 from .theme import ACCENT, ACCENT_SOFT, INCIDENT, MUTED, NEUTRAL, SUCCESS, severity_style
 
 _MAX_WIDTH = 144
@@ -45,7 +44,13 @@ def _header(data: DashboardData, width: int) -> Panel:
 def _metrics(data: DashboardData) -> Text:
     elevated = sum(1 for item in data.findings if _rank(item.severity) >= _rank("MEDIUM"))
     row = Text()
-    entries = (("EVENTS", data.lines), ("FINDINGS", len(data.findings)), ("ELEVATED", elevated), ("INCIDENTS", len(data.incidents)), ("ANOMALIES", len(data.anomalies)))
+    entries = (
+        ("EVENTS", data.lines),
+        ("FINDINGS", len(data.findings)),
+        ("ELEVATED", elevated),
+        ("INCIDENTS", len(data.incidents)),
+        ("ANOMALIES", len(data.anomalies)),
+    )
     for index, (label, value) in enumerate(entries):
         if index:
             row.append("   |   ", style=MUTED)
@@ -62,7 +67,9 @@ def _source_block(data: DashboardData) -> Panel:
     grid.add_row(Text("SOURCE", style=f"bold {ACCENT}"), Text(source_name, style=NEUTRAL))
     grid.add_row(Text("PATH", style=MUTED), Text(data.source, style=MUTED, overflow="fold"))
     grid.add_row(Text("METRICS", style=MUTED), _metrics(data))
-    return Panel(grid, title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1))
+    return Panel(
+        grid, title=Text(" INVESTIGATION SUMMARY ", style=f"bold {ACCENT}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1)
+    )
 
 
 def _top_findings(data: DashboardData, limit: int = 3) -> Panel:
@@ -84,7 +91,9 @@ def _top_findings(data: DashboardData, limit: int = 3) -> Panel:
         body.append(line)
     if len(ordered) > limit:
         body.append(Text(f"\n+ {len(ordered) - limit} more finding(s) in the local HTML report.", style=MUTED))
-    return Panel(Group(*body), title=Text(" TOP FINDINGS ", style=f"bold {ACCENT}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1))
+    return Panel(
+        Group(*body), title=Text(" TOP FINDINGS ", style=f"bold {ACCENT}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1)
+    )
 
 
 def _analyst_focus(data: DashboardData) -> Panel:
@@ -121,18 +130,8 @@ def _next(data: DashboardData) -> Panel:
 
 
 def render_dashboard(data: DashboardData, *, screen_width: int | None = None) -> RenderableType:
-    width = min(max(70, screen_width or 100), _MAX_WIDTH)
-    body: list[RenderableType] = [_header(data, width), Text(""), _source_block(data), Text("")]
-    if width >= 104:
-        layout = Table.grid(expand=True, padding=(0, 2))
-        layout.add_column(ratio=2)
-        layout.add_column(ratio=1)
-        layout.add_row(_top_findings(data), Group(_analyst_focus(data), Text(""), _next(data)))
-        body.append(layout)
-    else:
-        body.extend((_top_findings(data), Text(""), _analyst_focus(data), Text(""), _next(data)))
-    body.extend((Text(""), Text("Analysis complete. Full evidence remains in the local HTML report. Source unchanged.", style=f"bold {SUCCESS}")))
-    return Align.left(Group(*body), width=width, pad=False)
+    """Keep the v2.13 entrypoint while serving the full visual dashboard."""
+    return _render_visual_dashboard(data, screen_width=screen_width)
 
 
 __all__ = ["DashboardData", "analyze_dashboard", "render_dashboard"]

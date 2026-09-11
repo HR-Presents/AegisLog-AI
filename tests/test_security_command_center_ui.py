@@ -35,7 +35,17 @@ def test_home_uses_final_wordmark_and_existing_commands() -> None:
     assert "INVESTIGATE" in output
     assert "MONITOR & INVESTIGATE" in output
     assert "UTILITIES" in output
-    for label in ("[01] ANALYZE LOG", "[02] LIVE MONITOR", "[03] MULTI-SOURCE", "[04] NATIVE LOGS", "[05] NATIVE MONITOR", "[06] INCIDENTS", "[07] DEMO", "[08] HEALTH", "[09] HELP"):
+    for label in (
+        "[01] ANALYZE LOG",
+        "[02] LIVE MONITOR",
+        "[03] MULTI-SOURCE",
+        "[04] NATIVE LOGS",
+        "[05] NATIVE MONITOR",
+        "[06] INCIDENTS",
+        "[07] DEMO",
+        "[08] HEALTH",
+        "[09] HELP",
+    ):
         assert label in output
     assert "VERSION" not in output
     assert "<F>" not in output
@@ -55,6 +65,9 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     assert "EVENT ACTIVITY" in output
     assert "EVENT TREND" in output
     assert "SERVICE LOAD" in output
+    assert "DONUT CHART" in output
+    assert "THREAT WAVE" in output
+    assert "CORRELATION DIAGRAM" in output
     assert "ANALYST FOCUS" in output
     assert "RAW EVIDENCE" in output
     assert "failed password for admin" in output
@@ -81,6 +94,9 @@ def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
     assert "TELEMETRY TICKER" in output
     assert "EVENT TREND" in output
     assert "SERVICE ACTIVITY" in output
+    assert "SEVERITY DISTRIBUTION // DONUT" in output
+    assert "THREAT WAVE" in output
+    assert "DETECTION FLOW" in output
     assert "RATE & BASELINE INTELLIGENCE" in output
     assert "SIGNAL TREND" in output
     assert "INVESTIGATION QUEUE" in output
@@ -103,5 +119,8 @@ def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, m
     assert "INGESTION PULSE" in output
     assert "EVENT TREND" in output
     assert "FINDINGS BY CATEGORY" in output
+    assert "SEVERITY DISTRIBUTION // DONUT" in output
+    assert "THREAT WAVE" in output
+    assert "DETECTION FLOW" in output
     assert "SOC STATUS" in output
     assert "auth.log" in output and "web.log" in output

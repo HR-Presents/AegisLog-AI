@@ -12,7 +12,25 @@ from rich.text import Text
 
 from .anomaly import score_events
 from .incidents import correlate
-from .theme import ACCENT, ACCENT_BRIGHT, ACCENT_SOFT, CYAN, HIGH, INCIDENT, MUTED, NEUTRAL, SUCCESS, VIOLET, WARNING, severity_style, severity_text
+from .terminal_charts import donut_chart, horizontal_bar, stacked_composition, vertical_histogram, wave_chart
+from .theme import (
+    ACCENT,
+    ACCENT_BRIGHT,
+    CYAN,
+    DIM,
+    HIGH,
+    INCIDENT,
+    LIME,
+    MAGENTA,
+    MUTED,
+    NEUTRAL,
+    ORANGE,
+    SUCCESS,
+    VIOLET,
+    WARNING,
+    severity_style,
+    severity_text,
+)
 
 _NARROW, _WIDE, _MAX_WIDTH = 72, 104, 144
 _TIME = re.compile(r"^(?:\d{4}-\d{2}-\d{2}[T ](?P<iso>\d{2}:\d{2})|[A-Z][a-z]{2}\s+\d{1,2}\s+(?P<sys>\d{2}:\d{2}))")
@@ -28,7 +46,7 @@ def _frame_width() -> int:
 
 
 def _panel(body: RenderableType, title: str, tone: str = ACCENT, *, padding=(0, 1)) -> Panel:
-    return Panel(body, title=Text(f" {title} ", style=f"bold {tone}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=padding)
+    return Panel(body, title=Text(f" {title} ", style=f"bold {tone}"), title_align="left", box=box.ASCII, border_style=tone, padding=padding)
 
 
 def _header(title: str, source: str, profile: str, risk: str, subtitle: str) -> Panel:
@@ -75,10 +93,7 @@ def _metric_strip(metrics: list[tuple[str, str, str, str]], compact: bool) -> Pa
 
 
 def _bar(value: float, maximum: float, width: int = 16, tone: str = ACCENT) -> Text:
-    filled = 0 if value <= 0 else max(1, round(value / max(maximum, 1) * width))
-    result = Text("#" * min(width, filled), style=tone)
-    result.append("." * max(0, width - filled), style="#45536A")
-    return result
+    return horizontal_bar(value, maximum, width=width, tone=tone)
 
 
 def _distribution(title: str, values: Counter[str], *, semantic: bool = False) -> Panel:
@@ -93,7 +108,9 @@ def _distribution(title: str, values: Counter[str], *, semantic: bool = False) -
     for index, (label, count) in enumerate(items):
         tone = severity_style(str(label)) if semantic else _PALETTE[index % len(_PALETTE)]
         table.add_row(Text(str(label).upper(), style=tone), _bar(count, maximum, tone=tone), Text(f"{count}  {count / total:>4.0%}", style=tone))
-    return _panel(table, title, WARNING if semantic else ACCENT)
+    composition = {str(label): count for label, count in items}
+    visual = donut_chart(composition) if semantic else stacked_composition(composition, width=34)
+    return _panel(Group(visual, Text(""), table), title + (" // DONUT" if semantic else " // COMPOSITION"), MAGENTA if semantic else LIME)
 
 
 def _event_cadence(lines: list[str]) -> Panel:
@@ -110,23 +127,36 @@ def _event_cadence(lines: list[str]) -> Panel:
         note = "event-position buckets"
     if not items:
         return _panel(Text("Waiting for events.", style=MUTED), "EVENT CADENCE")
-    maximum = max(value for _, value in items)
-    height = 6
-    heights = [max(1, round(value / maximum * height)) for _, value in items]
-    chart = Table.grid(padding=0)
-    chart.add_column(width=5, justify="right")
-    chart.add_column()
-    for level in range(height, 0, -1):
-        scale = str(round(maximum * level / height)) if level in {height, 1} else ""
-        row = Text()
-        for index, item_height in enumerate(heights):
-            row.append("##" if item_height >= level else "  ", style=_PALETTE[index % len(_PALETTE)])
-            row.append(" ")
-        chart.add_row(Text(scale, style=MUTED), row)
-    axis = Text("--" * len(items), style=ACCENT_SOFT)
-    labels = Text(" ".join(label[-5:] for label, _ in items), style=MUTED, no_wrap=True, overflow="ellipsis")
-    values = Text(" ".join(f"{value:>2}" for _, value in items), style=NEUTRAL, no_wrap=True, overflow="ellipsis")
-    return _panel(Group(chart, Text("     ").append_text(axis), labels, values, Text(note, style=MUTED)), "EVENT TREND // VOLUME OVER TIME", CYAN)
+    return _panel(Group(vertical_histogram(items, height=7), Text(note, style=MUTED)), "EVENT TREND // VOLUME HISTOGRAM", CYAN)
+
+
+def _activity_wave(lines: list[str]) -> Panel:
+    weights: list[float] = []
+    for line in lines:
+        lowered = line.lower()
+        weight = 5.0 if "critical" in lowered else 4.0 if "error" in lowered or "failed" in lowered else 2.5 if "warn" in lowered or "block" in lowered else 1.0
+        weights.append(weight)
+    if not weights:
+        weights = [0.0]
+    bucket_size = max(1, (len(weights) + 11) // 12)
+    energy = [sum(weights[index : index + bucket_size]) for index in range(0, len(weights), bucket_size)][:12]
+    return _panel(wave_chart(energy, width=48, height=7, tone=MAGENTA), "THREAT WAVE // SEVERITY ENERGY", MAGENTA)
+
+
+def _flow_panel(source_count: int, event_count: int, finding_count: int, incident_count: int) -> Panel:
+    grid = Table.grid(expand=True, padding=(0, 1))
+    for ratio in (2, 1, 2, 1, 2, 1, 2):
+        grid.add_column(ratio=ratio, justify="center")
+    grid.add_row(
+        Text(f"SOURCES\n{source_count}", style=f"bold {CYAN}", justify="center"),
+        Text("━━▶", style=LIME),
+        Text(f"EVENTS\n{event_count:,}", style=f"bold {LIME}", justify="center"),
+        Text("━━▶", style=ORANGE),
+        Text(f"FINDINGS\n{finding_count}", style=f"bold {ORANGE}", justify="center"),
+        Text("━━▶", style=MAGENTA),
+        Text(f"INCIDENTS\n{incident_count}", style=f"bold {MAGENTA}", justify="center"),
+    )
+    return _panel(grid, "DETECTION FLOW // CORRELATION DIAGRAM", LIME)
 
 
 def _compare_bar(current: float, baseline: float, width: int = 14) -> Text:
@@ -139,7 +169,7 @@ def _compare_bar(current: float, baseline: float, width: int = 14) -> Text:
     plot[baseline_position] = "|"
     text = Text()
     for char in plot:
-        text.append(char, style=VIOLET if char == "|" else CYAN if char == "#" else ACCENT_SOFT)
+        text.append(char, style=VIOLET if char == "|" else CYAN if char == "#" else DIM)
     return text
 
 
@@ -216,12 +246,13 @@ def render_realtime_command_center(state) -> RenderableType:
     ]
     severity_panel, service_panel = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True), _distribution("SERVICE ACTIVITY", services)
     sections.extend(
-        (_two(_event_cadence(state.lines), severity_panel), service_panel, _trend_matrix(trend, profile.trend_metrics))
+        (_two(_event_cadence(state.lines), severity_panel), service_panel, _activity_wave(state.lines), _trend_matrix(trend, profile.trend_metrics))
         if width >= _WIDE
-        else (_event_cadence(state.lines), severity_panel, service_panel, _trend_matrix(trend, profile.trend_metrics))
+        else (_event_cadence(state.lines), severity_panel, service_panel, _activity_wave(state.lines), _trend_matrix(trend, profile.trend_metrics))
     )
     sections.extend(
         (
+            _flow_panel(1, state.total_lines, len(findings), len(incidents)),
             _finding_panel(list(state.recent_findings), profile.label),
             _panel(
                 Text(
@@ -281,13 +312,14 @@ def render_multisource_command_center(state) -> RenderableType:
     severity_panel = _distribution("SEVERITY DISTRIBUTION", severities, semantic=True)
     category_panel = _distribution("FINDINGS BY CATEGORY", categories)
     sections.extend(
-        (_two(_event_cadence(state.raw_lines), severity_panel), category_panel)
+        (_two(_event_cadence(state.raw_lines), severity_panel), category_panel, _activity_wave(state.raw_lines))
         if width >= _WIDE
-        else (_event_cadence(state.raw_lines), severity_panel, category_panel)
+        else (_event_cadence(state.raw_lines), severity_panel, category_panel, _activity_wave(state.raw_lines))
     )
     sections.extend(
         (
             _trend_matrix(trend, profile.trend_metrics),
+            _flow_panel(len(state.sources), state.total_lines, len(findings), len(incidents)),
             _finding_panel(list(state.alerts), profile.label),
             _panel(Text(f"ACTIVE  |  {state.total_bytes:,} bytes  |  {len(state.sources)} sources  |  no remediation", style=MUTED), "SOC STATUS", SUCCESS),
         )
