@@ -95,7 +95,7 @@ def _kpis(data: DashboardData) -> Panel:
         cell.append(str(value), style=f"bold {tone}")
         cells.append(cell)
     grid.add_row(*cells)
-    return _panel(grid, "INVESTIGATION PULSE // LIVE TICKER", SKY)
+    return _panel(grid, "INVESTIGATION TICKER // LIVE PULSE", SKY)
 
 
 def _bar(value: int, maximum: int, *, width: int = 16, tone: str = ACCENT) -> Text:
