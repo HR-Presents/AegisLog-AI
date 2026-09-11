@@ -10,7 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .theme import ACCENT, ACCENT_SOFT, INFO, MUTED, NEUTRAL, SUCCESS, WARNING
+from .theme import ACCENT, ACCENT_SOFT, INFO, MUTED, NEUTRAL, SECONDARY, SUCCESS, WARNING
 
 
 @dataclass(frozen=True)
@@ -96,14 +96,15 @@ def _spark(current: float, baseline: float, width: int = 12) -> Text:
     maximum = max(current, baseline, 1.0); current_n = min(width, round((current / maximum) * width)); base_n = min(width, round((baseline / maximum) * width)); text = Text()
     for index in range(1, width + 1):
         if index <= current_n: text.append("=", style=ACCENT if index <= base_n else WARNING)
-        elif index <= base_n: text.append("-", style=MUTED)
+        elif index <= base_n: text.append("-", style=SECONDARY)
         else: text.append(" ")
     return text
 
 
 def render_trends(snapshot: TrendSnapshot, metric_names: tuple[str, ...] | None = None) -> Panel:
-    allowed = set(metric_names or ()); metrics = [m for m in snapshot.metrics if not allowed or m.name in allowed]; table = Table(expand=True, box=None, padding=(0, 1)); table.add_column("SIGNAL", ratio=2, style=NEUTRAL); table.add_column("ACTIVITY", width=14); table.add_column("CURRENT", width=9, justify="right"); table.add_column("BASE", width=9, justify="right", style=MUTED); table.add_column("DELTA", width=7, justify="right"); table.add_column("STATE", width=9)
+    allowed = set(metric_names or ()); metrics = [m for m in snapshot.metrics if not allowed or m.name in allowed]; table = Table(expand=True, box=None, padding=(0, 1)); table.add_column("SIGNAL", ratio=2, style=NEUTRAL); table.add_column("ACTIVITY", width=14); table.add_column("CURRENT", width=9, justify="right"); table.add_column("BASE", width=9, justify="right", style=SECONDARY); table.add_column("DELTA", width=7, justify="right"); table.add_column("STATE", width=9)
     for metric in metrics:
-        ratio = f"{metric.deviation_ratio:.1f}x" if metric.deviation_ratio < 100 else ">99x"; style = _state_style(metric.state); table.add_row(metric.name, _spark(metric.current_per_minute, metric.baseline_per_minute), Text(f"{metric.current_per_minute:.1f}/m", style=style if metric.state != "NORMAL" else INFO), f"{metric.baseline_per_minute:.1f}/m", Text(ratio, style=style if metric.state != "NORMAL" else MUTED), Text(metric.state, style=style))
-    if not metrics: table.add_row("No profile metrics", Text("-" * 12, style=MUTED), "0.0/m", "0.0/m", "1.0x", Text("NORMAL", style=SUCCESS))
-    legend = Text("= current/overlap   - baseline", style=MUTED); return Panel(Group(table, Text(""), legend), title=Text(f" RATE & BASELINE  |  {snapshot.window_seconds}s WINDOW ", style=f"bold {ACCENT}"), title_align="left", box=box.ROUNDED, border_style=ACCENT_SOFT, padding=(0, 1))
+        ratio = f"{metric.deviation_ratio:.1f}x" if metric.deviation_ratio < 100 else ">99x"; style = _state_style(metric.state); table.add_row(metric.name, _spark(metric.current_per_minute, metric.baseline_per_minute), Text(f"{metric.current_per_minute:.1f}/m", style=style if metric.state != "NORMAL" else INFO), Text(f"{metric.baseline_per_minute:.1f}/m", style=SECONDARY), Text(ratio, style=style if metric.state != "NORMAL" else MUTED), Text(metric.state, style=style))
+    if not metrics: table.add_row("No profile metrics", Text("-" * 12, style=SECONDARY), "0.0/m", Text("0.0/m", style=SECONDARY), "1.0x", Text("NORMAL", style=SUCCESS))
+    legend = Text("= current/overlap", style=ACCENT); legend.append("   - baseline", style=SECONDARY)
+    return Panel(Group(table, Text(""), legend), title=Text(f" RATE & BASELINE  |  {snapshot.window_seconds}s WINDOW ", style=f"bold {SECONDARY}"), title_align="left", box=box.ROUNDED, border_style=ACCENT_SOFT, padding=(0, 1))
