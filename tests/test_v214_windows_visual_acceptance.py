@@ -26,15 +26,15 @@ def test_final_wordmark_replaces_falcon_and_version() -> None:
     assert "__/\\__" not in output
 
 
-def test_final_home_is_centered_and_bounded_on_wide_windows_terminal() -> None:
+def test_final_home_is_centered_and_compact_on_wide_windows_terminal() -> None:
     width = 180
     output = _render(width)
     lines = [line for line in output.splitlines() if line.strip()]
     assert lines
     first_border = next(line for line in lines if "+" in line)
     left_margin = len(first_border) - len(first_border.lstrip())
-    assert left_margin >= 18
-    assert len(first_border.strip()) <= 144
+    assert left_margin >= 28
+    assert len(first_border.strip()) <= 118
     assert max(len(line.rstrip()) for line in lines) <= width
 
 
@@ -53,3 +53,7 @@ def test_final_home_remains_ascii_safe_across_common_windows_widths() -> None:
         assert "01" in output
         assert "Q EXIT" in output.upper()
         assert max(len(line) for line in output.splitlines()) <= width
+        if width >= 120:
+            borders = [line.strip() for line in output.splitlines() if "+" in line]
+            assert borders
+            assert max(len(line) for line in borders) <= 118
