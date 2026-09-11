@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rich import box
+from rich.align import Align
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.table import Table
@@ -22,20 +23,26 @@ from .theme import (
     ACCENT,
     ACCENT_SOFT,
     ANOMALY,
-    DIM,
     INCIDENT,
     INFO,
     MUTED,
     NEUTRAL,
     SUCCESS,
+    CYAN,
+    LIME,
+    MAGENTA,
+    ORANGE,
+    VIOLET,
     risk_style,
     severity_style,
     severity_text,
 )
+from .terminal_charts import donut_chart, horizontal_bar, radar_chart, stacked_composition, unicode_charts_supported, vertical_histogram, wave_chart
 
 _SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
 _NARROW_DASHBOARD_BREAKPOINT = 72
 _WIDE_DASHBOARD_BREAKPOINT = 104
+_MAX_DASHBOARD_WIDTH = 144
 _MAX_BAR_WIDTH = 24
 _TIMESTAMP_PATTERNS = (
     re.compile(r"^(?P<label>\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::\d{2})?"),
@@ -117,11 +124,7 @@ def _ordered_incidents(data: DashboardData) -> list[Incident]:
 
 
 def _elevated_count(data: DashboardData) -> int:
-    return sum(
-        count
-        for severity, count in data.severities.items()
-        if _severity_rank(severity) >= _severity_rank("MEDIUM")
-    )
+    return sum(count for severity, count in data.severities.items() if _severity_rank(severity) >= _severity_rank("MEDIUM"))
 
 
 def _shield_label() -> Text:
@@ -200,7 +203,7 @@ def _metric_strip(data: DashboardData, *, compact: bool = False) -> Panel:
         table.add_row(*(_metric_cell(*metric) for metric in metrics))
     return Panel(
         table,
-        title=Text(" SECURITY METRICS ", style=f"bold {ACCENT}"),
+        title=Text(" SECURITY METRICS // INVESTIGATION TICKER ", style=f"bold {CYAN}"),
         title_align="left",
         box=box.ASCII,
         border_style=ACCENT_SOFT,
@@ -220,10 +223,7 @@ def _analyst_focus(data: DashboardData) -> Panel:
     grid.add_column(ratio=1, overflow="fold")
     grid.add_row(Text("PRIORITY", style=MUTED), Text(risk, style=f"bold {risk_style(risk)}"))
 
-    incident_first = bool(
-        top_incident
-        and (top_finding is None or _severity_rank(top_incident.severity) >= _severity_rank(top_finding.severity))
-    )
+    incident_first = bool(top_incident and (top_finding is None or _severity_rank(top_incident.severity) >= _severity_rank(top_finding.severity)))
     if incident_first and top_incident:
         incident_id = f"INC-{top_incident.id.upper()[:8]}"
         primary = Text(incident_id, style=f"bold {INCIDENT}")
@@ -269,12 +269,33 @@ def _analyst_focus(data: DashboardData) -> Panel:
 
 
 def _bar(value: int, maximum: int, width: int = _MAX_BAR_WIDTH) -> Text:
-    maximum = max(maximum, 1)
-    filled = 0 if value <= 0 else max(1, round((value / maximum) * width))
-    filled = min(width, filled)
-    bar = Text("#" * filled, style=ACCENT)
-    bar.append("." * (width - filled), style=DIM)
-    return bar
+    return horizontal_bar(value, maximum, width=width, tone=ACCENT)
+
+
+def _ranked_panel(title: str, values: dict[str, int], *, compact: bool = False, tone: str = ACCENT) -> Panel:
+    items = sorted(values.items(), key=lambda item: (-item[1], item[0]))[:6]
+    if not items:
+        return Panel(
+            Text("No data available for this dimension.", style=MUTED),
+            title=Text(f" {title} ", style=f"bold {tone}"),
+            title_align="left",
+            box=box.ASCII,
+            border_style=ACCENT_SOFT,
+        )
+    maximum = max(count for _, count in items)
+    total = max(1, sum(values.values()))
+    table = Table.grid(expand=True, padding=(0, 1))
+    table.add_column(ratio=1, overflow="ellipsis")
+    if not compact:
+        table.add_column(width=18)
+    table.add_column(width=10, justify="right")
+    for name, count in items:
+        cells: list[RenderableType] = [Text(str(name).upper(), style=NEUTRAL)]
+        if not compact:
+            cells.append(_bar(count, maximum, width=18))
+        cells.append(Text(f"{count}  {count / total:>4.0%}", style=tone))
+        table.add_row(*cells)
+    return Panel(table, title=Text(f" {title} ", style=f"bold {tone}"), title_align="left", box=box.ASCII, border_style=ACCENT_SOFT, padding=(0, 1))
 
 
 def _distribution_panel(data: DashboardData, *, compact: bool = False) -> Panel:
@@ -289,7 +310,7 @@ def _distribution_panel(data: DashboardData, *, compact: bool = False) -> Panel:
     if not rows:
         return Panel(
             Text("No finding distribution is available for this input.", style=SUCCESS),
-            title=Text(" SECURITY DISTRIBUTION ", style=f"bold {ACCENT}"),
+            title=Text(" SECURITY DISTRIBUTION // SEVERITY DONUT ", style=f"bold {MAGENTA}"),
             title_align="left",
             box=box.ASCII,
             border_style=ACCENT_SOFT,
@@ -314,12 +335,14 @@ def _distribution_panel(data: DashboardData, *, compact: bool = False) -> Panel:
                 _bar(count, maximum),
                 Text(str(count), style=f"bold {style}"),
             )
+    composition = {severity: data.severities.get(severity, 0) for severity in severity_order}
+    chart: RenderableType = stacked_composition(composition, width=28) if compact else donut_chart(composition)
     return Panel(
-        table,
-        title=Text(" SECURITY DISTRIBUTION ", style=f"bold {ACCENT}"),
+        Group(chart, Text(""), table),
+        title=Text(" SECURITY DISTRIBUTION // SEVERITY DONUT CHART ", style=f"bold {MAGENTA}"),
         title_align="left",
         box=box.ASCII,
-        border_style=ACCENT_SOFT,
+        border_style=MAGENTA,
         padding=(0, 1),
     )
 
@@ -341,28 +364,88 @@ def _activity_panel(data: DashboardData, *, compact: bool = False) -> Panel | No
         label = _timestamp_label(event.raw)
         if label:
             buckets[label] += 1
-    if len(buckets) < 2:
+    timestamped = len(buckets) >= 2
+    if timestamped:
+        items = list(buckets.items())[-8:]
+    else:
+        size = max(1, (len(data.events) + 7) // 8)
+        items = [(f"{start + 1}-{min(len(data.events), start + size)}", min(size, len(data.events) - start)) for start in range(0, len(data.events), size)][:8]
+    if not items:
         return None
-    items = list(buckets.items())[-8:]
-    maximum = max(count for _, count in items)
-    table = Table.grid(expand=True, padding=(0, 1))
-    table.add_column(width=18 if not compact else 13, style=MUTED, no_wrap=True)
-    if not compact:
-        table.add_column(width=_MAX_BAR_WIDTH)
-    table.add_column(width=7, justify="right")
-    for label, count in items:
-        cells: list[RenderableType] = [Text(label, style=MUTED)]
-        if not compact:
-            cells.append(_bar(count, maximum))
-        cells.append(Text(str(count), style=f"bold {ACCENT}"))
-        table.add_row(*cells)
     return Panel(
-        table,
-        title=Text(" EVENT ACTIVITY ", style=f"bold {ACCENT}"),
-        subtitle=Text("timestamped events / latest buckets", style=MUTED),
+        vertical_histogram(items, height=5 if compact else 7),
+        title=Text(f" {'EVENT ACTIVITY // EVENT TREND' if timestamped else 'EVENT CADENCE // EVENT TREND'} ", style=f"bold {CYAN}"),
+        subtitle=Text("timestamp buckets" if timestamped else "real event-position buckets", style=MUTED),
         title_align="left",
         box=box.ASCII,
-        border_style=ACCENT_SOFT,
+        border_style=CYAN,
+        padding=(0, 1),
+    )
+
+
+def _threat_wave_panel(data: DashboardData, *, compact: bool = False) -> Panel:
+    weights = {"CRITICAL": 5.0, "ERROR": 4.0, "WARNING": 2.5, "WARN": 2.5, "INFO": 1.0, "DEBUG": 0.5}
+    values = [weights.get((event.level or "INFO").upper(), 1.0) for event in data.events if event.message]
+    if not values:
+        values = [0.0]
+    buckets = min(12, max(1, len(values)))
+    size = max(1, (len(values) + buckets - 1) // buckets)
+    energy = [sum(values[index : index + size]) for index in range(0, len(values), size)][:buckets]
+    return Panel(
+        wave_chart(energy, width=24 if compact else 48, height=5 if compact else 7, tone=MAGENTA, fill=False),
+        title=Text(" THREAT WAVE // EVENT ENERGY ", style=f"bold {MAGENTA}"),
+        subtitle=Text("severity-weighted log activity", style=MUTED),
+        title_align="left",
+        box=box.ASCII,
+        border_style=MAGENTA,
+        padding=(0, 1),
+    )
+
+
+def _threat_radar_panel(data: DashboardData, *, compact: bool = False) -> Panel:
+    severity_weights = {"CRITICAL": 5, "HIGH": 4, "MEDIUM": 3, "LOW": 2, "INFO": 1}
+    alert_pressure = sum(data.severities.get(level, 0) * weight for level, weight in severity_weights.items())
+    error_count = sum(count for level, count in data.levels.items() if level.upper() in {"ERROR", "CRITICAL", "FATAL"})
+    auth_count = sum(count for category, count in data.categories.items() if "auth" in category.lower())
+    dimensions = {
+        "alert": alert_pressure,
+        "auth": auth_count,
+        "errors": error_count,
+        "incidents": len(data.incidents),
+        "anomalies": len(data.anomalies),
+        "services": len(data.services),
+    }
+    return Panel(
+        radar_chart(dimensions, width=23 if compact else 31, height=8 if compact else 10, tone=ORANGE),
+        title=Text(" THREAT RADAR // SIGNAL PROFILE ", style=f"bold {ORANGE}"),
+        subtitle=Text("normalized shape / exact values in legend", style=MUTED),
+        title_align="left",
+        box=box.ASCII,
+        border_style=ORANGE,
+        padding=(0, 1),
+    )
+
+
+def _analysis_flow_panel(data: DashboardData) -> Panel:
+    arrow = "━━▶" if unicode_charts_supported() else "==>"
+    grid = Table.grid(expand=True, padding=(0, 1))
+    for ratio in (2, 1, 2, 1, 2, 1, 2):
+        grid.add_column(ratio=ratio, justify="center")
+    grid.add_row(
+        Text(f"INPUT\n{data.lines:,} events", style=f"bold {CYAN}", justify="center"),
+        Text(arrow, style=LIME),
+        Text(f"SERVICES\n{len(data.services)} observed", style=f"bold {LIME}", justify="center"),
+        Text(arrow, style=ORANGE),
+        Text(f"FINDINGS\n{len(data.findings)} detected", style=f"bold {ORANGE}", justify="center"),
+        Text(arrow, style=MAGENTA),
+        Text(f"INCIDENTS\n{len(data.incidents)} correlated", style=f"bold {MAGENTA}", justify="center"),
+    )
+    return Panel(
+        grid,
+        title=Text(" INVESTIGATION FLOW // CORRELATION DIAGRAM ", style=f"bold {LIME}"),
+        title_align="left",
+        box=box.ASCII,
+        border_style=LIME,
         padding=(0, 1),
     )
 
@@ -611,18 +694,19 @@ def _next_steps(data: DashboardData) -> Panel:
 def _visual_analysis(data: DashboardData, *, screen_width: int, compact: bool) -> RenderableType:
     distribution = _distribution_panel(data, compact=compact)
     activity = _activity_panel(data, compact=compact)
+    services = _ranked_panel("SERVICE LOAD", data.services, compact=compact, tone=VIOLET)
     if activity is None or screen_width < _WIDE_DASHBOARD_BREAKPOINT:
-        return Group(distribution, *((Text(""), activity) if activity is not None else ()))
+        return Group(distribution, *((Text(""), activity) if activity is not None else ()), Text(""), services)
     layout = Table.grid(expand=True, padding=(0, 1))
     layout.add_column(ratio=1)
     layout.add_column(ratio=1)
-    layout.add_row(distribution, activity)
+    layout.add_row(distribution, Group(activity, Text(""), services))
     return layout
 
 
 def render_dashboard(data: DashboardData, *, screen_width: int | None = None) -> RenderableType:
     """Return a prioritized, responsive, data-aware terminal investigation command center."""
-    width = screen_width if screen_width is not None else 100
+    width = min(screen_width if screen_width is not None else 100, _MAX_DASHBOARD_WIDTH)
     compact = width < _NARROW_DASHBOARD_BREAKPOINT
     sections: list[RenderableType] = [
         _header(data),
@@ -630,6 +714,12 @@ def render_dashboard(data: DashboardData, *, screen_width: int | None = None) ->
         _metric_strip(data, compact=compact),
         Text(""),
         _visual_analysis(data, screen_width=width, compact=compact),
+        Text(""),
+        _threat_wave_panel(data, compact=compact),
+        Text(""),
+        _threat_radar_panel(data, compact=compact),
+        Text(""),
+        _analysis_flow_panel(data),
         Text(""),
         _analyst_focus(data),
     ]
@@ -646,4 +736,4 @@ def render_dashboard(data: DashboardData, *, screen_width: int | None = None) ->
     if raw is not None:
         sections.extend((Text(""), raw))
     sections.extend((Text(""), _next_steps(data)))
-    return Group(*sections)
+    return Align.left(Group(*sections), width=width, pad=False)

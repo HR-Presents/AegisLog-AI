@@ -4,19 +4,27 @@ from rich.text import Text
 
 # AegisLog visual system: one controlled blue identity accent over cool neutral
 # text. Semantic colors are deliberately reserved for real state and severity.
-ACCENT = "#5B8CFF"
-ACCENT_SOFT = "#385784"
-MUTED = "#8391A6"
-SUCCESS = "#62B38F"
-INFO = "#8BA8C7"
-WARNING = "#D2A65A"
-HIGH = "#D56C73"
-CRITICAL = "bold #EF747B"
-INCIDENT = "#A0AEC0"
-ANOMALY = "#91A0B5"
-NEUTRAL = "#E8EDF5"
-DIM = "#526177"
-SURFACE = "#101722"
+ACCENT = "#22D3EE"
+ACCENT_SOFT = "#155E75"
+ACCENT_BRIGHT = "#67E8F9"
+CYAN = "#38BDF8"
+BLUE = "#60A5FA"
+VIOLET = "#C084FC"
+MAGENTA = "#F472B6"
+LIME = "#A3E635"
+ORANGE = "#FB923C"
+YELLOW = "#FACC15"
+MUTED = "#94A3B8"
+SUCCESS = "#34D399"
+INFO = BLUE
+WARNING = "#FBBF24"
+HIGH = ORANGE
+CRITICAL = "bold #FB7185"
+INCIDENT = MAGENTA
+ANOMALY = VIOLET
+NEUTRAL = "#F8FAFC"
+DIM = "#475569"
+SURFACE = "#07111F"
 
 SEVERITY_STYLES = {
     "CRITICAL": CRITICAL,

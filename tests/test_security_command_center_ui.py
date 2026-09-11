@@ -35,7 +35,17 @@ def test_home_uses_final_wordmark_and_existing_commands() -> None:
     assert "INVESTIGATE" in output
     assert "MONITOR & INVESTIGATE" in output
     assert "UTILITIES" in output
-    for label in ("[01] ANALYZE LOG", "[02] LIVE MONITOR", "[03] MULTI-SOURCE", "[04] NATIVE LOGS", "[05] NATIVE MONITOR", "[06] INCIDENTS", "[07] DEMO", "[08] HEALTH", "[09] HELP"):
+    for label in (
+        "[01] ANALYZE LOG",
+        "[02] LIVE MONITOR",
+        "[03] MULTI-SOURCE",
+        "[04] NATIVE LOGS",
+        "[05] NATIVE MONITOR",
+        "[06] INCIDENTS",
+        "[07] DEMO",
+        "[08] HEALTH",
+        "[09] HELP",
+    ):
         assert label in output
     assert "VERSION" not in output
     assert "<F>" not in output
@@ -51,6 +61,14 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     assert "SECURITY METRICS" in output
     assert "EVENTS" in output and "6" in output
     assert "SECURITY DISTRIBUTION" in output
+    assert "INVESTIGATION TICKER" in output
+    assert "EVENT ACTIVITY" in output
+    assert "EVENT TREND" in output
+    assert "SERVICE LOAD" in output
+    assert "DONUT CHART" in output
+    assert "THREAT WAVE" in output
+    assert "THREAT RADAR" in output
+    assert "CORRELATION DIAGRAM" in output
     assert "ANALYST FOCUS" in output
     assert "RAW EVIDENCE" in output
     assert "failed password for admin" in output
@@ -63,6 +81,8 @@ def test_analysis_dashboard_omits_activity_chart_without_timestamps(tmp_path: Pa
     output = _plain(render_dashboard(data, screen_width=80), width=80)
     assert "SECURITY METRICS" in output
     assert "EVENT ACTIVITY" not in output
+    assert "EVENT TREND" in output
+    assert "real event-position buckets" in output
 
 
 def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
@@ -72,6 +92,16 @@ def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
     output = _plain(render_realtime_command_center(state), width=120)
     assert "LIVE MONITOR" in output
     assert "LIVE SECURITY METRICS" in output
+    assert "TELEMETRY TICKER" in output
+    assert "EVENT TREND" in output
+    assert "SERVICE ACTIVITY" in output
+    assert "SEVERITY DISTRIBUTION // DONUT" in output
+    assert "THREAT WAVE" in output
+    assert "THREAT RADAR" in output
+    assert "DETECTION FLOW" in output
+    assert "RATE & BASELINE INTELLIGENCE" in output
+    assert "SIGNAL TREND" in output
+    assert "INVESTIGATION QUEUE" in output
     assert "6" in output
     assert "live.log" in output
 
@@ -88,4 +118,27 @@ def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, m
     output = _plain(render_multisource_command_center(state), width=120)
     assert "MULTI-SOURCE" in output
     assert "SOURCE ACTIVITY" in output
+    assert "INGESTION PULSE" in output
+    assert "EVENT TREND" in output
+    assert "FINDINGS BY CATEGORY" in output
+    assert "SEVERITY DISTRIBUTION // DONUT" in output
+    assert "THREAT WAVE" in output
+    assert "THREAT RADAR" in output
+    assert "DETECTION FLOW" in output
+    assert "SOC STATUS" in output
     assert "auth.log" in output and "web.log" in output
+
+
+def test_visual_dashboards_fall_back_cleanly_for_legacy_windows(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AEGISLOG_ASCII_CHARTS", "1")
+    monkeypatch.setattr("aegislog.command_center_ui.shutil.get_terminal_size", lambda fallback: type("S", (), {"columns": 120})())
+    path = tmp_path / "legacy.log"
+    path.write_text("".join(_sample_lines()), encoding="utf-8")
+    analysis = _plain(render_dashboard(analyze_dashboard(path), screen_width=120), width=120)
+    state = RealtimeState(source="legacy.log", window_size=50, watch_profile="all")
+    state.ingest(_sample_lines(), now=10.0)
+    live = _plain(render_realtime_command_center(state), width=120)
+    analysis.encode("cp1252")
+    live.encode("cp1252")
+    assert "==>" in analysis
+    assert "THREAT RADAR" in live
