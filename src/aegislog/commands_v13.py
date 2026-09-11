@@ -24,7 +24,7 @@ def _view(state: RealtimeState, notice=None):
     return Group(dashboard, notice)
 
 
-def _live_options(refresh: float) -> dict[str, object]:
+def _live_options() -> dict[str, object]:
     """Use one explicit full-screen redraw per poll for stable Windows rendering."""
     return {
         "console": console,
@@ -71,7 +71,7 @@ def live_dashboard(
     source_missing = False
     notice = None
     try:
-        with Live(_view(state), **_live_options(refresh)) as live:
+        with Live(_view(state), **_live_options()) as live:
             live.refresh()
             while True:
                 if not path.exists() or not path.is_file():
