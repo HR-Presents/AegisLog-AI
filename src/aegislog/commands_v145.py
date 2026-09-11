@@ -13,7 +13,7 @@ from .theme import ACCENT, ACCENT_SOFT, DIM, MUTED, NEUTRAL, SUCCESS
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 _NARROW_BREAKPOINT = 72
 _WIDE_BREAKPOINT = 96
-_MAX_HOME_WIDTH = 144
+_MAX_HOME_WIDTH = 118
 
 
 def _screen_width(screen_width: int | None = None) -> int:
@@ -141,9 +141,6 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
     if width >= _WIDE_BREAKPOINT:
         gap = 2
-        # Use the real Windows terminal width instead of freezing the command
-        # center at the old 112-column cap. Keep a 64/36 split so the primary
-        # investigation area remains dominant while status/info fill the right.
         left_width = max(64, int((width - gap) * 0.64))
         right_width = width - gap - left_width
         left = Group(_primary_panel(left_width), Text(""), _tools_panel(left_width), Text(""), _utility_panel(left_width))
