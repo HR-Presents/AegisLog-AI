@@ -14,8 +14,8 @@ CHART_PALETTE = (MAGENTA, CYAN, LIME, ORANGE, VIOLET, BLUE, WARNING, SUCCESS, AC
 
 def horizontal_bar(value: float, maximum: float, width: int = 20, tone: str = CYAN) -> Text:
     filled = 0 if value <= 0 else max(1, round(value / max(maximum, 1.0) * width))
-    bar = Text("█" * min(width, filled), style=tone)
-    bar.append("░" * max(0, width - filled), style="#334155")
+    bar = Text("#" * min(width, filled), style=tone)
+    bar.append("." * max(0, width - filled), style="#334155")
     return bar
 
 
@@ -31,10 +31,10 @@ def stacked_composition(values: Mapping[str, int], width: int = 38) -> Renderabl
         segment = remaining if index == len(items) - 1 else max(1, round(count / total * width))
         segment = min(remaining, segment)
         tone = CHART_PALETTE[index % len(CHART_PALETTE)]
-        track.append("█" * segment, style=tone)
+        track.append("#" * segment, style=tone)
         if index:
             legend.append("   ")
-        legend.append(f"■ {label.upper()} {count / total:.0%}", style=tone)
+        legend.append(f"# {label.upper()} {count / total:.0%}", style=tone)
         remaining -= segment
     return Group(track, legend)
 
@@ -63,7 +63,7 @@ def donut_chart(values: Mapping[str, int]) -> RenderableType:
                 if angle <= stop:
                     tone = candidate
                     break
-            row.append("██", style=tone)
+            row.append("##", style=tone)
         rows.append(row)
     center = Text(f"{total} total", style=f"bold {ACCENT_BRIGHT}", justify="center")
     legend = Table.grid(padding=(0, 1))
@@ -71,7 +71,7 @@ def donut_chart(values: Mapping[str, int]) -> RenderableType:
     legend.add_column(justify="right")
     for index, (label, count) in enumerate(items[:6]):
         tone = CHART_PALETTE[index % len(CHART_PALETTE)]
-        legend.add_row(Text(f"■ {label.upper()}", style=tone), Text(f"{count}  {count / total:.0%}", style=tone))
+        legend.add_row(Text(f"# {label.upper()}", style=tone), Text(f"{count}  {count / total:.0%}", style=tone))
     layout = Table.grid(expand=True, padding=(0, 2))
     layout.add_column(width=31)
     layout.add_column(ratio=1)
@@ -95,21 +95,21 @@ def wave_chart(values: Sequence[float], *, width: int = 36, height: int = 7, ton
     previous: tuple[int, int] | None = None
     for x, value in enumerate(points):
         y = height - 1 - round((value - low) / span * (height - 1))
-        rows[y][x] = "●"
+        rows[y][x] = "*"
         if previous is not None:
             px, py = previous
             if y < py:
-                rows[min(py, height - 1)][x - 1] = "╱"
+                rows[min(py, height - 1)][x - 1] = "/"
             elif y > py:
-                rows[max(py, 0)][x - 1] = "╲"
+                rows[max(py, 0)][x - 1] = "\\"
             elif rows[y][x - 1] == " ":
-                rows[y][x - 1] = "─"
+                rows[y][x - 1] = "-"
         previous = (x, y)
-    rendered = [Text(f"{high:>5.1f} │", style=MUTED)]
+    rendered = [Text(f"{high:>5.1f} |", style=MUTED)]
     for index, row in enumerate(rows):
-        prefix = "      │" if index else ""
+        prefix = "      |" if index else ""
         rendered.append(Text(prefix).append("".join(row), style=tone))
-    rendered.append(Text("  0.0 └" + "─" * width, style=MUTED))
+    rendered.append(Text("  0.0 +" + "-" * width, style=MUTED))
     return Group(*rendered)
 
 
@@ -120,11 +120,11 @@ def vertical_histogram(items: Sequence[tuple[str, float]], *, height: int = 7) -
     heights = [max(1, round(value / maximum * height)) if value else 0 for _, value in items]
     rows: list[Text] = []
     for level in range(height, 0, -1):
-        row = Text(f"{maximum * level / height:>5.1f} │", style=MUTED)
+        row = Text(f"{maximum * level / height:>5.1f} |", style=MUTED)
         for index, bar_height in enumerate(heights):
-            row.append("██" if bar_height >= level else "  ", style=CHART_PALETTE[index % len(CHART_PALETTE)])
+            row.append("##" if bar_height >= level else "  ", style=CHART_PALETTE[index % len(CHART_PALETTE)])
             row.append(" ")
         rows.append(row)
-    rows.append(Text("  0.0 └" + "───" * len(items), style=MUTED))
+    rows.append(Text("  0.0 +" + "---" * len(items), style=MUTED))
     rows.append(Text("       " + " ".join(label[-2:].rjust(2) for label, _ in items), style=MUTED))
     return Group(*rows)

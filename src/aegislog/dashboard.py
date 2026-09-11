@@ -414,11 +414,11 @@ def _analysis_flow_panel(data: DashboardData) -> Panel:
         grid.add_column(ratio=ratio, justify="center")
     grid.add_row(
         Text(f"INPUT\n{data.lines:,} events", style=f"bold {CYAN}", justify="center"),
-        Text("━━▶", style=LIME),
+        Text("==>", style=LIME),
         Text(f"SERVICES\n{len(data.services)} observed", style=f"bold {LIME}", justify="center"),
-        Text("━━▶", style=ORANGE),
+        Text("==>", style=ORANGE),
         Text(f"FINDINGS\n{len(data.findings)} detected", style=f"bold {ORANGE}", justify="center"),
-        Text("━━▶", style=MAGENTA),
+        Text("==>", style=MAGENTA),
         Text(f"INCIDENTS\n{len(data.incidents)} correlated", style=f"bold {MAGENTA}", justify="center"),
     )
     return Panel(

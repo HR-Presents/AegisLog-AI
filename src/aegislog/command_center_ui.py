@@ -149,11 +149,11 @@ def _flow_panel(source_count: int, event_count: int, finding_count: int, inciden
         grid.add_column(ratio=ratio, justify="center")
     grid.add_row(
         Text(f"SOURCES\n{source_count}", style=f"bold {CYAN}", justify="center"),
-        Text("━━▶", style=LIME),
+        Text("==>", style=LIME),
         Text(f"EVENTS\n{event_count:,}", style=f"bold {LIME}", justify="center"),
-        Text("━━▶", style=ORANGE),
+        Text("==>", style=ORANGE),
         Text(f"FINDINGS\n{finding_count}", style=f"bold {ORANGE}", justify="center"),
-        Text("━━▶", style=MAGENTA),
+        Text("==>", style=MAGENTA),
         Text(f"INCIDENTS\n{incident_count}", style=f"bold {MAGENTA}", justify="center"),
     )
     return _panel(grid, "DETECTION FLOW // CORRELATION DIAGRAM", LIME)

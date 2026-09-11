@@ -71,6 +71,7 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     assert "ANALYST FOCUS" in output
     assert "RAW EVIDENCE" in output
     assert "failed password for admin" in output
+    output.encode("cp1252")
 
 
 def test_analysis_dashboard_omits_activity_chart_without_timestamps(tmp_path: Path) -> None:
@@ -102,6 +103,7 @@ def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
     assert "INVESTIGATION QUEUE" in output
     assert "6" in output
     assert "live.log" in output
+    output.encode("cp1252")
 
 
 def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, monkeypatch) -> None:
@@ -124,3 +126,4 @@ def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, m
     assert "DETECTION FLOW" in output
     assert "SOC STATUS" in output
     assert "auth.log" in output and "web.log" in output
+    output.encode("cp1252")

@@ -121,7 +121,7 @@ def _input_panel(
     for label, value in lines:
         if primary_label is not None and label == primary_label:
             grid.add_row(
-                Text(f"▶ {label}", style=f"bold {accent}"),
+                Text(f"> {label}", style=f"bold {accent}"),
                 Text(value, style="bold white"),
             )
         else:
