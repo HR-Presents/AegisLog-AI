@@ -285,7 +285,7 @@ def render_dashboard(data: DashboardData, *, screen_width: int | None = None) ->
     # A single fixed-width container constrains every expand=True child panel.
     # Do not center inside a wider console here: left padding becomes part of
     # the physical line length and breaks Windows width guarantees.
-    frame = Table.grid(width=width, padding=0)
+    frame = Table(show_header=False, box=None, padding=0, width=width)
     frame.add_column(width=width)
     for section in sections:
         frame.add_row(section)
