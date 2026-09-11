@@ -12,8 +12,8 @@ from .theme import ACCENT, ACCENT_SOFT, DIM, MUTED, NEUTRAL, SUCCESS
 
 _LEGACY_INLINE_COMMAND = legacy._run_inline_command
 _NARROW_BREAKPOINT = 72
-_WIDE_BREAKPOINT = 100
-_MAX_HOME_WIDTH = 116
+_WIDE_BREAKPOINT = 90
+_MAX_HOME_WIDTH = 98
 
 
 def _screen_width(screen_width: int | None = None) -> int:
@@ -36,11 +36,11 @@ def _wordmark(compact: bool = False) -> Text:
         return mark
 
     lines = (
-        "    _    _____ ____ ___ ____  _     ___   ____ ",
-        "   / \\  | ____/ ___|_ _/ ___|| |   / _ \\ / ___|",
-        "  / _ \\ |  _|| |  _ | |\___ \\| |  | | | | |  _ ",
-        " / ___ \\| |__| |_| || | ___) | |__| |_| | |_| |",
-        "/_/   \\_\\_____\\____|___|____/|_____\\___/ \\____|",
+        r"    _    _____ ____ ___ ____  _     ___   ____ ",
+        r"   / \  | ____/ ___|_ _/ ___|| |   / _ \ / ___|",
+        r"  / _ \ |  _|| |  _ | |\___ \| |  | | | | |  _ ",
+        r" / ___ \| |__| |_| || | ___) | |__| |_| | |_| |",
+        r"/_/   \_\_____\____|___|____/|_____\___/ \____|",
     )
     for index, line in enumerate(lines):
         if index:
@@ -91,7 +91,7 @@ def _operation_header(
     heading.append("  //  ", style=MUTED)
     heading.append(title.upper(), style=f"bold {accent}")
     context = Text(subtitle, style=NEUTRAL, overflow="fold")
-    posture = Text("LOCAL-FIRST / READ-ONLY / DETERMINISTIC", style=MUTED)
+    posture = Text("LOCAL / READ-ONLY / DETERMINISTIC", style=MUTED)
     maker = Text("MADE BY HR-PRESENTS", style=f"bold {ACCENT}")
     return Panel(
         Group(heading, context, posture, maker),
@@ -135,9 +135,9 @@ def _input_panel(
 
 
 def _menu_item(key: str, label: str, description: str) -> Text:
-    item = Text()
+    item = Text(overflow="fold")
     item.append(f"[{key}] ", style=f"bold {ACCENT}")
-    item.append(f"{label:<20}", style=f"bold {NEUTRAL}")
+    item.append(f"{label:<18}", style=f"bold {NEUTRAL}")
     item.append(description, style=MUTED)
     return item
 
@@ -156,13 +156,14 @@ def _menu_panel(title: str, rows: list[tuple[str, str, str]], width: int) -> Pan
 
 
 def _status_panel(width: int) -> Panel:
+    compact = width < 44
     grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(width=14)
-    grid.add_column(ratio=1)
-    grid.add_row(Text("STATUS", style=MUTED), Text("SYSTEM READY", style=f"bold {SUCCESS}"))
-    grid.add_row(Text("MODE", style=MUTED), Text("LOCAL ANALYSIS", style=NEUTRAL))
-    grid.add_row(Text("DATA", style=MUTED), Text("READ-ONLY", style=NEUTRAL))
-    grid.add_row(Text("ENGINE", style=MUTED), Text("DETERMINISTIC", style=NEUTRAL))
+    grid.add_column(width=9 if compact else 12, no_wrap=True)
+    grid.add_column(ratio=1, overflow="fold")
+    grid.add_row(Text("STATUS", style=MUTED), Text("SYSTEM READY", style=f"bold {SUCCESS}", overflow="fold"))
+    grid.add_row(Text("MODE", style=MUTED), Text("LOCAL ANALYSIS", style=NEUTRAL, overflow="fold"))
+    grid.add_row(Text("DATA", style=MUTED), Text("READ-ONLY", style=NEUTRAL, overflow="fold"))
+    grid.add_row(Text("ENGINE", style=MUTED), Text("DETERMINISTIC", style=NEUTRAL, overflow="fold"))
     return Panel(
         grid,
         title=Text(" SYSTEM ", style=f"bold {ACCENT}"),
@@ -182,10 +183,10 @@ def _quick_info_panel(width: int) -> Panel:
         ("OWNER", "HR-PRESENTS"),
     )
     grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(width=12)
+    grid.add_column(width=10)
     grid.add_column(ratio=1, overflow="fold")
     for label, value in rows:
-        grid.add_row(Text(label, style=MUTED), Text(value, style=ACCENT if label != "OWNER" else NEUTRAL))
+        grid.add_row(Text(label, style=MUTED), Text(value, style=ACCENT if label != "OWNER" else NEUTRAL, overflow="fold"))
     return Panel(
         grid,
         title=Text(" QUICK INFO ", style=f"bold {ACCENT}"),
@@ -200,7 +201,7 @@ def _quick_info_panel(width: int) -> Panel:
 def _menu(screen_width: int | None = None) -> RenderableType:
     width = _frame_width(screen_width)
     rows = [
-        ("01", "INVESTIGATE LOGS", "Analyze evidence and generate a report"),
+        ("01", "ANALYZE LOG", "Analyze evidence and generate a report"),
         ("02", "LIVE MONITOR", "Watch one log source continuously"),
         ("03", "MULTI-SOURCE", "Correlate activity across live sources"),
         ("04", "NATIVE LOGS", "Inspect OS or container telemetry"),
@@ -216,7 +217,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
     if width >= _WIDE_BREAKPOINT:
         gap = 2
-        left_width = int((width - gap) * 0.58)
+        left_width = int((width - gap) * 0.60)
         right_width = width - gap - left_width
         right = Group(_status_panel(right_width), Text(""), _quick_info_panel(right_width))
         layout = Table.grid(padding=0)
@@ -231,7 +232,7 @@ def _menu(screen_width: int | None = None) -> RenderableType:
 
 def _footer(screen_width: int | None = None) -> Text:
     width = _frame_width(screen_width)
-    footer = Text()
+    footer = Text(overflow="fold")
     footer.append("Select [01-09]", style=f"bold {ACCENT}")
     footer.append(" or type a command", style=NEUTRAL)
     footer.append("   |   Q Exit", style=MUTED)
