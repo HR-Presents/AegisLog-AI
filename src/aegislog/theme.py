@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from rich.text import Text
 
-# AegisLog hybrid SOC visual system: luminous cyan/mint identity over a
-# medium-contrast terminal canvas. Semantic colors remain reserved for state.
+# AegisLog hybrid SOC visual system: teal identity with violet, sky, mint,
+# amber and coral accents. Semantic colors remain tied to security state.
 ACCENT = "#4FD1C5"
+SECONDARY = "#A78BFA"
+SKY = "#67B7FF"
 ACCENT_SOFT = "#5F7F83"
 MUTED = "#AAB8BD"
 SUCCESS = "#78D6A3"
-INFO = "#8EC5D6"
+INFO = SKY
 WARNING = "#F0C36A"
 HIGH = "#F08A7E"
 CRITICAL = "bold #FF6B72"
-INCIDENT = "#C8A7E8"
-ANOMALY = "#9FB7E9"
+INCIDENT = SECONDARY
+ANOMALY = "#8FB7FF"
 NEUTRAL = "#F2F5F4"
 DIM = "#728388"
 SURFACE = "#263236"
