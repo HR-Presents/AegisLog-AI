@@ -6,7 +6,8 @@ from rich.console import Console
 
 from aegislog.command_center_ui import render_multisource_command_center, render_realtime_command_center
 from aegislog.commands_v145 import _home
-from aegislog.dashboard import analyze_dashboard, render_dashboard
+from aegislog.dashboard import analyze_dashboard
+from aegislog.dashboard_v213 import render_dashboard
 from aegislog.multisource import MultiSourceState
 from aegislog.realtime import RealtimeState
 
@@ -47,21 +48,23 @@ def test_analysis_dashboard_visualizes_only_real_sample_data(tmp_path: Path) -> 
     path.write_text("".join(_sample_lines()), encoding="utf-8")
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=120), width=120)
-    assert "INVESTIGATION SUMMARY" in output
-    assert "SECURITY METRICS" in output
+    assert "ANALYZE" in output
+    assert "INVESTIGATION PULSE" in output
+    assert "SOURCE CONTEXT" in output
+    assert "SEVERITY PROFILE" in output
+    assert "INVESTIGATION FOCUS" in output
+    assert "PRIORITY FINDINGS" in output
     assert "EVENTS" in output and "6" in output
-    assert "SECURITY DISTRIBUTION" in output
-    assert "ANALYST FOCUS" in output
-    assert "RAW EVIDENCE" in output
     assert "failed password for admin" in output
+    assert "ANALYST FOCUS" not in output
 
 
-def test_analysis_dashboard_omits_activity_chart_without_timestamps(tmp_path: Path) -> None:
+def test_analysis_dashboard_does_not_invent_timeline_without_timestamps(tmp_path: Path) -> None:
     path = tmp_path / "untimed.log"
     path.write_text("error service failed\ninfo service started\n", encoding="utf-8")
     data = analyze_dashboard(path)
     output = _plain(render_dashboard(data, screen_width=80), width=80)
-    assert "SECURITY METRICS" in output
+    assert "INVESTIGATION PULSE" in output
     assert "EVENT ACTIVITY" not in output
 
 
@@ -71,9 +74,14 @@ def test_live_command_center_uses_realtime_state_values(monkeypatch) -> None:
     state.ingest(_sample_lines(), now=10.0)
     output = _plain(render_realtime_command_center(state), width=120)
     assert "LIVE MONITOR" in output
-    assert "LIVE SECURITY METRICS" in output
+    assert "TELEMETRY PULSE" in output
+    assert "SEVERITY MIX" in output
+    assert "SERVICE LOAD" in output
+    assert "RATE & BASELINE" in output
+    assert "FINDING STREAM" in output
     assert "6" in output
     assert "live.log" in output
+    assert "#" not in output
 
 
 def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, monkeypatch) -> None:
@@ -87,5 +95,10 @@ def test_multisource_command_center_shows_real_source_activity(tmp_path: Path, m
     state.ingest(second, _sample_lines()[4:], now=11.0)
     output = _plain(render_multisource_command_center(state), width=120)
     assert "MULTI-SOURCE" in output
-    assert "SOURCE ACTIVITY" in output
+    assert "SOURCE PULSE" in output
+    assert "SEVERITY MIX" in output
+    assert "FINDINGS BY CATEGORY" in output
+    assert "RATE & BASELINE" in output
+    assert "ALERT STREAM" in output
     assert "auth.log" in output and "web.log" in output
+    assert "#" not in output
