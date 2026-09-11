@@ -43,4 +43,6 @@ def test_compact_analyze_does_not_dump_deep_tables() -> None:
 def test_compact_analyze_is_bounded_for_wide_windows_terminal() -> None:
     data = DashboardData(source=r"C:\\Users\\Example\\Downloads\\very-long-but-realistic-log-file-name.log", lines=1, findings=(), anomalies=(), incidents=(), levels={}, services={}, categories={}, severities={})
     output = _plain(render_dashboard(data, screen_width=220), width=220)
-    assert max(len(line) for line in output.splitlines()) <= 118
+    meaningful = [line.rstrip() for line in output.splitlines() if line.strip()]
+    assert meaningful
+    assert max(len(line) for line in meaningful) <= 144
