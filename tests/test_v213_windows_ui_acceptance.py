@@ -28,15 +28,18 @@ def test_mission_control_uses_final_wordmark_identity() -> None:
     assert "<F>" not in output
 
 
-def test_compact_analyze_does_not_dump_deep_tables() -> None:
+def test_compact_analyze_uses_visual_investigation_hierarchy() -> None:
     data = DashboardData(source=r"C:\\Logs\\sample.log", lines=26, findings=(), anomalies=(), incidents=(), levels={"INFO": 26}, services={"app": 26}, categories={}, severities={})
     output = _plain(render_dashboard(data, screen_width=118), width=120)
-    assert "ANALYZE LOG" in output
-    assert "TOP FINDINGS" in output
-    assert "ANALYST FOCUS" in output
-    assert "NEXT" in output
-    assert "EVENTS 26" in output
-    assert "RAW EVIDENCE" not in output
+    assert "ANALYZE" in output
+    assert "INVESTIGATION PULSE" in output
+    assert "SOURCE CONTEXT" in output
+    assert "SEVERITY PROFILE" in output
+    assert "INVESTIGATION FOCUS" in output
+    assert "PRIORITY FINDINGS" in output
+    assert "NEXT ACTIONS" in output
+    assert "26" in output
+    assert "ANALYST FOCUS" not in output
     assert "INVESTIGATION TIMELINE" not in output
 
 
