@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import typer
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 
 from .command_center_ui import render_realtime_command_center
@@ -17,8 +17,22 @@ console = Console()
 render_realtime = render_realtime_command_center
 
 
-def _view(state: RealtimeState):
-    return bounded(render_realtime(state))
+def _view(state: RealtimeState, notice=None):
+    dashboard = bounded(render_realtime(state))
+    if notice is None:
+        return dashboard
+    return Group(dashboard, notice)
+
+
+def _live_options(refresh: float) -> dict[str, object]:
+    """Use one explicit full-screen redraw per poll for stable Windows rendering."""
+    return {
+        "console": console,
+        "auto_refresh": False,
+        "screen": True,
+        "transient": True,
+        "vertical_overflow": "crop",
+    }
 
 
 def live_dashboard(
@@ -52,33 +66,30 @@ def live_dashboard(
         )
     )
     if from_start:
-        console.print(render_realtime(state))
-        console.print(live_initial_status("file", prefix="Initial scan complete."))
+        console.print(live_initial_status("file", prefix="Initial scan complete. Opening live workspace."))
 
     source_missing = False
+    notice = None
     try:
-        with Live(
-            _view(state),
-            console=console,
-            refresh_per_second=max(1, int(round(1 / refresh))),
-            screen=False,
-            transient=False,
-        ) as live:
+        with Live(_view(state), **_live_options(refresh)) as live:
+            live.refresh()
             while True:
                 if not path.exists() or not path.is_file():
-                    live.update(_view(state), refresh=True)
                     if not source_missing:
-                        console.print(live_source_status(str(path), available=False))
+                        notice = live_source_status(str(path), available=False)
                         source_missing = True
+                    live.update(_view(state, notice), refresh=True)
                     time.sleep(refresh)
                     continue
                 if source_missing:
-                    console.print(live_source_status(str(path), available=True))
+                    notice = live_source_status(str(path), available=True)
                     source_missing = False
+                else:
+                    notice = None
                 lines, cursor = read_new_lines_cursor(path, cursor)
                 if lines:
                     state.ingest(lines)
-                live.update(_view(state), refresh=True)
+                live.update(_view(state, notice), refresh=True)
                 time.sleep(refresh)
     except KeyboardInterrupt:
         console.print(live_stopped_status("File", degraded=source_missing))
