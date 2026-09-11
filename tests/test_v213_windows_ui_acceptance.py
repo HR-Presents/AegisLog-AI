@@ -13,17 +13,18 @@ def _plain(renderable, width: int = 118) -> str:
     return console.export_text()
 
 
-def test_mission_control_uses_front_falcon_identity() -> None:
+def test_mission_control_uses_final_wordmark_identity() -> None:
     output = _plain(commands_v145._home(118), width=120)
-    assert "A E G I S L O G" in output
+    assert "AEGISLOG" in output
+    assert "DEFENSIVE LOG INVESTIGATION" in output
+    assert "MADE BY HR-PRESENTS" in output
     assert "SYSTEM READY" in output
-    assert "INVESTIGATE" in output
-    assert "MONITOR" in output
-    assert "|---/\\_/\\---|" not in output
-    assert "__/\\__" in output
-    assert "\\__/" in output
-    assert "UNDERSTAND" not in output
-    assert "STAY AHEAD" not in output
+    assert "MAIN MENU" in output
+    assert "INVESTIGATE LOGS" in output
+    assert "LIVE MONITOR" in output
+    assert "VERSION" not in output
+    assert "__/\\__" not in output
+    assert "<F>" not in output
 
 
 def test_compact_analyze_does_not_dump_deep_tables() -> None:
