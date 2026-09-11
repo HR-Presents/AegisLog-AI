@@ -31,6 +31,9 @@ _NARROW = 72
 _WIDE = 104
 _MAX_WIDTH = 132
 _ANALYTIC_PALETTE = (ACCENT, SECONDARY, SKY, SUCCESS, WARNING, HIGH)
+_SERVICE_PALETTE = (SKY, ACCENT, SUCCESS, SECONDARY, WARNING, HIGH)
+_CATEGORY_PALETTE = (SECONDARY, HIGH, WARNING, SKY, SUCCESS, ACCENT)
+_SOURCE_PALETTE = (ACCENT, SKY, SECONDARY, SUCCESS, WARNING, HIGH)
 
 
 def _risk(counts: Counter[str]) -> str:
@@ -113,25 +116,34 @@ def _mini_bar(count: int, maximum: int, width: int = 16, *, style: str = ACCENT)
     return text
 
 
-def _distribution(title: str, values: Counter[str], *, compact: bool, semantic: bool = False) -> Panel:
+def _distribution(
+    title: str,
+    values: Counter[str],
+    *,
+    compact: bool,
+    semantic: bool = False,
+    palette: tuple[str, ...] | None = None,
+    title_style: str = ACCENT,
+) -> Panel:
     items = values.most_common(5)
     if not items:
         return Panel(
             Text("No matching activity in this window.", style=MUTED),
-            title=Text(f" {title} ", style=f"bold {ACCENT}"),
+            title=Text(f" {title} ", style=f"bold {title_style}"),
             title_align="left",
             box=box.ROUNDED,
             border_style=ACCENT_SOFT,
         )
     maximum = max(count for _, count in items)
     total = max(1, sum(values.values()))
+    colors = palette or _ANALYTIC_PALETTE
     table = Table.grid(expand=True, padding=(0, 1))
     table.add_column(ratio=1, overflow="crop")
     table.add_column(width=18)
     table.add_column(width=9, justify="right")
     for index, (label, count) in enumerate(items):
         pct = count / total * 100
-        style = severity_style(str(label)) if semantic else _ANALYTIC_PALETTE[index % len(_ANALYTIC_PALETTE)]
+        style = severity_style(str(label)) if semantic else colors[index % len(colors)]
         table.add_row(
             Text(str(label).upper(), style=style if semantic else NEUTRAL),
             _mini_bar(count, maximum, style=style),
@@ -139,7 +151,7 @@ def _distribution(title: str, values: Counter[str], *, compact: bool, semantic: 
         )
     return Panel(
         table,
-        title=Text(f" {title} ", style=f"bold {ACCENT}"),
+        title=Text(f" {title} ", style=f"bold {title_style}"),
         title_align="left",
         box=box.ROUNDED,
         border_style=ACCENT_SOFT,
@@ -234,16 +246,28 @@ def render_realtime_command_center(state) -> RenderableType:
         pair.add_column(ratio=1)
         pair.add_column(ratio=1)
         pair.add_row(
-            _distribution("SEVERITY MIX", severities, compact=compact, semantic=True),
-            _distribution("SERVICE LOAD", services, compact=compact),
+            _distribution("SEVERITY MIX", severities, compact=compact, semantic=True, title_style=WARNING),
+            _distribution(
+                "SERVICE LOAD",
+                services,
+                compact=compact,
+                palette=_SERVICE_PALETTE,
+                title_style=SKY,
+            ),
         )
         sections.append(pair)
     else:
         sections.extend(
             (
-                _distribution("SEVERITY MIX", severities, compact=compact, semantic=True),
+                _distribution("SEVERITY MIX", severities, compact=compact, semantic=True, title_style=WARNING),
                 Text(""),
-                _distribution("SERVICE LOAD", services, compact=compact),
+                _distribution(
+                    "SERVICE LOAD",
+                    services,
+                    compact=compact,
+                    palette=_SERVICE_PALETTE,
+                    title_style=SKY,
+                ),
             )
         )
     sections.extend(
@@ -280,7 +304,7 @@ def _source_activity(state, *, compact: bool) -> Panel:
     table.add_column("STATUS", width=10, no_wrap=True)
     table.add_column("EVENTS", width=8, justify="right")
     for index, (name, count, available) in enumerate(rows):
-        tone = _ANALYTIC_PALETTE[index % len(_ANALYTIC_PALETTE)]
+        tone = _SOURCE_PALETTE[index % len(_SOURCE_PALETTE)]
         table.add_row(
             Text(name, style=tone),
             _mini_bar(count, maximum, style=tone),
@@ -289,7 +313,7 @@ def _source_activity(state, *, compact: bool) -> Panel:
         )
     return Panel(
         table,
-        title=Text(" SOURCE PULSE ", style=f"bold {SECONDARY}"),
+        title=Text(" SOURCE PULSE ", style=f"bold {ACCENT}"),
         title_align="left",
         box=box.ROUNDED,
         border_style=ACCENT_SOFT,
@@ -382,16 +406,28 @@ def render_multisource_command_center(state) -> RenderableType:
         pair.add_column(ratio=1)
         pair.add_column(ratio=1)
         pair.add_row(
-            _distribution("SEVERITY MIX", severities, compact=compact, semantic=True),
-            _distribution("FINDINGS BY CATEGORY", categories, compact=compact),
+            _distribution("SEVERITY MIX", severities, compact=compact, semantic=True, title_style=WARNING),
+            _distribution(
+                "FINDINGS BY CATEGORY",
+                categories,
+                compact=compact,
+                palette=_CATEGORY_PALETTE,
+                title_style=SECONDARY,
+            ),
         )
         sections.append(pair)
     else:
         sections.extend(
             (
-                _distribution("SEVERITY MIX", severities, compact=compact, semantic=True),
+                _distribution("SEVERITY MIX", severities, compact=compact, semantic=True, title_style=WARNING),
                 Text(""),
-                _distribution("FINDINGS BY CATEGORY", categories, compact=compact),
+                _distribution(
+                    "FINDINGS BY CATEGORY",
+                    categories,
+                    compact=compact,
+                    palette=_CATEGORY_PALETTE,
+                    title_style=SECONDARY,
+                ),
             )
         )
     sections.extend(
