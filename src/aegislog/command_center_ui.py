@@ -243,7 +243,7 @@ def _status_panel(text: str, *, title: str) -> Panel:
 
 
 def _frame(sections: list[RenderableType], width: int) -> RenderableType:
-    frame = Table.grid(width=width, padding=0)
+    frame = Table(show_header=False, box=None, padding=0, width=width)
     frame.add_column(width=width)
     for section in sections:
         frame.add_row(section)
