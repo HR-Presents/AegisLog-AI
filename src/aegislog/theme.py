@@ -6,6 +6,9 @@ from rich.text import Text
 # text. Semantic colors are deliberately reserved for real state and severity.
 ACCENT = "#5B8CFF"
 ACCENT_SOFT = "#385784"
+ACCENT_BRIGHT = "#78A5FF"
+CYAN = "#63C5DA"
+VIOLET = "#9B8AFB"
 MUTED = "#8391A6"
 SUCCESS = "#62B38F"
 INFO = "#8BA8C7"
